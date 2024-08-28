@@ -29,6 +29,7 @@ class CanBus
 private:
   MCP2515 *mcp2515;
   spi_device_handle_t spi;
+  QueueHandle_t commandQueue;
 
   void printCANStatus()
   {
@@ -54,10 +55,21 @@ private:
   }
 
 public:
-  CanBus() {};
+  CanBus()
+  {
+    commandQueue = xQueueCreate(10, sizeof(Command));
+    if (commandQueue == NULL)
+    {
+      ESP_LOGE(FUNCTION_NAME, "Failed to create command queue");
+    }
+  };
 
   ~CanBus()
   {
+    if (commandQueue != NULL)
+    {
+      vQueueDelete(commandQueue);
+    }
     delete mcp2515;
   }
 

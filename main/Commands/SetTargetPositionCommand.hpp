@@ -3,7 +3,8 @@
 
 #include "Command.hpp"
 #include "..\CANServo.hpp"
-#include "..\Debug.hpp"
+#include "esp_log.h"
+
 class SetTargetPositionCommand : public Command
 {
 private:
@@ -19,7 +20,7 @@ public:
 
   void execute() override
   {
-    static const char *TAG = __func__;
+    static const char *TAG = FUNCTION_NAME;
     uint8_t data[7];
     data[0] = absolute ? 0xF5 : 0xF4;  // Befehlscode für Position mode4: absolute motion by axis
     data[1] = (speed >> 8) & 0x7F;     // Combine direction bit with the upper 7 bits of speed
@@ -30,15 +31,7 @@ public:
     data[6] = position & 0xFF;         // Untere 8 Bits der Position
                                        // data[7] = calculateCRC(data, 8)
 
-    debug.info();
-    debug.add("Setting target position: ");
-    debug.add(position);
-    debug.add(", Speed: ");
-    debug.add(speed);
-    debug.add(", Acceleration: ");
-    debug.add(acceleration);
-    debug.add(", Mode: ");
-    debug.print(absolute ? "Absolute" : "Relative");
+    ESP_LOGI(TAG, "Setting target position: %d, Speed: %d, Acceleration: %d, Mode: %s", position, speed, acceleration, absolute ? "Absolute" : "Relative");
 
     servo->sendCommand(data, 7);
   }

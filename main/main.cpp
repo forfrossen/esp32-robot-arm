@@ -16,41 +16,17 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_app_format.h"
-#include "CANServo.hpp"
 #include <iostream>
 #include <regex>
 #include <string>
 #include "utils.hpp"
-
-#include "Commands/Command.hpp"
-#include "Commands/Query/QueryMotorStatusCommand.hpp"
-#include "Commands/Query/QueryMotorPositionCommand.hpp"
+#include "CANServo.hpp"
 
 CanBus *canBus = new CanBus();
-CommandMapper *commandMapper;
+CommandMapper *commandMapper = new CommandMapper();
 std::map<uint8_t, CANServo *> Servos;
 
 const char compile_date[] = __DATE__ " " __TIME__;
-
-void checkForMessages()
-{
-  static const char *TAG = FUNCTION_NAME;
-
-  can_frame msg;
-  while (canBus->listenForMessages(&msg))
-  {
-
-    uint32_t id = msg.can_id;
-
-    if (Servos[id] == nullptr)
-    {
-      ESP_LOGI(TAG, "Servo not found for ID: %lu", id);
-      continue;
-    }
-
-    Servos[id]->handleReceivedMessage(&msg);
-  }
-}
 
 void task_checkMessages(void *pvParameters)
 {
@@ -64,31 +40,25 @@ void task_checkMessages(void *pvParameters)
     // ESP_LOGI(TAG, "New iteration of taskCheckCanMessages");
     // ESP_LOGI(TAG, "High water mark before calling checkForMessages: %d", uxHighWaterMark);
 
-    checkForMessages();
+    can_frame msg;
+    while (canBus->listenForMessages(&msg))
+    {
+
+      uint32_t id = msg.can_id;
+
+      if (Servos[id] == nullptr)
+      {
+        ESP_LOGI(TAG, "Servo not found for ID: %lu", id);
+        continue;
+      }
+
+      Servos[id]->handleReceivedMessage(&msg);
+    }
 
     // uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
     // ESP_LOGI(TAG, "High water mark before calling checkForMessages: %d", uxHighWaterMark);
 
     vTaskDelay(500 / portTICK_PERIOD_MS);
-  }
-}
-
-void task_QueryPosition(void *pvParameters)
-{
-  static const char *TAG = FUNCTION_NAME;
-  vTaskDelay(2000 / portTICK_PERIOD_MS);
-
-  for (;;)
-  {
-    ESP_LOGI(TAG, "New iteration of taskQueryMotorPosition");
-    for (auto &pair : Servos)
-    {
-      Command *queryMotorPosition = new QueryMotorPositionCommand(pair.second);
-      queryMotorPosition->execute();
-      delete queryMotorPosition;
-      vTaskDelay(200 / portTICK_PERIOD_MS);
-    }
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
   }
 }
 
@@ -117,7 +87,6 @@ extern "C" void app_main()
 
   canBus->begin();
 
-  commandMapper = new CommandMapper();
 
   // Initialisierung der Servo42D_CAN Instanzen
   // Servos[0x01] = new CANServo(0x01, canBus, commandMapper);

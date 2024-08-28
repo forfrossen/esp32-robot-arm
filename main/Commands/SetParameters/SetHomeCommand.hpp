@@ -2,8 +2,8 @@
 #define SET_HOME_COMMAND_H
 
 #include "..\Command.hpp"
-#include "..\..\CANServo.hpp"
-#include "..\..\Debug.hpp"
+#include "../../CANServo.hpp"
+#include "esp_log.h"
 class SetHomeCommand : public Command
 {
 private:
@@ -19,7 +19,7 @@ public:
 
   void execute() override
   {
-    static const char *TAG = __func__;
+    static const char *TAG = FUNCTION_NAME;
 
     uint8_t data[6];                   // Command code + parameters + CRC
     data[0] = 0x90;                    // Set Home command code
@@ -29,17 +29,7 @@ public:
     data[4] = homeSpeed & 0xFF;        // Low byte of home speed
     data[5] = endLimit;                // End limit: 0 = disable, 1 = enable
 
-    debug.info();
-    debug.add("ID: ");
-    debug.add(servo->getCanId(), 16);
-    debug.add(", Home Trigger: ");
-    debug.add(homeTrig ? "High" : "Low");
-    debug.add(", Home Direction: ");
-    debug.add(homeDir ? "CCW" : "CW");
-    debug.add(", Home Speed: ");
-    debug.add(homeSpeed);
-    debug.add(", End Limit: ");
-    debug.print(endLimit ? "Enabled" : "Disabled");
+    ESP_LOGI(TAG, "Setting Home: %s, %s, %u RPM, %s", homeTrig ? "High" : "Low", homeDir ? "CCW" : "CW", homeSpeed, endLimit ? "Enabled" : "Disabled");
 
     servo->sendCommand(data, 6);
   }

@@ -13,8 +13,7 @@ public:
 
   void execute() override
   {
-
-    static const char *TAG = __func__;
+    static const char *TAG = FUNCTION_NAME;
     uint8_t data[1] = {0xF1};
 
     ESP_LOGI(TAG, "Querying motor status");

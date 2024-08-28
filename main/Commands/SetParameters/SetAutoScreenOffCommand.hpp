@@ -2,8 +2,8 @@
 #define SET_AUTO_SCREEN_OFF_COMMAND_H
 
 #include "../Command.hpp"
-#include "..\..\CANServo.hpp"
-#include "..\..\Debug.hpp"
+#include "../../CANServo.hpp"
+#include "esp_log.h"
 
 class SetAutoScreenOffCommand : public Command
 {
@@ -17,14 +17,12 @@ public:
 
   void execute() override
   {
-    static const char *TAG = __func__;
+    static const char *TAG = FUNCTION_NAME;
     uint8_t data[2];
     data[0] = 0x87; // Set Auto Screen Off command code
     data[1] = enable;
 
-    debug.info();
-    debug.add("Setting Auto Screen Off: ");
-    debug.print(enable);
+    ESP_LOGI(TAG, "Setting Auto Screen Off: %u", enable);
 
     servo->sendCommand(data, 2);
   }

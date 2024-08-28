@@ -2,8 +2,8 @@
 #define SET_CURRENT_COMMAND_H
 
 #include "../Command.hpp"
-#include "..\..\CANServo.hpp"
-#include "..\..\Debug.hpp"
+#include "../../CANServo.hpp"
+#include "esp_log.h"
 
 class SetCurrentCommand : public Command
 {
@@ -17,15 +17,13 @@ public:
 
   void execute() override
   {
-    static const char *TAG = __func__;
+    static const char *TAG = FUNCTION_NAME;
     uint8_t data[3];
     data[0] = 0x83; // Set Current command code
     data[1] = (current >> 8) & 0xFF;
     data[2] = current & 0xFF;
 
-    debug.info();
-    debug.add("Setting Current: ");
-    debug.print(current);
+    ESP_LOGI(TAG, "Setting Current: %u", current);
 
     servo->sendCommand(data, 3);
   }

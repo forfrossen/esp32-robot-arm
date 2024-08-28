@@ -3,7 +3,7 @@
 
 #include "Command.hpp"
 #include "..\CANServo.hpp"
-#include "..\Debug.hpp"
+#include "esp_log.h"
 
 class StopMotorCommand : public Command
 {
@@ -15,11 +15,10 @@ public:
 
   void execute() override
   {
-    static const char *TAG = __func__;
+    static const char *TAG = FUNCTION_NAME;
     uint8_t data[4] = {0xF7};
 
-    debug.info();
-    debug.print("Stopping motor");
+    ESP_LOGI(TAG, "Stopping motor");
 
     servo->sendCommand(data, 1);
   }

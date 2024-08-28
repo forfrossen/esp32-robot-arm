@@ -5,31 +5,17 @@
 #include "Commands/Command.hpp"
 #include "Commands/Query/QueryMotorPositionCommand.hpp"
 
-void CANServo::taskEntryPoint(void *pvParameters)
-{
-  CANServo *instance = static_cast<CANServo *>(pvParameters);
-  instance->queryPosition(instance);
-}
-
-CANServo::CANServo(uint32_t id, CanBus *bus, CommandMapper *commandMapper) : canId(id), canBus(bus), commandMapper(commandMapper)
+void CANServo::vTask_queryPosition(void *pvParameters)
 {
   const char *TAG = FUNCTION_NAME;
-  ;
-  ESP_LOGI(TAG, "New Servo42D_CAN object created with CAN ID: %lu", canId);
-
-  xTaskCreatePinnedToCore(&CANServo::taskEntryPoint, "taskQueryMotorPosition", 512 * 2 * 4, this, 2, NULL, 0);
-}
-
-void CANServo::queryPosition(CANServo *servo)
-{
-  static const char *TAG = FUNCTION_NAME;
+  CANServo *instance = static_cast<CANServo *>(pvParameters);
   vTaskDelay(2000 / portTICK_PERIOD_MS);
 
   for (;;)
   {
     ESP_LOGI(TAG, "New iteration of taskQueryMotorPosition");
 
-    Command *queryMotorPosition = new QueryMotorPositionCommand(servo);
+    Command *queryMotorPosition = new QueryMotorPositionCommand(instance);
     queryMotorPosition->execute();
     delete queryMotorPosition;
 
@@ -37,14 +23,11 @@ void CANServo::queryPosition(CANServo *servo)
   }
 }
 
-void CANServo::registerResponseHandler(uint8_t commandCode, std::function<void(uint8_t *, uint8_t)> handler)
+CANServo::CANServo(uint32_t id, CanBus *bus, CommandMapper *commandMapper) : canId(id), canBus(bus), commandMapper(commandMapper)
 {
-  responseHandlerRegistry.registerHandler(commandCode, handler);
-}
-
-void CANServo::handleResponse(uint8_t *data, uint8_t length)
-{
-  responseHandlerRegistry.handleResponse(data, length);
+  const char *TAG = FUNCTION_NAME;
+  ESP_LOGI(TAG, "New Servo42D_CAN object created with CAN ID: %lu", canId);
+  xTaskCreatePinnedToCore(&CANServo::vTask_queryPosition, "taskQueryMotorPosition", 512 * 2 * 4, this, 2, NULL, 0);
 }
 
 void CANServo::handleReceivedMessage(can_frame *frame)

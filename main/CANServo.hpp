@@ -28,9 +28,6 @@ public:
   void handleSetWorkModeResponse(uint8_t *data, uint8_t length);
   void handleSetCurrentResponse(uint8_t *data, uint8_t length);
   void decodeMessage(const uint8_t *data, uint8_t length);
-  // static void taskFunctionWrapper(void *pvParameters);
-  void taskCheckForMessages();
-  void queryPosition(CANServo *servo);
 
   uint32_t getCanId() const { return canId; }
   uint32_t getCarryValue() const { return CarryValue; }
@@ -44,7 +41,7 @@ private:
   uint32_t CarryValue;
   uint16_t EncoderValue;
   std::string F5Status;
-  static void taskEntryPoint(void *pvParameters);
+  static void vTask_queryPosition(void *pvParameters);
 };
 
 #endif // CANSERVO_H

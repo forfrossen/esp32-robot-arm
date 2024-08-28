@@ -3,7 +3,7 @@
 
 #include "Command.hpp"
 #include "..\CANServo.hpp"
-#include "..\Debug.hpp"
+#include "esp_log.h"
 
 class RunMotorInSpeedModeCommand : public Command
 {
@@ -19,7 +19,8 @@ public:
 
   void execute() override
   {
-    static const char *TAG = __func__;
+    static const char *TAG = FUNCTION_NAME;
+
     if (speed > 3000)
     {
       speed = 3000;
@@ -31,13 +32,7 @@ public:
     data[2] = speed & 0xFF;
     data[3] = acceleration;
 
-    debug.info();
-    debug.add("Running motor in speed mode: ");
-    debug.add(speed);
-    debug.add(" RPM, acceleration: ");
-    debug.add(acceleration);
-    debug.add(", direction: ");
-    debug.print(direction ? "CW" : "CCW");
+    ESP_LOGI(TAG, "Running motor in speed mode: %u RPM, acceleration: %u, direction: %s", speed, acceleration, direction ? "CW" : "CCW");
 
     servo->sendCommand(data, 3);
   }

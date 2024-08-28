@@ -2,8 +2,8 @@
 #define SET_SUBDIVISION_COMMAND_H
 
 #include "../Command.hpp"
-#include "..\..\CANServo.hpp"
-#include "..\..\Debug.hpp"
+#include "../../CANServo.hpp"
+#include "esp_log.h"
 
 class SetSubdivisionCommand : public Command
 {
@@ -17,14 +17,12 @@ public:
 
   void execute() override
   {
-    static const char *TAG = __func__;
+    static const char *TAG = FUNCTION_NAME;
     uint8_t data[2];
     data[0] = 0x84; // Set Subdivision command code
     data[1] = subdivision;
 
-    debug.info();
-    debug.add("Setting Subdivision: ");
-    debug.print(subdivision);
+    ESP_LOGI(TAG, "Setting Subdivision: %u", subdivision);
 
     servo->sendCommand(data, 2);
   }

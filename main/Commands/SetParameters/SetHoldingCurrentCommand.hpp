@@ -2,8 +2,8 @@
 #define SET_HOLDING_CURRENT_COMMAND_H
 
 #include "..\Command.hpp"
-#include "..\..\CANServo.hpp"
-#include "..\..\Debug.hpp"
+#include "../../CANServo.hpp"
+#include "esp_log.h"
 
 class SetHoldingCurrentCommand : public Command
 {
@@ -17,14 +17,12 @@ public:
 
   void execute() override
   {
-    static const char *TAG = __func__;
+    static const char *TAG = FUNCTION_NAME;
     uint8_t data[2];
     data[0] = 0x9B; // Set Holding Current command code
     data[1] = holdCurrent;
 
-    debug.info();
-    debug.add("Setting Holding Current: ");
-    debug.print(holdCurrent);
+    ESP_LOGI(TAG, "Setting Holding Current: %u", holdCurrent);
 
     servo->sendCommand(data, 2);
   }

@@ -1,6 +1,8 @@
 #ifndef QUERYMOTORPOSITIONCOMMAND_HPP
 #define QUERYMOTORPOSITIONCOMMAND_HPP
 
+#include "esp_log.h"
+
 class QueryMotorPositionCommand : public Command
 {
 private:
@@ -11,7 +13,7 @@ public:
 
   void execute() override
   {
-    static const char *TAG = __func__;
+    static const char *TAG = FUNCTION_NAME;
     uint8_t data[1] = {0x30};
 
     ESP_LOGI(TAG, "Querying motor position");
@@ -19,5 +21,4 @@ public:
     servo->sendCommand(data, 1);
   }
 };
-
 #endif // QUERYMOTORPOSITIONCOMMAND_HPP

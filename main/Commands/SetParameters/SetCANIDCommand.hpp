@@ -2,8 +2,8 @@
 #define SET_CAN_ID_COMMAND_H
 
 #include "../Command.hpp"
-#include "..\..\CANServo.hpp"
-#include "..\..\Debug.hpp"
+#include "../../CANServo.hpp"
+#include "esp_log.h"
 
 class SetCANIDCommand : public Command
 {
@@ -17,15 +17,13 @@ public:
 
   void execute() override
   {
-    static const char *TAG = __func__;
+    static const char *TAG = FUNCTION_NAME;
     uint8_t data[3];
     data[0] = 0x8B; // Set CAN ID command code
     data[1] = (canId >> 8) & 0xFF;
     data[2] = canId & 0xFF;
 
-    debug.info();
-    debug.add("Setting CAN ID: ");
-    debug.print(canId, 16);
+    ESP_LOGI(TAG, "Setting CAN ID: %u", canId);
 
     servo->sendCommand(data, 3);
   }
