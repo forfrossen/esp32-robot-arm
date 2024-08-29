@@ -17,12 +17,12 @@ public:
 
   void execute() override
   {
-    static const char *TAG = FUNCTION_NAME;
+
     uint8_t data[2];
     data[0] = 0x8A; // Set CAN Bit Rate command code
     data[1] = bitRate;
 
-    ESP_LOGI(TAG, "Setting CAN Bit Rate: %u", bitRate);
+    ESP_LOGI(FUNCTION_NAME, "Setting CAN Bit Rate: %u", bitRate);
 
     servo->sendCommand(data, 2);
   }

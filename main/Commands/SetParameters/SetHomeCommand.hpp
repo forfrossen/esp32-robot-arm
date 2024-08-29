@@ -19,7 +19,6 @@ public:
 
   void execute() override
   {
-    static const char *TAG = FUNCTION_NAME;
 
     uint8_t data[6];                   // Command code + parameters + CRC
     data[0] = 0x90;                    // Set Home command code
@@ -29,7 +28,7 @@ public:
     data[4] = homeSpeed & 0xFF;        // Low byte of home speed
     data[5] = endLimit;                // End limit: 0 = disable, 1 = enable
 
-    ESP_LOGI(TAG, "Setting Home: %s, %s, %u RPM, %s", homeTrig ? "High" : "Low", homeDir ? "CCW" : "CW", homeSpeed, endLimit ? "Enabled" : "Disabled");
+    ESP_LOGI(FUNCTION_NAME, "Setting Home: %s, %s, %u RPM, %s", homeTrig ? "High" : "Low", homeDir ? "CCW" : "CW", homeSpeed, endLimit ? "Enabled" : "Disabled");
 
     servo->sendCommand(data, 6);
   }

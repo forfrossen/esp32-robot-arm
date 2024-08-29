@@ -17,7 +17,7 @@ public:
 
   void execute() override
   {
-    static const char *TAG = FUNCTION_NAME;
+
     uint8_t data[2];
     data[0] = 0x89; // Set Subdivision Interpolation command code
     data[1] = enable;
@@ -26,7 +26,7 @@ public:
     debug.add("Setting Subdivision Interpolation: ");
     debug.print(enable);
 
-    ESP_LOGI(TAG, "Setting Subdivision Interpolation: %u", enable);
+    ESP_LOGI(FUNCTION_NAME, "Setting Subdivision Interpolation: %u", enable);
 
     servo->sendCommand(data, 2);
   }

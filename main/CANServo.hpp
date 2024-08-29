@@ -4,18 +4,29 @@
 #include <map>
 #include <functional>
 #include <cstdint>
-#include "CanBus.h"
+#include "CanBus.hpp"
 #include "CommandMapper.hpp"
 #include "../components/mcp2515/include/mcp2515.h"
 #include "../components/mcp2515/include/can.h"
 #include "ResponseHandlerRegistry.hpp"
+#include "StateMachine.hpp"
+#include "freertos/FreeRTOS.h"
 
 #define MAX_PROCESSED_MESSAGES 10
 
 class CANServo
 {
 public:
-  CANServo(uint32_t id, CanBus *bus, CommandMapper *commandMapper);
+  enum class State
+  {
+    IDLE,
+    REQUESTED,
+    MOVING,
+    COMPLETED,
+    ERROR
+  };
+
+  CANServo(uint32_t id, CanBus *canBus, CommandMapper *commandMapper);
 
   void registerResponseHandler(uint8_t commandCode, std::function<void(uint8_t *, uint8_t)> handler);
   void handleResponse(uint8_t *data, uint8_t length);
@@ -33,15 +44,24 @@ public:
   uint32_t getCarryValue() const { return CarryValue; }
   uint16_t getEncoderValue() const { return EncoderValue; }
 
+  StateMachine::State getState() const { return stateMachine.getState(); }
+  void setState(StateMachine::State newState);
+
 private:
   uint32_t canId;
   CanBus *canBus;
+  QueueHandle_t &outQ;
+  QueueHandle_t inQ;
   CommandMapper *commandMapper;
   ResponseHandlerRegistry responseHandlerRegistry;
   uint32_t CarryValue;
   uint16_t EncoderValue;
   std::string F5Status;
+  StateMachine stateMachine;
+  void initializeStateMachine();
+
   static void vTask_queryPosition(void *pvParameters);
+  static void vTask_checkInQ(void *pvParameters);
 };
 
 #endif // CANSERVO_H

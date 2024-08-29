@@ -19,7 +19,6 @@ public:
 
   void execute() override
   {
-    static const char *TAG = FUNCTION_NAME;
 
     if (speed > 3000)
     {
@@ -32,9 +31,10 @@ public:
     data[2] = speed & 0xFF;
     data[3] = acceleration;
 
-    ESP_LOGI(TAG, "Running motor in speed mode: %u RPM, acceleration: %u, direction: %s", speed, acceleration, direction ? "CW" : "CCW");
+    ESP_LOGI(FUNCTION_NAME, "Running motor in speed mode: %u RPM, acceleration: %u, direction: %s", speed, acceleration, direction ? "CW" : "CCW");
 
     servo->sendCommand(data, 3);
+    servo->setState(StateMachine::State::REQUESTED);
   }
 };
 #endif // RUN_MOTOR_IN_SPEED_MODE_COMMAND_H

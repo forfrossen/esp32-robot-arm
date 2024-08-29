@@ -17,12 +17,12 @@ public:
 
   void execute() override
   {
-    static const char *TAG = FUNCTION_NAME;
+
     uint8_t data[2];
     data[0] = 0x85; // Set Enable Pin command code
     data[1] = enable;
 
-    ESP_LOGI(TAG, "Setting Enable Pin: %u", enable);
+    ESP_LOGI(FUNCTION_NAME, "Setting Enable Pin: %u", enable);
 
     servo->sendCommand(data, 2);
   }

@@ -2,16 +2,32 @@
 #define UTILS_HPP
 
 #include <string>
+#include <cstring>
 
 inline const char *findFunctionNameStart(const char *prettyFunction)
 {
   const char *start = prettyFunction;
-  while (*start != ' ' && *start != '(')
-    ++start; // Skip return type or move to the opening parenthesis
-  if (*start == ' ')
-    ++start; // Move past the space if it is a space
-  while (*start == ' ')
-    ++start; // Skip any additional spaces
+  const char *lastSpace = nullptr;
+  const char *doubleColon = strstr(prettyFunction, "::");
+
+  while (*start != '\0' && start < doubleColon)
+  {
+    if (*start == ' ')
+    {
+      lastSpace = start;
+    }
+    ++start;
+  }
+
+  if (lastSpace)
+  {
+    start = lastSpace + 1; // Move past the last space
+  }
+  else
+  {
+    start = prettyFunction; // No space found, start from the beginning
+  }
+
   return start;
 }
 
@@ -30,6 +46,7 @@ inline const char *getFunctionName(const char *prettyFunction)
 
   static thread_local char functionName[256];
   size_t length = end - start;
+
   if (length >= sizeof(functionName))
   {
     length = sizeof(functionName) - 1;

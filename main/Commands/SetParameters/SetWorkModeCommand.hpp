@@ -17,12 +17,12 @@ public:
 
   void execute() override
   {
-    static const char *TAG = FUNCTION_NAME;
+
     uint8_t data[2];
     data[0] = 0x82; // Set Work Mode command code
     data[1] = mode;
 
-    ESP_LOGI(TAG, "Setting Work Mode: %u", mode);
+    ESP_LOGI(FUNCTION_NAME, "Setting Work Mode: %u", mode);
 
     servo->sendCommand(data, 2);
   }

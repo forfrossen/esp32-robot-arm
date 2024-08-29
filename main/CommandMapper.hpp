@@ -101,20 +101,19 @@ public:
   // Declaration of the getCommandNameFromCode function
   void getCommandNameFromCode(uint8_t code, char *commandName)
   {
-    static const char *TAG = FUNCTION_NAME;
 
-    ESP_LOGI(TAG, "Looking for code: 0x%02X", code);
+    ESP_LOGI(FUNCTION_NAME, "Looking for code: 0x%02X", code);
 
     auto it = commandMap.find(code);
     if (it != commandMap.end())
     {
       std::strcpy(commandName, it->second);
-      ESP_LOGI(TAG, "Found command name: %s", commandName);
+      ESP_LOGI(FUNCTION_NAME, "Found command name: %s", commandName);
     }
     else
     {
       std::strcpy(commandName, unknownCommand);
-      ESP_LOGE(TAG, "Command not found, using unknown command");
+      ESP_LOGE(FUNCTION_NAME, "Command not found, using unknown command");
     }
   };
 };

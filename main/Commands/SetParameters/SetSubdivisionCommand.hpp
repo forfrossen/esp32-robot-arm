@@ -17,12 +17,12 @@ public:
 
   void execute() override
   {
-    static const char *TAG = FUNCTION_NAME;
+
     uint8_t data[2];
     data[0] = 0x84; // Set Subdivision command code
     data[1] = subdivision;
 
-    ESP_LOGI(TAG, "Setting Subdivision: %u", subdivision);
+    ESP_LOGI(FUNCTION_NAME, "Setting Subdivision: %u", subdivision);
 
     servo->sendCommand(data, 2);
   }

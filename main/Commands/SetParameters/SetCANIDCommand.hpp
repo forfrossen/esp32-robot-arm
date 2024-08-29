@@ -17,13 +17,13 @@ public:
 
   void execute() override
   {
-    static const char *TAG = FUNCTION_NAME;
+
     uint8_t data[3];
     data[0] = 0x8B; // Set CAN ID command code
     data[1] = (canId >> 8) & 0xFF;
     data[2] = canId & 0xFF;
 
-    ESP_LOGI(TAG, "Setting CAN ID: %u", canId);
+    ESP_LOGI(FUNCTION_NAME, "Setting CAN ID: %u", canId);
 
     servo->sendCommand(data, 3);
   }

@@ -13,10 +13,10 @@ public:
 
   void execute() override
   {
-    static const char *TAG = FUNCTION_NAME;
+
     uint8_t data[1] = {0xF1};
 
-    ESP_LOGI(TAG, "Querying motor status");
+    ESP_LOGI(FUNCTION_NAME, "Querying motor status");
 
     servo->sendCommand(data, 1);
   }

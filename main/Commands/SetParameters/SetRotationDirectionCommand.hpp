@@ -17,12 +17,12 @@ public:
 
   void execute() override
   {
-    static const char *TAG = FUNCTION_NAME;
+
     uint8_t data[2];
     data[0] = 0x86; // Set Rotation Direction command code
     data[1] = direction;
 
-    ESP_LOGI(TAG, "Setting Rotation Direction: %u", direction);
+    ESP_LOGI(FUNCTION_NAME, "Setting Rotation Direction: %u", direction);
 
     servo->sendCommand(data, 2);
   }

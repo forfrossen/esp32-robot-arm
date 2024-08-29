@@ -17,13 +17,13 @@ public:
 
   void execute() override
   {
-    static const char *TAG = FUNCTION_NAME;
+
     uint8_t data[3];
     data[0] = 0x83; // Set Current command code
     data[1] = (current >> 8) & 0xFF;
     data[2] = current & 0xFF;
 
-    ESP_LOGI(TAG, "Setting Current: %u", current);
+    ESP_LOGI(FUNCTION_NAME, "Setting Current: %u", current);
 
     servo->sendCommand(data, 3);
   }

@@ -17,12 +17,12 @@ public:
 
   void execute() override
   {
-    static const char *TAG = FUNCTION_NAME;
+
     uint8_t data[2];
     data[0] = 0x88; // Set Locked Rotor Protection command code
     data[1] = enable;
 
-    ESP_LOGI(TAG, "Setting Locked Rotor Protection: %u", enable);
+    ESP_LOGI(FUNCTION_NAME, "Setting Locked Rotor Protection: %u", enable);
 
     servo->sendCommand(data, 2);
   }
