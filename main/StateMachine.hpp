@@ -19,25 +19,23 @@ public:
     ERROR
   };
 
-  using Action = std::function<void()>;
-
   StateMachine();
 
   State getState() const;
   void setState(State newState);
-  void addTransition(State from, State to, Action action);
+  void addTransition(State from, State to[]);
 
 private:
   const char *stateToString(StateMachine::State state);
-  struct Transition
-  {
-    State from;
-    State to;
-    Action action;
-  };
 
   State state;
-  std::map<std::pair<State, State>, Action> transitions;
+
+  std::map<State, std::vector<State>> transitions = {
+      {State::IDLE, {State::REQUESTED, State::ERROR}},
+      {State::REQUESTED, {State::MOVING, State::ERROR}},
+      {State::MOVING, {State::COMPLETED, State::REQUESTED, State::ERROR}},
+      {State::COMPLETED, {State::IDLE, State::REQUESTED}},
+      {State::ERROR, {State::IDLE, State::REQUESTED}}};
 };
 
 #endif // STATEMACHINE_HPP

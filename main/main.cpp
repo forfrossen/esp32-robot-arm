@@ -31,29 +31,26 @@ const char compile_date[] = __DATE__ " " __TIME__;
 extern "C" void app_main()
 {
   esp_log_level_set("*", ESP_LOG_INFO);
+  /*
 
-  const std::map<std::string, esp_log_level_t> logLevels = {
-      {"CanBus::sendCANMessage", ESP_LOG_ERROR},
-      {"CanBus::vTask_handleReceiveQueue", ESP_LOG_INFO},
-      {"CANServo::vTask_queryPosition", ESP_LOG_ERROR},
-      {"CANServo::sendCommand", ESP_LOG_INFO},
-      {"CANServo::handleReceivedMessage", ESP_LOG_INFO},
-      {"CANServo::decodeMessage", ESP_LOG_INFO},
-      {"CANServo::handleQueryMotorPositionResponse", ESP_LOG_INFO},
-      {"QueryMotorPositionCommand::execute", ESP_LOG_ERROR},
-      {"CommandMapper::getCommandNameFromCode", ESP_LOG_ERROR},
-  };
-  // Apply log levels for specific tags
-  for (const auto &x : logLevels)
-  {
-    esp_log_level_set(x.first.c_str(), x.second);
-    ESP_LOGI("app_main", "Set log level for %s to %d", x.first.c_str(), x.second);
-  }
-
-  // Example log calls to check if they are being filtered correctly
-  ESP_LOGI("CommandMapper::getCommandNameFromCode", "This INFO message should not appear if the log level is set to ERROR.");
-  ESP_LOGE("CommandMapper::getCommandNameFromCode", "This ERROR message should appear.");
-
+    const std::map<std::string, esp_log_level_t> logLevels = {
+        {"CanBus::sendCANMessage", ESP_LOG_ERROR},
+        {"CanBus::vTask_handleReceiveQueue", ESP_LOG_INFO},
+        {"CANServo::vTask_queryPosition", ESP_LOG_ERROR},
+        {"CANServo::sendCommand", ESP_LOG_INFO},
+        {"CANServo::handleReceivedMessage", ESP_LOG_INFO},
+        {"CANServo::decodeMessage", ESP_LOG_INFO},
+        {"CANServo::handleQueryMotorPositionResponse", ESP_LOG_INFO},
+        {"QueryMotorPositionCommand::execute", ESP_LOG_ERROR},
+        {"CommandMapper::getCommandNameFromCode", ESP_LOG_ERROR},
+    };
+    // Apply log levels for specific tags
+    for (const auto &x : logLevels)
+    {
+      esp_log_level_set(x.first.c_str(), x.second);
+      ESP_LOGI("app_main", "Set log level for %s to %d", x.first.c_str(), x.second);
+    }
+  */
   ESP_LOGI(FUNCTION_NAME, "Hello world! Robot Arm starting up...");
 
   // Allow other core to finish initialization
@@ -81,6 +78,6 @@ extern "C" void app_main()
 
   // Initialisierung der Servo42D_CAN Instanzen
   // Servos[0x01] = new CANServo(0x01, canBus, commandMapper);
-  Servos[0x02] = new CANServo(0x02, canBus, commandMapper);
+  // Servos[0x02] = new CANServo(0x02, canBus, commandMapper);
   Servos[0x03] = new CANServo(0x03, canBus, commandMapper);
 }

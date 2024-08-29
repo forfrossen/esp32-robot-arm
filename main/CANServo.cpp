@@ -21,42 +21,36 @@ void CANServo::vTask_queryPosition(void *pvParameters)
     queryMotorPosition->execute();
     delete queryMotorPosition;
 
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    vTaskDelay(8000 / portTICK_PERIOD_MS);
   }
 }
 
-void CANServo::vTask_checkInQ(void *vParameters)
+void CANServo::vTask_handleInQ(void *vParameters)
 {
   CANServo *instance = static_cast<CANServo *>(vParameters);
   for (;;)
   {
     can_frame frame;
-    if (xQueuePeek(instance->inQ, &frame, (TickType_t)10) == pdPASS)
-    {
-      if (frame.can_id == instance->getCanId())
-      {
-        xQueueReceive(instance->inQ, &frame, 0);
-        instance->handleReceivedMessage(&frame);
-      }
-    }
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    xQueueReceive(instance->inQ, &frame, portMAX_DELAY);
+    ESP_LOGI(FUNCTION_NAME, "Received message from inQ with ID: %lu", frame.can_id);
+    instance->handleReceivedMessage(&frame);
   }
 }
 
-void task_sendPositon(void *pvParameters)
+void CANServo::task_sendPositon(void *pvParameters)
 {
   CANServo *instance = static_cast<CANServo *>(pvParameters);
-  vTaskDelay(4000 / portTICK_PERIOD_MS);
+  vTaskDelay(8000 / portTICK_PERIOD_MS);
   for (;;)
   {
     ESP_LOGI(FUNCTION_NAME, "New iteration of taskSendRandomTargetPositionCommands");
 
     // Generate random values
-    int randomValue = esp_random() % 100; // Random value between 0 and 99
-    int randomSpeed = esp_random() % 50;  // Random speed between 0 and 49
-    int randomAccel = esp_random() % 20;  // Random acceleration between 0 and 19
+    int randomValue = esp_random() % 1000; // Random value between 0 and 99
+    int randomSpeed = esp_random() % 2000;
+    int randomAccel = esp_random() % 255;
 
-    Command *setTargetPositionCommand = new SetTargetPositionCommand(instance, randomValue, randomSpeed, randomAccel, true);
+    Command *setTargetPositionCommand = new SetTargetPositionCommand(instance, randomValue * 1000, randomSpeed, randomAccel, true);
     setTargetPositionCommand->execute();
     delete setTargetPositionCommand;
 
@@ -64,48 +58,25 @@ void task_sendPositon(void *pvParameters)
   }
 }
 
-CANServo::CANServo(uint32_t id, CanBus *canbus, CommandMapper *commandMapper) : canBus(canbus), commandMapper(commandMapper)
+CANServo::CANServo(uint32_t id, CanBus *canBus, CommandMapper *commandMapper) : canId(id), canBus(canBus), commandMapper(commandMapper)
 {
-  initializeStateMachine();
 
   ESP_LOGI(FUNCTION_NAME, "New Servo42D_CAN object created with CAN ID: %lu", canId);
-
-  outQ = canBus->outQ;
   inQ = xQueueCreate(10, sizeof(can_frame));
   canBus->registerInQueue(canId, inQ);
 
-  xTaskCreatePinnedToCore(&CANServo::vTask_queryPosition, "taskQueryMotorPosition", 512 * 2 * 4, this, 2, NULL, 0);
-  xTaskCreatePinnedToCore(&CANServo::vTask_checkInQ, "taskQueryMotorPosition", 512 * 2 * 4, this, 2, NULL, 0);
-}
+  if (outQ == NULL)
+  {
+    ESP_LOGE(FUNCTION_NAME, "Error: outQ is NULL!");
+  }
+  else
+  {
+    outQ = canBus->outQ;
+  }
 
-void CANServo::initializeStateMachine()
-{
-  stateMachine.addTransition(StateMachine::State::IDLE, StateMachine::State::REQUESTED, []()
-                             { ESP_LOGI(FUNCTION_NAME, "Transitioning from IDLE to REQUESTED"); });
-
-  stateMachine.addTransition(StateMachine::State::REQUESTED, StateMachine::State::MOVING, []()
-                             { ESP_LOGI(FUNCTION_NAME, "Transitioning from REQUESTED to MOVING"); });
-
-  stateMachine.addTransition(StateMachine::State::MOVING, StateMachine::State::COMPLETED, []()
-                             { ESP_LOGI(FUNCTION_NAME, "Transitioning from MOVING to COMPLETED"); });
-
-  stateMachine.addTransition(StateMachine::State::ERROR, StateMachine::State::IDLE, []()
-                             { ESP_LOGI(FUNCTION_NAME, "Transitioning from ERROR to IDLE"); });
-
-  stateMachine.addTransition(StateMachine::State::IDLE, StateMachine::State::ERROR, []()
-                             { ESP_LOGI(FUNCTION_NAME, "Transitioning from IDLE to ERROR"); });
-
-  stateMachine.addTransition(StateMachine::State::REQUESTED, StateMachine::State::ERROR, []()
-                             { ESP_LOGI(FUNCTION_NAME, "Transitioning from REQUESTED to ERROR"); });
-
-  stateMachine.addTransition(StateMachine::State::MOVING, StateMachine::State::ERROR, []()
-                             { ESP_LOGI(FUNCTION_NAME, "Transitioning from MOVING to ERROR"); });
-
-  stateMachine.addTransition(StateMachine::State::COMPLETED, StateMachine::State::IDLE, []()
-                             { ESP_LOGI(FUNCTION_NAME, "Transitioning from COMPLETED to IDLE"); });
-
-  stateMachine.addTransition(StateMachine::State::COMPLETED, StateMachine::State::ERROR, []()
-                             { ESP_LOGI(FUNCTION_NAME, "Transitioning from COMPLETED to ERROR"); });
+  xTaskCreatePinnedToCore(&CANServo::vTask_queryPosition, "TASK_queryPosition", 1024 * 3, this, 2, NULL, 1);
+  xTaskCreatePinnedToCore(&CANServo::vTask_handleInQ, "TASK_handleInQ", 1024 * 3, this, 2, NULL, 0);
+  xTaskCreatePinnedToCore(&CANServo::task_sendPositon, "TASK_SendRandomTargetPositionCommands", 1024 * 3, this, 4, NULL, 1);
 }
 
 void CANServo::setState(StateMachine::State newState)
@@ -115,16 +86,12 @@ void CANServo::setState(StateMachine::State newState)
 
 void CANServo::handleReceivedMessage(can_frame *frame)
 {
-  if (frame->can_id != canId)
-    return;
 
   if (!frame->data[0])
   {
     ESP_LOGE(FUNCTION_NAME, "Error: code is empty!");
     return;
   }
-
-  ESP_LOGI(FUNCTION_NAME, "ID: %lu\t received message with code: %u", frame->can_id, frame->data[0]);
 
   char commandName[50];
   commandMapper->getCommandNameFromCode(frame->data[0], commandName);

@@ -30,16 +30,21 @@ StateMachine::State StateMachine::getState() const
 
 void StateMachine::setState(State newState)
 {
-  auto transition = transitions.find({state, newState});
-  if (transition != transitions.end())
+  auto it = transitions.find(state);
+  if (it == transitions.end())
   {
-    transition->second(); // Execute the action
+    ESP_LOGE(FUNCTION_NAME, "No transitions found for state %s", stateToString(state));
+    return;
   }
-  ESP_LOGI(FUNCTION_NAME, "State changed from %s to: %s", stateToString(state), stateToString(state));
-  state = newState;
-}
 
-void StateMachine::addTransition(State from, State to, Action action)
-{
-  transitions[{from, to}] = action;
+  const std::vector<State> &validTransitions = it->second;
+  if (std::find(validTransitions.begin(), validTransitions.end(), newState) != validTransitions.end())
+  {
+    state = newState;
+    ESP_LOGI(FUNCTION_NAME, "State changed to %s", stateToString(state));
+  }
+  else
+  {
+    ESP_LOGE(FUNCTION_NAME, "Invalid transition from %s to %s", stateToString(state), stateToString(newState));
+  }
 }

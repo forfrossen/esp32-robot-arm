@@ -50,7 +50,7 @@ public:
 private:
   uint32_t canId;
   CanBus *canBus;
-  QueueHandle_t &outQ;
+  QueueHandle_t outQ;
   QueueHandle_t inQ;
   CommandMapper *commandMapper;
   ResponseHandlerRegistry responseHandlerRegistry;
@@ -58,10 +58,11 @@ private:
   uint16_t EncoderValue;
   std::string F5Status;
   StateMachine stateMachine;
-  void initializeStateMachine();
+
+  static void vTask_handleInQ(void *pvParameters);
 
   static void vTask_queryPosition(void *pvParameters);
-  static void vTask_checkInQ(void *pvParameters);
+  static void task_sendPositon(void *pvParameters);
 };
 
 #endif // CANSERVO_H

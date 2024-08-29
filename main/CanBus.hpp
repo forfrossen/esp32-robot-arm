@@ -32,7 +32,7 @@ private:
   CAN_CLOCK canClock = MCP_8MHZ;
   spi_device_handle_t spi;
 
-  std::map<uint32_t, QueueHandle_t &> inQs;
+  std::map<uint32_t, QueueHandle_t> inQs;
   TaskHandle_t taskHandleCheckMessages;
 
   bool interrupt = false;
@@ -90,7 +90,7 @@ public:
   ERROR receiveCan(const MCP2515::RXBn rxBuffer);
   ERROR receiveCanFrame(const struct can_frame *frame);
 
-  void registerInQueue(canid_t canId, QueueHandle_t &inQ);
+  void registerInQueue(canid_t canId, QueueHandle_t inQ);
 
   bool isConnected();
   void begin();
@@ -99,7 +99,7 @@ public:
   static void vTask_handleSendQueue(void *pvParameters);
   static void vTask_handleReceiveQueue(void *pvParameters);
 
-  QueueHandle_t &outQ;
+  QueueHandle_t outQ;
 
   uint8_t calculateCRC(uint32_t id, const uint8_t *data, uint8_t length);
   bool sendCANMessage(can_frame frame);

@@ -172,24 +172,14 @@ CanBus::ERROR CanBus::setupQueues()
     xTaskCreatePinnedToCore(vTask_handleSendQueue, "OutQueueTask", 3000, this, 5, NULL, 0);
   }
 
+  xTaskCreatePinnedToCore(vTask_handleReceiveQueue, "InQueuesTask", 3000, this, 5, &taskHandleCheckMessages, 0);
+
   return ERROR_OK;
 }
 
-void CanBus::registerInQueue(canid_t canId, QueueHandle_t &inQ)
+void CanBus::registerInQueue(canid_t canId, QueueHandle_t inQ)
 {
-  inQ = xQueueCreate(10, sizeof(can_frame));
-
-  inQs.insert(std::make_pair(canId, inQ));
-
-  if (inQ == NULL)
-  {
-    ESP_LOGE(FUNCTION_NAME, "Failed to create response queue");
-    return ERROR_INQUEUE_NOT_INITIALIZED;
-  }
-  else
-  {
-    xTaskCreatePinnedToCore(vTask_handleReceiveQueue, "InQueueTask", 3000, this, 5, &taskHandleCheckMessages, 0);
-  }
+  inQs.emplace(canId, inQ);
 }
 
 CanBus::ERROR CanBus::disconnectCan()
@@ -269,16 +259,26 @@ void CanBus::vTask_handleReceiveQueue(void *pvParameters)
       continue;
     }
 
-    if (xQueueSendToBack(canBus->inQ, &frame, 0) == pdPASS)
+    if (!canBus->inQs.count(frame.can_id))
     {
-      ESP_LOGI(FUNCTION_NAME, "    ==> Received message enqueued successfully!");
+      ESP_LOGE(FUNCTION_NAME, "No queue for can_id %lu", frame.can_id);
       continue;
     }
     else
     {
-      ESP_LOGE(FUNCTION_NAME, "    ==> Error enqueuing received message!");
-      continue;
+      ESP_LOGI(FUNCTION_NAME, "Queue found for can_id %lu", frame.can_id);
+      if (xQueueSendToBack(canBus->inQs[frame.can_id], &frame, 0) == pdPASS)
+      {
+        ESP_LOGI(FUNCTION_NAME, "    ==> Received message enqueued successfully!");
+        continue;
+      }
+      else
+      {
+        ESP_LOGE(FUNCTION_NAME, "    ==> Error enqueuing received message!");
+        continue;
+      }
     }
+
     vTaskDelay(100 / portTICK_PERIOD_MS);
   }
 }
