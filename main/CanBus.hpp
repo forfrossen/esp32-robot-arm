@@ -34,6 +34,7 @@ private:
 
   std::map<uint32_t, QueueHandle_t> inQs;
   TaskHandle_t taskHandleCheckMessages;
+  TaskHandle_t taskHandleOutQueue;
 
   bool interrupt = false;
   bool _isConnected = false;

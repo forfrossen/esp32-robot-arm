@@ -169,10 +169,12 @@ CanBus::ERROR CanBus::setupQueues()
   }
   else
   {
-    xTaskCreatePinnedToCore(vTask_handleSendQueue, "OutQueueTask", 3000, this, 5, NULL, 0);
+    xTaskCreatePinnedToCore(vTask_handleSendQueue, "OutQueueTask", 3000, this, 5, &taskHandleOutQueue, 0);
+    configASSERT(taskHandleOutQueue);
   }
 
   xTaskCreatePinnedToCore(vTask_handleReceiveQueue, "InQueuesTask", 3000, this, 5, &taskHandleCheckMessages, 0);
+  configASSERT(taskHandleCheckMessages);
 
   return ERROR_OK;
 }
@@ -226,9 +228,9 @@ void CanBus::vTask_handleReceiveQueue(void *pvParameters)
       canBus->mcp2515->clearRXnOVR();
     }
 
-    if (irq & MCP2515::CANINTF_WAKIF)
+    if (irq & MCP2515::CANINTF_WAKIF || irq & MCP2515::CANINTF_MERRF)
     {
-      ESP_LOGE(FUNCTION_NAME, "MCP_WAKIF");
+      ESP_LOGE(FUNCTION_NAME, "MCP_WAKIF or MCP_MERRF");
       canBus->mcp2515->clearInterrupts();
     }
 
@@ -236,12 +238,6 @@ void CanBus::vTask_handleReceiveQueue(void *pvParameters)
     {
       ESP_LOGE(FUNCTION_NAME, "ERRIF");
       canBus->mcp2515->clearMERR();
-    }
-
-    if (irq & MCP2515::CANINTF_MERRF)
-    {
-      ESP_LOGE(FUNCTION_NAME, "MERRF");
-      canBus->mcp2515->clearInterrupts();
     }
 
     struct can_frame frame;
@@ -278,8 +274,6 @@ void CanBus::vTask_handleReceiveQueue(void *pvParameters)
         continue;
       }
     }
-
-    vTaskDelay(100 / portTICK_PERIOD_MS);
   }
 }
 
