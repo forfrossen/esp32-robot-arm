@@ -32,7 +32,7 @@ private:
 
   std::map<State, std::vector<State>> transitions = {
       {State::IDLE, {State::REQUESTED, State::ERROR}},
-      {State::REQUESTED, {State::MOVING, State::ERROR}},
+      {State::REQUESTED, {State::REQUESTED, State::MOVING, State::ERROR}},
       {State::MOVING, {State::COMPLETED, State::REQUESTED, State::ERROR}},
       {State::COMPLETED, {State::IDLE, State::REQUESTED}},
       {State::ERROR, {State::IDLE, State::REQUESTED}}};

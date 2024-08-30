@@ -1,5 +1,5 @@
-#ifndef SET_CAN_ID_COMMAND_H
-#define SET_CAN_ID_COMMAND_H
+#ifndef SET_identifier_COMMAND_H
+#define SET_identifier_COMMAND_H
 
 #include "../Command.hpp"
 #include "../../CANServo.hpp"
@@ -29,4 +29,4 @@ public:
   }
 };
 
-#endif // SET_CAN_ID_COMMAND_H
+#endif // SET_identifier_COMMAND_H

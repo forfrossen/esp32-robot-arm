@@ -21,7 +21,7 @@ void CANServo::vTask_queryPosition(void *pvParameters)
     queryMotorPosition->execute();
     delete queryMotorPosition;
 
-    vTaskDelay(8000 / portTICK_PERIOD_MS);
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
   }
 }
 
@@ -30,10 +30,10 @@ void CANServo::vTask_handleInQ(void *vParameters)
   CANServo *instance = static_cast<CANServo *>(vParameters);
   for (;;)
   {
-    can_frame frame;
-    xQueueReceive(instance->inQ, &frame, portMAX_DELAY);
-    ESP_LOGI(FUNCTION_NAME, "Received message from inQ with ID: %lu", frame.can_id);
-    instance->handleReceivedMessage(&frame);
+    twai_message_t twai_message_t;
+    xQueueReceive(instance->inQ, &twai_message_t, portMAX_DELAY);
+    ESP_LOGI(FUNCTION_NAME, "Received message from inQ with ID: %lu", twai_message_t.identifier);
+    instance->handleReceivedMessage(&twai_message_t);
   }
 }
 
@@ -62,7 +62,7 @@ CANServo::CANServo(uint32_t id, CanBus *canBus, CommandMapper *commandMapper) : 
 {
 
   ESP_LOGI(FUNCTION_NAME, "New Servo42D_CAN object created with CAN ID: %lu", canId);
-  inQ = xQueueCreate(10, sizeof(can_frame));
+  inQ = xQueueCreate(10, sizeof(twai_message_t));
   canBus->registerInQueue(canId, inQ);
 
   if (outQ == NULL)
@@ -84,22 +84,22 @@ void CANServo::setState(StateMachine::State newState)
   stateMachine.setState(newState);
 }
 
-void CANServo::handleReceivedMessage(can_frame *frame)
+void CANServo::handleReceivedMessage(twai_message_t *twai_message_t)
 {
 
-  if (!frame->data[0])
+  if (!twai_message_t->data[0])
   {
     ESP_LOGE(FUNCTION_NAME, "Error: code is empty!");
     return;
   }
 
   char commandName[50];
-  commandMapper->getCommandNameFromCode(frame->data[0], commandName);
+  commandMapper->getCommandNameFromCode(twai_message_t->data[0], commandName);
 
-  ESP_LOGI(FUNCTION_NAME, "ID: %lu\t length: %u\tcode: %d\tcommandName: %s", canId, frame->can_dlc, frame->data[0], commandName);
+  ESP_LOGI(FUNCTION_NAME, "ID: %lu\t length: %u\tcode: %d\tcommandName: %s", canId, twai_message_t->data_length_code, twai_message_t->data[0], commandName);
 
-  __u8 *data = frame->data;
-  uint8_t length = frame->can_dlc;
+  __u8 *data = twai_message_t->data;
+  uint8_t length = twai_message_t->data_length_code;
 
   if (data[0] == 0x30)
   {
@@ -144,11 +144,17 @@ void CANServo::sendCommand(uint8_t *data, uint8_t length)
   char commandName[50];
   commandMapper->getCommandNameFromCode(code, commandName);
 
-  ESP_LOGI(FUNCTION_NAME, "ID: %lu\t length: %u\t code: %d\t commandName: %s", canId, length, data[0], commandName);
-  can_frame frame;
-  frame.can_id = canId;
-  frame.can_dlc = length;
-  memcpy(frame.data, data, length);
+  ESP_LOGI(FUNCTION_NAME, "ID: %lu\t length: %u\t code: 0x%02X\t commandName: %s", canId, length, data[0], commandName);
+
+  twai_message_t msg = {};
+  msg.identifier = canId;
+  msg.data_length_code = length + 1;
+  msg.extd = 0;
+  msg.rtr = 0;
+  msg.ss = 0;
+  msg.dlc_non_comp = 0;
+
+  memcpy(&msg.data, data, length + 1);
 
   if (outQ == NULL)
   {
@@ -156,7 +162,7 @@ void CANServo::sendCommand(uint8_t *data, uint8_t length)
     return;
   }
 
-  if (xQueueSendToBack(outQ, &frame, 0) == pdPASS)
+  if (xQueueSendToBack(outQ, &msg, 0) == pdPASS)
   {
     ESP_LOGI(FUNCTION_NAME, "    ==> Message enqueued successfully!");
   }

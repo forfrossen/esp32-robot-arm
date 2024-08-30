@@ -30,7 +30,7 @@ public:
 
   void registerResponseHandler(uint8_t commandCode, std::function<void(uint8_t *, uint8_t)> handler);
   void handleResponse(uint8_t *data, uint8_t length);
-  void handleReceivedMessage(can_frame *frame);
+  void handleReceivedMessage(twai_message_t *twai_message_t);
   void sendCommand(uint8_t *data, uint8_t length);
   void handleQueryStatusResponse(const uint8_t *data, uint8_t length);
   void handleQueryMotorPositionResponse(const uint8_t *data, uint8_t length);
