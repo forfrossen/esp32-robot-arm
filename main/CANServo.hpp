@@ -56,6 +56,7 @@ private:
     uint16_t EncoderValue;
     std::string F5Status;
     StateMachine stateMachine;
+    int errorCounter = 0;
 
     static void vTask_handleInQ(void *pvParameters);
 

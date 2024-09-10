@@ -13,6 +13,12 @@ void CANServo::vTask_queryPosition(void *pvParameters)
 
     for (;;)
     {
+        if (instance->errorCounter > 5)
+        {
+            ESP_LOGE(FUNCTION_NAME, "Error counter exceeded 5. Stopping taskQueryMotorPosition");
+            vTaskDelete(NULL);
+        }
+
         ESP_LOGI(FUNCTION_NAME, "New iteration of taskQueryMotorPosition");
 
         Command *queryMotorPosition = new QueryMotorPositionCommand(instance);
@@ -67,9 +73,11 @@ CANServo::CANServo(uint32_t id, CanBus *canBus, CommandMapper *commandMapper) : 
     configASSERT(inQ);
     configASSERT(outQ);
 
+    // Temporary Tasks
     xTaskCreatePinnedToCore(&CANServo::vTask_queryPosition, "TASK_queryPosition", 1024 * 3, this, 2, NULL, 1);
-    xTaskCreatePinnedToCore(&CANServo::vTask_handleInQ, "TASK_handleInQ", 1024 * 3, this, 2, NULL, 0);
     xTaskCreatePinnedToCore(&CANServo::task_sendPositon, "TASK_SendRandomTargetPositionCommands", 1024 * 3, this, 4, NULL, 1);
+
+    xTaskCreatePinnedToCore(&CANServo::vTask_handleInQ, "TASK_handleInQ", 1024 * 3, this, 2, NULL, 0);
 
     configASSERT(vTask_queryPosition);
     configASSERT(vTask_handleInQ);
