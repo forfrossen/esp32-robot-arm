@@ -1,38 +1,88 @@
-#include "CanBus.hpp"
+#include "TWAIController.hpp"
 
-CanBus::CanBus()
+TWAIController &TWAIController::getInstance()
 {
-    twai_general_config_t generalConfig = TWAI_GENERAL_CONFIG_DEFAULT(GPIO_NUM_17, GPIO_NUM_16, TWAI_MODE_NORMAL);
-    twai_timing_config_t timingConfig = TWAI_TIMING_CONFIG_500KBITS();
-    twai_filter_config_t filterConfig = TWAI_FILTER_CONFIG_ACCEPT_ALL();
+    static TWAIController instance;
+    return instance;
+}
+
+TWAIController::TWAIController()
+{
+    esp_err_t ret;
+    if (!_isConnected)
+    {
+        ret = init();
+        if (ret != ESP_OK)
+        {
+            ESP_LOGE(FUNCTION_NAME, "TWAIController initialization failed.");
+        }
+    }
+    ESP_LOGI(FUNCTION_NAME, "TWAIController initialized.");
+
+    ret = setupQueues();
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(FUNCTION_NAME, "TWAIController setupQueues failed.");
+    }
+    ESP_LOGI(FUNCTION_NAME, "TWAIController setupQueues successful.");
+}
+
+// Initialisierung der TWAI-Schnittstelle
+esp_err_t TWAIController::init()
+{
+    if (_isConnected)
+    {
+        ESP_LOGW(FUNCTION_NAME, "TWAIController already initialized.");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    twai_general_config_t general_config = TWAI_GENERAL_CONFIG_DEFAULT(GPIO_NUM_17, GPIO_NUM_16, TWAI_MODE_NORMAL);
+    twai_timing_config_t timing_config = TWAI_TIMING_CONFIG_500KBITS();
+    twai_filter_config_t filter_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
     uint32_t alerts_to_enable = TWAI_ALERT_ALL;
 
-    ESP_ERROR_CHECK(twai_driver_install(&generalConfig, &timingConfig, &filterConfig));
+    esp_err_t ret = twai_driver_install(&general_config, &timing_config, &filter_config);
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(FUNCTION_NAME, "TWAI driver install failed.");
+        return ret;
+    }
     ESP_LOGI(FUNCTION_NAME, "Driver installed");
 
-    ESP_ERROR_CHECK(twai_reconfigure_alerts(alerts_to_enable, NULL));
+    ret = twai_reconfigure_alerts(alerts_to_enable, NULL);
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(FUNCTION_NAME, "Alerts reconfiguration failed.");
+        twai_driver_uninstall();
+        return ret;
+    }
     ESP_LOGI(FUNCTION_NAME, "Alerts reconfigured");
 
-    ESP_ERROR_CHECK(twai_start());
+    ret = twai_start();
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(FUNCTION_NAME, "TWAI start failed.");
+        twai_driver_uninstall();
+        return ret;
+    }
     ESP_LOGI(FUNCTION_NAME, "Driver started");
 
     _isConnected = true;
-
-    ESP_ERROR_CHECK(setupQueues());
+    return ESP_OK;
 }
 
-CanBus::~CanBus()
+TWAIController::~TWAIController()
 {
     _isConnected = false;
     twai_stop();
 }
 
-bool CanBus::isConnected()
+bool TWAIController::isConnected()
 {
     return _isConnected;
 }
 
-esp_err_t CanBus::setupQueues()
+esp_err_t TWAIController::setupQueues()
 {
     ESP_LOGI(FUNCTION_NAME, "Creating Queue Buffers");
     outQ = xQueueCreate(10, sizeof(twai_message_t));
@@ -53,21 +103,21 @@ esp_err_t CanBus::setupQueues()
     return ESP_OK;
 }
 
-esp_err_t CanBus::registerInQueue(uint32_t id, QueueHandle_t inQ)
+esp_err_t TWAIController::registerInQueue(uint32_t id, QueueHandle_t inQ)
 {
     inQs.emplace(id, inQ);
     return ESP_OK;
 }
 
-CanBus::ERROR CanBus::disconnectCan()
+TWAIController::ERROR TWAIController::disconnectCan()
 {
     _isConnected = false;
     return ERROR_OK;
 }
 
-void CanBus::vTask_ERROR(void *pvParameters)
+void TWAIController::vTask_ERROR(void *pvParameters)
 {
-    CanBus *canBus = static_cast<CanBus *>(pvParameters);
+    TWAIController *twai_controller = static_cast<TWAIController *>(pvParameters);
     while (1)
     {
         uint32_t alerts;
@@ -78,13 +128,13 @@ void CanBus::vTask_ERROR(void *pvParameters)
             continue;
         }
 
-        canBus->handleAlerts(alerts);
+        twai_controller->handleAlerts(alerts);
     }
 }
 
-void CanBus::vTask_Reception(void *pvParameters)
+void TWAIController::vTask_Reception(void *pvParameters)
 {
-    CanBus *canBus = static_cast<CanBus *>(pvParameters);
+    TWAIController *twai_controller = static_cast<TWAIController *>(pvParameters);
 
     while (1)
     {
@@ -93,10 +143,10 @@ void CanBus::vTask_Reception(void *pvParameters)
         assert(ret == ESP_OK); // Ensure the message was received successfully
         ESP_LOGI(FUNCTION_NAME, "Message received");
 
-        assert(canBus->inQs.count(msg.identifier) > 0);
+        assert(twai_controller->inQs.count(msg.identifier) > 0);
 
         ESP_LOGI(FUNCTION_NAME, "Queue found for identifier %lu", msg.identifier);
-        BaseType_t xStatus = xQueueSendToBack(canBus->inQs[msg.identifier], &msg, 0);
+        BaseType_t xStatus = xQueueSendToBack(twai_controller->inQs[msg.identifier], &msg, 0);
         assert(xStatus == pdPASS);
 
         ESP_LOGI(FUNCTION_NAME, "\t==> Received message enqueued successfully!");
@@ -106,7 +156,7 @@ void CanBus::vTask_Reception(void *pvParameters)
     }
 }
 
-void CanBus::calculateCRC(twai_message_t *msg)
+void TWAIController::calculateCRC(twai_message_t *msg)
 {
     uint8_t crc = msg->identifier;
 
@@ -118,17 +168,17 @@ void CanBus::calculateCRC(twai_message_t *msg)
     msg->data[msg->data_length_code - 1] = crc;
 }
 
-void CanBus::vTask_Transmission(void *pvParameters)
+void TWAIController::vTask_Transmission(void *pvParameters)
 {
-    CanBus *canBus = static_cast<CanBus *>(pvParameters);
+    TWAIController *twai_controller = static_cast<TWAIController *>(pvParameters);
 
     while (1)
     {
         twai_message_t outQmsg;
-        if (xQueueReceive(canBus->outQ, &outQmsg, portMAX_DELAY) == pdPASS)
+        if (xQueueReceive(twai_controller->outQ, &outQmsg, portMAX_DELAY) == pdPASS)
         {
             // outQmsg.data[outQmsg.data_length_code] = 32;
-            canBus->calculateCRC(&outQmsg);
+            twai_controller->calculateCRC(&outQmsg);
 
             ESP_LOGI(FUNCTION_NAME, "Sending message");
 
@@ -137,7 +187,7 @@ void CanBus::vTask_Transmission(void *pvParameters)
             if (result != ESP_OK)
             {
                 ESP_LOGE(FUNCTION_NAME, "\t==> Failed to send message");
-                canBus->handleTransmitError(&result);
+                twai_controller->handleTransmitError(&result);
                 continue;
             }
             ESP_LOGI(FUNCTION_NAME, "\t==> Successfully sent message");
@@ -145,7 +195,7 @@ void CanBus::vTask_Transmission(void *pvParameters)
     }
 }
 
-void CanBus::handleTransmitError(esp_err_t *error)
+void TWAIController::handleTransmitError(esp_err_t *error)
 {
     switch (*error)
     {
@@ -172,7 +222,7 @@ void CanBus::handleTransmitError(esp_err_t *error)
     assert(*error != ESP_ERR_INVALID_STATE);
 }
 
-void CanBus::handleAlerts(uint32_t alerts)
+void TWAIController::handleAlerts(uint32_t alerts)
 {
 
     ESP_LOGE(FUNCTION_NAME, "Alerts triggered: %lu", alerts);

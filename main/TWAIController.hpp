@@ -1,5 +1,5 @@
-#ifndef CANBUS_H
-#define CANBUS_H
+#ifndef TWAICONTROLLER_H
+#define TWAICONTROLLER_H
 
 #include "driver/gpio.h"
 #include "esp_err.h"
@@ -11,7 +11,7 @@
 #include <driver/twai.h>
 #include <map>
 
-class CanBus
+class TWAIController
 {
 private:
     std::map<uint32_t, QueueHandle_t> inQs;
@@ -29,6 +29,10 @@ private:
     static const uint16_t TIMESTAMP_LIMIT = 0xEA60;
 
 public:
+    // Singleton-Zugriffsmethode
+    static TWAIController &getInstance();
+    esp_err_t init();
+
     enum ERROR
     {
         ERROR_OK,
@@ -54,8 +58,8 @@ public:
         ERROR_MCP2515_MERRF,
     };
 
-    CanBus();
-    ~CanBus();
+    TWAIController();
+    ~TWAIController();
 
     ERROR connectCan();
     ERROR disconnectCan();

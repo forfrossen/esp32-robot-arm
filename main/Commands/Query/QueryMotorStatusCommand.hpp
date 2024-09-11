@@ -6,19 +6,19 @@
 class QueryMotorStatusCommand : public Command
 {
 private:
-  CANServo *servo;
+    MotorController *servo;
 
 public:
-  QueryMotorStatusCommand(CANServo *servo) : servo(servo) {}
+    QueryMotorStatusCommand(MotorController *servo) : servo(servo) {}
 
-  void execute() override
-  {
+    void execute() override
+    {
 
-    uint8_t data[1] = {0xF1};
+        uint8_t data[1] = {0xF1};
 
-    ESP_LOGI(FUNCTION_NAME, "Querying motor status");
+        ESP_LOGI(FUNCTION_NAME, "Querying motor status");
 
-    servo->sendCommand(data, 1);
-  }
+        servo->sendCommand(data, 1);
+    }
 };
 #endif // QUERYMOTORSTATUSCOMMAND_HPP

@@ -1,14 +1,14 @@
-#include "CANServo.hpp"
+#include "MotorController.hpp"
 #include "Commands/Command.hpp"
 #include "Commands/Query/QueryMotorPositionCommand.hpp"
 #include "Commands/SetTargetPositionCommand.hpp"
 #include "esp_random.h"
 #include "utils.hpp"
 
-void CANServo::vTask_queryPosition(void *pvParameters)
+void MotorController::vTask_queryPosition(void *pvParameters)
 {
 
-    CANServo *instance = static_cast<CANServo *>(pvParameters);
+    MotorController *instance = static_cast<MotorController *>(pvParameters);
     vTaskDelay(2000 / portTICK_PERIOD_MS);
 
     for (;;)
@@ -29,9 +29,9 @@ void CANServo::vTask_queryPosition(void *pvParameters)
     }
 }
 
-void CANServo::vTask_handleInQ(void *vParameters)
+void MotorController::vTask_handleInQ(void *vParameters)
 {
-    CANServo *instance = static_cast<CANServo *>(vParameters);
+    MotorController *instance = static_cast<MotorController *>(vParameters);
     for (;;)
     {
         twai_message_t twai_message_t;
@@ -41,9 +41,9 @@ void CANServo::vTask_handleInQ(void *vParameters)
     }
 }
 
-void CANServo::task_sendPositon(void *pvParameters)
+void MotorController::task_sendPositon(void *pvParameters)
 {
-    CANServo *instance = static_cast<CANServo *>(pvParameters);
+    MotorController *instance = static_cast<MotorController *>(pvParameters);
     vTaskDelay(8000 / portTICK_PERIOD_MS);
     for (;;)
     {
@@ -54,42 +54,47 @@ void CANServo::task_sendPositon(void *pvParameters)
         int randomSpeed = esp_random() % 2000;
         int randomAccel = esp_random() % 255;
 
-        Command *setTargetPositionCommand = new SetTargetPositionCommand(instance, randomValue * 1000, randomSpeed, randomAccel, true);
-        setTargetPositionCommand->execute();
-        delete setTargetPositionCommand;
+        // Command *setTargetPositionCommand = new SetTargetPositionCommand(instance, randomValue * 1000, randomSpeed, randomAccel, true);
+        // setTargetPositionCommand->execute();
+        // delete setTargetPositionCommand;
+
+        SetTargetPositionCommand setTargetPositionCommand = instance->setTargetPositionCommand(instance, randomValue * 1000, randomSpeed, randomAccel, true);
+        uint8_t *data = setTargetPositionCommand.getData();
+
+        instance->sendCommand(data, 7);
 
         vTaskDelay(4000 / portTICK_PERIOD_MS);
     }
 }
 
-CANServo::CANServo(uint32_t id, CanBus *canBus, CommandMapper *commandMapper) : canId(id), canBus(canBus), commandMapper(commandMapper)
+MotorController::MotorController(uint32_t id, TWAIController *twai_controller, CommandMapper *command_mapper) : canId(id), twai_controller(twai_controller), command_mapper(command_mapper)
 {
     ESP_LOGI(FUNCTION_NAME, "New Servo42D_CAN object created with CAN ID: %lu", canId);
 
     inQ = xQueueCreate(10, sizeof(twai_message_t));
-    ESP_ERROR_CHECK(canBus->registerInQueue(canId, inQ));
+    ESP_ERROR_CHECK(twai_controller->registerInQueue(canId, inQ));
 
-    outQ = canBus->outQ;
+    outQ = twai_controller->outQ;
     configASSERT(inQ);
     configASSERT(outQ);
 
     // Temporary Tasks
-    xTaskCreatePinnedToCore(&CANServo::vTask_queryPosition, "TASK_queryPosition", 1024 * 3, this, 2, NULL, 1);
-    xTaskCreatePinnedToCore(&CANServo::task_sendPositon, "TASK_SendRandomTargetPositionCommands", 1024 * 3, this, 4, NULL, 1);
+    xTaskCreatePinnedToCore(&MotorController::vTask_queryPosition, "TASK_queryPosition", 1024 * 3, this, 2, NULL, 1);
+    xTaskCreatePinnedToCore(&MotorController::task_sendPositon, "TASK_SendRandomTargetPositionCommands", 1024 * 3, this, 4, NULL, 1);
 
-    xTaskCreatePinnedToCore(&CANServo::vTask_handleInQ, "TASK_handleInQ", 1024 * 3, this, 2, NULL, 0);
+    xTaskCreatePinnedToCore(&MotorController::vTask_handleInQ, "TASK_handleInQ", 1024 * 3, this, 2, NULL, 0);
 
     configASSERT(vTask_queryPosition);
     configASSERT(vTask_handleInQ);
     configASSERT(task_sendPositon);
 }
 
-void CANServo::setState(StateMachine::State newState)
+void MotorController::setState(StateMachine::State newState)
 {
     stateMachine.setState(newState);
 }
 
-void CANServo::handleReceivedMessage(twai_message_t *twai_message_t)
+void MotorController::handleReceivedMessage(twai_message_t *twai_message_t)
 {
 
     if (!twai_message_t->data[0])
@@ -99,7 +104,7 @@ void CANServo::handleReceivedMessage(twai_message_t *twai_message_t)
     }
 
     char commandName[50];
-    commandMapper->getCommandNameFromCode(twai_message_t->data[0], commandName);
+    command_mapper->getCommandNameFromCode(twai_message_t->data[0], commandName);
 
     ESP_LOGI(FUNCTION_NAME, "ID: %lu\t length: %u\tcode: %d\tcommandName: %s", canId, twai_message_t->data_length_code, twai_message_t->data[0], commandName);
 
@@ -135,7 +140,7 @@ void CANServo::handleReceivedMessage(twai_message_t *twai_message_t)
     }
 }
 
-void CANServo::sendCommand(uint8_t *data, uint8_t length)
+void MotorController::sendCommand(uint8_t *data, uint8_t length)
 {
 
     uint8_t code = data[0];
@@ -147,7 +152,7 @@ void CANServo::sendCommand(uint8_t *data, uint8_t length)
     }
 
     char commandName[50];
-    commandMapper->getCommandNameFromCode(code, commandName);
+    command_mapper->getCommandNameFromCode(code, commandName);
 
     ESP_LOGI(FUNCTION_NAME, "ID: %lu\t length: %u\t code: 0x%02X\t commandName: %s", canId, length, data[0], commandName);
 
@@ -166,7 +171,7 @@ void CANServo::sendCommand(uint8_t *data, uint8_t length)
     ESP_LOGI(FUNCTION_NAME, "    ==> Message enqueued successfully!");
 }
 
-void CANServo::handleQueryStatusResponse(const uint8_t *data, uint8_t length)
+void MotorController::handleQueryStatusResponse(const uint8_t *data, uint8_t length)
 {
 
     uint8_t status = data[1];
@@ -207,7 +212,7 @@ void CANServo::handleQueryStatusResponse(const uint8_t *data, uint8_t length)
     }
 }
 
-void CANServo::handleQueryMotorPositionResponse(const uint8_t *data, uint8_t length)
+void MotorController::handleQueryMotorPositionResponse(const uint8_t *data, uint8_t length)
 {
 
     if (length != 8 || data[0] != 0x30)
@@ -223,7 +228,7 @@ void CANServo::handleQueryMotorPositionResponse(const uint8_t *data, uint8_t len
     ESP_LOGI(FUNCTION_NAME, "Encoder value: %u", EncoderValue);
 }
 
-void CANServo::handleSetPositionResponse(const uint8_t *data, uint8_t length)
+void MotorController::handleSetPositionResponse(const uint8_t *data, uint8_t length)
 {
 
     if (length != 3)
@@ -267,7 +272,7 @@ void CANServo::handleSetPositionResponse(const uint8_t *data, uint8_t length)
     ESP_LOGI(FUNCTION_NAME, "Set Position Response: %s", F5Status.c_str());
 }
 
-void CANServo::handeSetHomeResponse(const uint8_t *data, uint8_t length)
+void MotorController::handeSetHomeResponse(const uint8_t *data, uint8_t length)
 {
 
     if (length != 3)
@@ -306,7 +311,7 @@ void CANServo::handeSetHomeResponse(const uint8_t *data, uint8_t length)
     ESP_LOGI(FUNCTION_NAME, "CRC: %u", crc);
 }
 
-void CANServo::handleSetWorkModeResponse(uint8_t *data, uint8_t length)
+void MotorController::handleSetWorkModeResponse(uint8_t *data, uint8_t length)
 {
 
     if (data[1] == 1)
@@ -319,7 +324,7 @@ void CANServo::handleSetWorkModeResponse(uint8_t *data, uint8_t length)
     }
 }
 
-void CANServo::handleSetCurrentResponse(uint8_t *data, uint8_t length)
+void MotorController::handleSetCurrentResponse(uint8_t *data, uint8_t length)
 {
 
     if (data[1] == 1)

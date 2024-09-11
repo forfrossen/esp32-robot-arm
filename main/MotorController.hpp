@@ -1,10 +1,11 @@
-#ifndef SERVO42D_CAN_H
-#define SERVO42D_CAN_H
+#ifndef MOTORCONTROLLER_H
+#define MOTORCONTROLLER_H
 
-#include "CanBus.hpp"
 #include "CommandMapper.hpp"
+#include "Commands/SetTargetPositionCommand.hpp"
 #include "ResponseHandlerRegistry.hpp"
 #include "StateMachine.hpp"
+#include "TWAIController.hpp"
 #include "freertos/FreeRTOS.h"
 #include <cstdint>
 #include <functional>
@@ -12,7 +13,7 @@
 
 #define MAX_PROCESSED_MESSAGES 10
 
-class CANServo
+class MotorController
 {
 public:
     enum class State
@@ -24,7 +25,7 @@ public:
         ERROR
     };
 
-    CANServo(uint32_t id, CanBus *canBus, CommandMapper *commandMapper);
+    MotorController(uint32_t id, TWAIController *twai_controller, CommandMapper *command_mapper);
 
     void registerResponseHandler(uint8_t commandCode, std::function<void(uint8_t *, uint8_t)> handler);
     void handleResponse(uint8_t *data, uint8_t length);
@@ -38,7 +39,13 @@ public:
     void handleSetCurrentResponse(uint8_t *data, uint8_t length);
     void decodeMessage(const uint8_t *data, uint8_t length);
 
-    uint32_t getCanId() const { return canId; }
+    SetTargetPositionCommand setTargetPositionCommand(MotorController *servo, int position, int speed = 100, int acceleration = 5, bool absolute = true);
+
+    uint32_t
+    getCanId() const
+    {
+        return canId;
+    }
     uint32_t getCarryValue() const { return CarryValue; }
     uint16_t getEncoderValue() const { return EncoderValue; }
 
@@ -47,10 +54,10 @@ public:
 
 private:
     uint32_t canId;
-    CanBus *canBus;
+    TWAIController *twai_controller;
     QueueHandle_t outQ;
     QueueHandle_t inQ;
-    CommandMapper *commandMapper;
+    CommandMapper *command_mapper;
     ResponseHandlerRegistry responseHandlerRegistry;
     uint32_t CarryValue;
     uint16_t EncoderValue;

@@ -1,15 +1,17 @@
 #ifndef COMMANDMAPPER_H
 #define COMMANDMAPPER_H
-#include <map>
-#include <string>
+#include "esp_err.h"
+#include "esp_log.h"
+#include "utils.hpp"
 #include <cstdint>
 #include <cstring>
-#include "utils.hpp"
+#include <map>
+#include <string>
 
 struct CommandMap
 {
-  uint8_t commandNum;
-  const char *commandName;
+    uint8_t commandNum;
+    const char *commandName;
 };
 
 static const char cmd0[] = "Read encoder value (carry)";
@@ -53,68 +55,68 @@ class CommandMapper
 {
 
 private:
-  std::map<uint8_t, const char *>
-      commandMap;
+    std::map<uint8_t, const char *>
+        commandMap;
 
 public:
-  CommandMapper()
-  {
-    commandMap = {
-        {0x30, cmd0},
-        {0x31, cmd1},
-        {0x32, cmd2},
-        {0x33, cmd3},
-        {0x34, cmd4},
-        {0x39, cmd5},
-        {0x3A, cmd6},
-        {0x3B, cmd7},
-        {0x3D, cmd8},
-        {0x3E, cmd9},
-        {0x80, cmd10},
-        {0x82, cmd11},
-        {0x83, cmd12},
-        {0x84, cmd13},
-        {0x85, cmd14},
-        {0x86, cmd15},
-        {0x87, cmd16},
-        {0x88, cmd17},
-        {0x89, cmd18},
-        {0x8A, cmd19},
-        {0x8B, cmd20},
-        {0x8C, cmd21},
-        {0x8D, cmd22},
-        {0x8F, cmd23},
-        {0x90, cmd24},
-        {0x91, cmd25},
-        {0x92, cmd26},
-        {0x94, cmd27},
-        {0xF1, cmd28},
-        {0xF2, cmd29},
-        {0xF3, cmd30},
-        {0xF4, cmd31},
-        {0xF5, cmd32},
-        {0xF6, cmd33},
-        {0xF7, cmd34},
-        {0xFF, unknownCommand}};
-  }
-
-  // Declaration of the getCommandNameFromCode function
-  void getCommandNameFromCode(uint8_t code, char *commandName)
-  {
-
-    ESP_LOGI(FUNCTION_NAME, "Looking for code: 0x%02X", code);
-
-    auto it = commandMap.find(code);
-    if (it != commandMap.end())
+    CommandMapper()
     {
-      std::strcpy(commandName, it->second);
-      ESP_LOGI(FUNCTION_NAME, "Found command name: %s", commandName);
+        commandMap = {
+            {0x30, cmd0},
+            {0x31, cmd1},
+            {0x32, cmd2},
+            {0x33, cmd3},
+            {0x34, cmd4},
+            {0x39, cmd5},
+            {0x3A, cmd6},
+            {0x3B, cmd7},
+            {0x3D, cmd8},
+            {0x3E, cmd9},
+            {0x80, cmd10},
+            {0x82, cmd11},
+            {0x83, cmd12},
+            {0x84, cmd13},
+            {0x85, cmd14},
+            {0x86, cmd15},
+            {0x87, cmd16},
+            {0x88, cmd17},
+            {0x89, cmd18},
+            {0x8A, cmd19},
+            {0x8B, cmd20},
+            {0x8C, cmd21},
+            {0x8D, cmd22},
+            {0x8F, cmd23},
+            {0x90, cmd24},
+            {0x91, cmd25},
+            {0x92, cmd26},
+            {0x94, cmd27},
+            {0xF1, cmd28},
+            {0xF2, cmd29},
+            {0xF3, cmd30},
+            {0xF4, cmd31},
+            {0xF5, cmd32},
+            {0xF6, cmd33},
+            {0xF7, cmd34},
+            {0xFF, unknownCommand}};
     }
-    else
+
+    // Declaration of the getCommandNameFromCode function
+    void getCommandNameFromCode(uint8_t code, char *commandName)
     {
-      std::strcpy(commandName, unknownCommand);
-      ESP_LOGE(FUNCTION_NAME, "Command not found, using unknown command");
-    }
-  };
+
+        ESP_LOGI(FUNCTION_NAME, "Looking for code: 0x%02X", code);
+
+        auto it = commandMap.find(code);
+        if (it != commandMap.end())
+        {
+            std::strcpy(commandName, it->second);
+            ESP_LOGI(FUNCTION_NAME, "Found command name: %s", commandName);
+        }
+        else
+        {
+            std::strcpy(commandName, unknownCommand);
+            ESP_LOGE(FUNCTION_NAME, "Command not found, using unknown command");
+        }
+    };
 };
 #endif
