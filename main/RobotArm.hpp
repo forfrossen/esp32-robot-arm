@@ -12,12 +12,16 @@ private:
 
     // Kinematics kinematics;          // Klasse für kinematische Berechnungen
 public:
-    RobotArm(TWAIController *twai_controller, CommandMapper *command_mapper)
+    RobotArm()
     {
-        this->twai_controller = twai_controller;
-        this->command_mapper = command_mapper;
 
+        twai_controller = new TWAIController();
+        command_mapper = new CommandMapper();
+        vTaskDelay(pdMS_TO_TICKS(1000));
+
+        // Servos[0x01] = new MotorController(0x01, twai_controller, command_mapper);
         servos[2] = new MotorController(0x02, twai_controller, command_mapper);
+        // Servos[0x03] = new MotorController(0x03, twai_controller, command_mapper);
     }
 
     ~RobotArm()

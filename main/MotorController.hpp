@@ -2,7 +2,7 @@
 #define MOTORCONTROLLER_H
 
 #include "CommandMapper.hpp"
-#include "Commands/SetTargetPositionCommand.hpp"
+#include "Commands/TWAICommandFactory.hpp"
 #include "ResponseHandlerRegistry.hpp"
 #include "StateMachine.hpp"
 #include "TWAIController.hpp"
@@ -38,8 +38,8 @@ public:
     void handleSetWorkModeResponse(uint8_t *data, uint8_t length);
     void handleSetCurrentResponse(uint8_t *data, uint8_t length);
     void decodeMessage(const uint8_t *data, uint8_t length);
-
-    SetTargetPositionCommand setTargetPositionCommand(MotorController *servo, int position, int speed = 100, int acceleration = 5, bool absolute = true);
+    esp_err_t set_target_position();
+    esp_err_t query_position();
 
     uint32_t
     getCanId() const
@@ -64,6 +64,8 @@ private:
     std::string F5Status;
     StateMachine stateMachine;
     int errorCounter = 0;
+
+    TWAICommandFactory commandFactory;
 
     static void vTask_handleInQ(void *pvParameters);
 

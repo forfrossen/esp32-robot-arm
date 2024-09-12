@@ -5,6 +5,8 @@
 #include "esp_random.h"
 #include "utils.hpp"
 
+#define STEPS_PER_REVOLUTION 16384
+
 void MotorController::vTask_queryPosition(void *pvParameters)
 {
 
@@ -20,10 +22,7 @@ void MotorController::vTask_queryPosition(void *pvParameters)
         }
 
         ESP_LOGI(FUNCTION_NAME, "New iteration of taskQueryMotorPosition");
-
-        Command *queryMotorPosition = new QueryMotorPositionCommand(instance);
-        queryMotorPosition->execute();
-        delete queryMotorPosition;
+        instance->query_position();
 
         vTaskDelay(4000 / portTICK_PERIOD_MS);
     }
@@ -47,27 +46,19 @@ void MotorController::task_sendPositon(void *pvParameters)
     vTaskDelay(8000 / portTICK_PERIOD_MS);
     for (;;)
     {
+        if (instance->errorCounter > 5)
+        {
+            ESP_LOGE(FUNCTION_NAME, "Error counter exceeded 5. Stopping taskQueryMotorPosition");
+            vTaskDelete(NULL);
+        }
+
         ESP_LOGI(FUNCTION_NAME, "New iteration of taskSendRandomTargetPositionCommands");
-
-        // Generate random values
-        int randomValue = esp_random() % 1000; // Random value between 0 and 99
-        int randomSpeed = esp_random() % 2000;
-        int randomAccel = esp_random() % 255;
-
-        // Command *setTargetPositionCommand = new SetTargetPositionCommand(instance, randomValue * 1000, randomSpeed, randomAccel, true);
-        // setTargetPositionCommand->execute();
-        // delete setTargetPositionCommand;
-
-        SetTargetPositionCommand setTargetPositionCommand = instance->setTargetPositionCommand(instance, randomValue * 1000, randomSpeed, randomAccel, true);
-        uint8_t *data = setTargetPositionCommand.getData();
-
-        instance->sendCommand(data, 7);
-
-        vTaskDelay(4000 / portTICK_PERIOD_MS);
+        instance->set_target_position();
+        vTaskDelay(6000 / portTICK_PERIOD_MS);
     }
 }
 
-MotorController::MotorController(uint32_t id, TWAIController *twai_controller, CommandMapper *command_mapper) : canId(id), twai_controller(twai_controller), command_mapper(command_mapper)
+MotorController::MotorController(uint32_t id, TWAIController *twai_controller, CommandMapper *command_mapper) : canId(id), twai_controller(twai_controller), command_mapper(command_mapper), commandFactory(id, twai_controller->outQ)
 {
     ESP_LOGI(FUNCTION_NAME, "New Servo42D_CAN object created with CAN ID: %lu", canId);
 
@@ -87,6 +78,33 @@ MotorController::MotorController(uint32_t id, TWAIController *twai_controller, C
     configASSERT(vTask_queryPosition);
     configASSERT(vTask_handleInQ);
     configASSERT(task_sendPositon);
+}
+
+esp_err_t MotorController::set_target_position()
+{
+    int position = (esp_random() % 5) * STEPS_PER_REVOLUTION; // Random value between 0 and 99
+    int speed = esp_random() % 1600;
+    int acceleration = esp_random() % 255;
+    bool absolute = esp_random() % 2;
+
+    speed = 1600;
+    acceleration = 255;
+    absolute = false;
+
+    commandFactory.createSetTargetPositionCommand()
+        .set_position(position)
+        .set_speed(speed)
+        .set_acceleration(acceleration)
+        .set_absolute(absolute)
+        .build_twai_message_and_enqueue();
+
+    return ESP_OK;
+}
+
+esp_err_t MotorController::query_position()
+{
+    commandFactory.createQueryMotorPositionCommand().build_twai_message_and_enqueue();
+    return ESP_OK;
 }
 
 void MotorController::setState(StateMachine::State newState)
@@ -165,9 +183,15 @@ void MotorController::sendCommand(uint8_t *data, uint8_t length)
     msg.dlc_non_comp = 0;
     memcpy(&msg.data, data, length + 1);
 
-    configASSERT(outQ);
+    if (outQ == NULL)
+    {
+        ESP_LOGE(FUNCTION_NAME, "outQ is NULL");
+    }
 
-    ESP_ERROR_CHECK(xQueueSendToBack(outQ, &msg, 0));
+    if (xQueueSendToBack(outQ, &msg, 0) != pdTRUE)
+    {
+        ESP_LOGE(FUNCTION_NAME, " ==> Failed to enqueue message!");
+    }
     ESP_LOGI(FUNCTION_NAME, "    ==> Message enqueued successfully!");
 }
 

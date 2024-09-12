@@ -75,7 +75,6 @@ public:
 
     QueueHandle_t outQ;
 
-    void calculateCRC(twai_message_t *msg);
     bool transmit(twai_message_t msg);
     void handleTransmitError(esp_err_t *error);
     void handleAlerts(uint32_t alerts);

@@ -156,18 +156,6 @@ void TWAIController::vTask_Reception(void *pvParameters)
     }
 }
 
-void TWAIController::calculateCRC(twai_message_t *msg)
-{
-    uint8_t crc = msg->identifier;
-
-    for (uint8_t i = 0; i < msg->data_length_code - 1; i++)
-    {
-        crc += msg->data[i];
-    }
-
-    msg->data[msg->data_length_code - 1] = crc;
-}
-
 void TWAIController::vTask_Transmission(void *pvParameters)
 {
     TWAIController *twai_controller = static_cast<TWAIController *>(pvParameters);
@@ -178,7 +166,7 @@ void TWAIController::vTask_Transmission(void *pvParameters)
         if (xQueueReceive(twai_controller->outQ, &outQmsg, portMAX_DELAY) == pdPASS)
         {
             // outQmsg.data[outQmsg.data_length_code] = 32;
-            twai_controller->calculateCRC(&outQmsg);
+            // twai_controller->calculateCRC(&outQmsg);
 
             ESP_LOGI(FUNCTION_NAME, "Sending message");
 
@@ -265,6 +253,7 @@ void TWAIController::handleAlerts(uint32_t alerts)
     if (alerts & TWAI_ALERT_BUS_ERROR)
     {
         ESP_LOGE(FUNCTION_NAME, "A (Bit, Stuff, CRC, Form, ACK) error has occurred on the bus");
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
     if (alerts & TWAI_ALERT_TX_FAILED)
     {
