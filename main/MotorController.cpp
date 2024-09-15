@@ -1,7 +1,5 @@
 #include "MotorController.hpp"
 #include "Commands/Command.hpp"
-#include "Commands/Query/QueryMotorPositionCommand.hpp"
-#include "Commands/SetTargetPositionCommand.hpp"
 #include "esp_random.h"
 #include "utils.hpp"
 
@@ -91,20 +89,20 @@ esp_err_t MotorController::set_target_position()
     acceleration = 255;
     absolute = false;
 
-    commandFactory.createSetTargetPositionCommand()
-        .set_position(position)
-        .set_speed(speed)
-        .set_acceleration(acceleration)
-        .set_absolute(absolute)
-        .build_twai_message_and_enqueue();
+    esp_err_t ret = commandFactory.create_set_target_position_command()
+                        .set_position(position)
+                        .set_speed(speed)
+                        .set_acceleration(acceleration)
+                        .set_absolute(absolute)
+                        .build_and_send();
 
-    return ESP_OK;
+    return ret;
 }
 
 esp_err_t MotorController::query_position()
 {
-    commandFactory.createQueryMotorPositionCommand().build_twai_message_and_enqueue();
-    return ESP_OK;
+    esp_err_t ret = commandFactory.create_query_motor_position_command().build_and_send();
+    return ret;
 }
 
 void MotorController::setState(StateMachine::State newState)

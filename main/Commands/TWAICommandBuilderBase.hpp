@@ -11,11 +11,12 @@ class TWAICommandBuilderBase
 {
 protected:
     twai_message_t msg = {};
-    QueueHandle_t outQ;
     uint32_t id;
+    QueueHandle_t outQ;
+    uint8_t *data;
 
 public:
-    TWAICommandBuilderBase(uint32_t id, QueueHandle_t outQ) : outQ(outQ), id(id)
+    TWAICommandBuilderBase(uint32_t id, QueueHandle_t outQ) : id(id), outQ(outQ)
     {
         ESP_LOGI(FUNCTION_NAME, "TWAICommandBuilderBase constructor called");
 
@@ -23,17 +24,41 @@ public:
         msg.rtr = 0;
         msg.ss = 0;
         msg.dlc_non_comp = 0;
-        setIdentifier();
-    }
-
-    void setIdentifier()
-    {
         msg.identifier = id;
     }
 
-    void finalize_message(uint8_t *data)
+    ~TWAICommandBuilderBase()
+    {
+        delete[] data;
+    }
+
+    void setOutQ(QueueHandle_t outQ)
+    {
+        this->outQ = outQ;
+    }
+
+    void setId(uint32_t id)
+    {
+        this->id = id;
+    }
+
+    virtual esp_err_t build_twai_message() = 0;
+
+    esp_err_t build_and_send()
+    {
+        build_twai_message();
+        set_msg_data();
+        set_msg_data_crc();
+        return enqueueMessage();
+    }
+
+    void set_msg_data()
     {
         memcpy(&msg.data, data, msg.data_length_code);
+    }
+
+    void set_msg_data_crc()
+    {
         msg.data[msg.data_length_code - 1] = calculateCRC();
     }
 
