@@ -4,6 +4,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
 #include "utils.hpp"
 #include <driver/twai.h>
 
@@ -13,10 +14,12 @@ protected:
     twai_message_t msg = {};
     uint32_t id;
     QueueHandle_t outQ;
+    QueueHandle_t inQ;
     uint8_t *data;
+    uint8_t command_id;
 
 public:
-    TWAICommandBuilderBase(uint32_t id, QueueHandle_t outQ) : id(id), outQ(outQ)
+    TWAICommandBuilderBase(uint32_t id, QueueHandle_t outQ, QueueHandle_t inQ) : id(id), outQ(outQ), inQ(inQ)
     {
         ESP_LOGI(FUNCTION_NAME, "TWAICommandBuilderBase constructor called");
 
@@ -27,19 +30,24 @@ public:
         msg.identifier = id;
     }
 
+    void handle_inQ(void *pvParameters)
+    {
+        TWAICommandBuilderBase *instance = static_cast<TWAICommandBuilderBase *>(pvParameters);
+        for (;;)
+        {
+            twai_message_t twai_message_t;
+            xQueuePeek(instance->inQ, &twai_message_t, (TickType_t)0);
+            if (twai_message_t.identifier == instance->id && twai_message_t.data[0] == instance->command_id)
+            {
+                ESP_LOGI(FUNCTION_NAME, "Resolving message from inQ with ID: 0x%02lX for command: %02X", twai_message_t.identifier, twai_message_t.data[0]);
+                xQueueReceive(instance->inQ, &twai_message_t, (TickType_t)10);
+            }
+        }
+    }
+
     ~TWAICommandBuilderBase()
     {
         delete[] data;
-    }
-
-    void setOutQ(QueueHandle_t outQ)
-    {
-        this->outQ = outQ;
-    }
-
-    void setId(uint32_t id)
-    {
-        this->id = id;
     }
 
     virtual esp_err_t build_twai_message() = 0;
@@ -76,6 +84,8 @@ public:
 
     esp_err_t enqueueMessage()
     {
+        command_id = msg.data[0];
+
         if (!outQ)
         {
             ESP_LOGE(FUNCTION_NAME, "outQ is NULL");

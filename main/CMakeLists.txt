@@ -9,4 +9,5 @@ REQUIRES driver
 REQUIRES esp_event
 REQUIRES esp_wifi
 REQUIRES nvs_flash
-INCLUDE_DIRS "." "Commands" "Commands/Query" "Commands/SetParameters")
+REQUIRES esp_http_server
+INCLUDE_DIRS "." "Commands" "Commands/SetParameters")

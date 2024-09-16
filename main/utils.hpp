@@ -1,61 +1,70 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
-#include <string>
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
 #include <cstring>
+#include <string>
 
 inline const char *findFunctionNameStart(const char *prettyFunction)
 {
-  const char *start = prettyFunction;
-  const char *lastSpace = nullptr;
-  const char *doubleColon = strstr(prettyFunction, "::");
+    const char *start = prettyFunction;
+    const char *lastSpace = nullptr;
+    const char *doubleColon = strstr(prettyFunction, "::");
 
-  while (*start != '\0' && start < doubleColon)
-  {
-    if (*start == ' ')
+    while (*start != '\0' && start < doubleColon)
     {
-      lastSpace = start;
+        if (*start == ' ')
+        {
+            lastSpace = start;
+        }
+        ++start;
     }
-    ++start;
-  }
 
-  if (lastSpace)
-  {
-    start = lastSpace + 1; // Move past the last space
-  }
-  else
-  {
-    start = prettyFunction; // No space found, start from the beginning
-  }
+    if (lastSpace)
+    {
+        start = lastSpace + 1; // Move past the last space
+    }
+    else
+    {
+        start = prettyFunction; // No space found, start from the beginning
+    }
 
-  return start;
+    return start;
 }
 
 inline const char *findFunctionNameEnd(const char *start)
 {
-  const char *end = start;
-  while (*end != '(')
-    ++end; // Find the opening parenthesis
-  return end;
+    const char *end = start;
+    while (*end != '(')
+        ++end; // Find the opening parenthesis
+    return end;
 }
 
 inline const char *getFunctionName(const char *prettyFunction)
 {
-  const char *start = findFunctionNameStart(prettyFunction);
-  const char *end = findFunctionNameEnd(start);
+    const char *start = findFunctionNameStart(prettyFunction);
+    const char *end = findFunctionNameEnd(start);
 
-  static thread_local char functionName[256];
-  size_t length = end - start;
+    static thread_local char functionName[256];
+    size_t length = end - start;
 
-  if (length >= sizeof(functionName))
-  {
-    length = sizeof(functionName) - 1;
-  }
-  strncpy(functionName, start, length);
-  functionName[length] = '\0';
-  return functionName;
+    if (length >= sizeof(functionName))
+    {
+        length = sizeof(functionName) - 1;
+    }
+    strncpy(functionName, start, length);
+    functionName[length] = '\0';
+    return functionName;
 }
 
 #define FUNCTION_NAME getFunctionName(__PRETTY_FUNCTION__)
+
+struct TWAICommandFactorySettings
+{
+    uint32_t id;
+    QueueHandle_t outQ;
+    QueueHandle_t inQ = nullptr;
+};
 
 #endif // UTILS_HPP

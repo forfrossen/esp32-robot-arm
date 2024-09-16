@@ -9,12 +9,12 @@ class SetHomeParametersCommandBuilder : public TWAICommandBuilderBase
 {
 private:
     uint8_t direction;
-    uint8_t speed;
+    uint16_t speed;
     uint8_t acceleration;
     bool absolute;
 
 public:
-    SetHomeParametersCommandBuilder(uint32_t id, QueueHandle_t outQ) : TWAICommandBuilderBase(id, outQ)
+    SetHomeParametersCommandBuilder(uint32_t id, QueueHandle_t outQ, QueueHandle_t inQ) : TWAICommandBuilderBase(id, outQ, inQ)
     {
         msg.data_length_code = 8;
         data = new uint8_t[msg.data_length_code];
@@ -26,7 +26,7 @@ public:
         return *this;
     }
 
-    SetHomeParametersCommandBuilder &set_speed(uint8_t speed)
+    SetHomeParametersCommandBuilder &set_speed(uint16_t speed)
     {
         this->speed = speed;
         return *this;

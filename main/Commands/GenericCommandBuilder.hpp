@@ -16,13 +16,13 @@ private:
     std::vector<uint8_t> payload;
 
 public:
-    GenericCommandBuilder(uint32_t id, QueueHandle_t outQ, uint8_t cmdCode, std::vector<uint8_t> payload) : TWAICommandBuilderBase(id, outQ), commandCode(cmdCode), payload(payload)
+    GenericCommandBuilder(uint32_t id, QueueHandle_t outQ, QueueHandle_t inQ, uint8_t cmdCode, std::vector<uint8_t> payload) : TWAICommandBuilderBase(id, outQ, inQ), commandCode(cmdCode), payload(payload)
     {
         msg.data_length_code = 2 + payload.size();
         data = new uint8_t[msg.data_length_code];
     }
 
-    GenericCommandBuilder(uint32_t id, QueueHandle_t outQ, uint8_t cmdCode) : TWAICommandBuilderBase(id, outQ), commandCode(cmdCode)
+    GenericCommandBuilder(uint32_t id, QueueHandle_t outQ, QueueHandle_t inQ, uint8_t cmdCode) : TWAICommandBuilderBase(id, outQ, inQ), commandCode(cmdCode)
     {
         msg.data_length_code = 2;
         data = new uint8_t[msg.data_length_code];

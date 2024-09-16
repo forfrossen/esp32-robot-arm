@@ -1,11 +1,13 @@
 #include "RobotArm.hpp"
+#include "WebSocketServer.hpp"
 #include "Wifi.hpp"
 
 #include "esp_err.h"
+
 #include "esp_log.h"
+#include "esp_netif.h"
+
 #include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
-#include "freertos/task.h"
 #include "sdkconfig.h"
 #include "utils.hpp"
 #include <inttypes.h>
@@ -15,13 +17,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <string>
-;
 
 RobotArm *robot_arm;
 
 const char compile_date[] = __DATE__ " " __TIME__;
+
 extern "C" void app_main()
 {
+    static httpd_handle_t server = NULL;
     esp_err_t ret;
     esp_log_level_set("*", ESP_LOG_INFO);
     /*
@@ -54,6 +57,8 @@ extern "C" void app_main()
     ESP_LOGI(FUNCTION_NAME, "Hallo, Test from Arm !!!");
     ESP_LOGI(FUNCTION_NAME, "Build date: %s", compile_date);
 
+    ESP_ERROR_CHECK(esp_netif_init());
+
     // Allow other core to finish initialization
 
     robot_arm = new RobotArm();
@@ -69,4 +74,9 @@ extern "C" void app_main()
     ESP_LOGI(FUNCTION_NAME, "ESP_WIFI_MODE_STA");
 
     Wifi::wifi_init_sta();
+
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &connect_handler, &server));
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &disconnect_handler, &server));
+
+    server = start_webserver();
 }
