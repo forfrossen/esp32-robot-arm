@@ -1,5 +1,5 @@
-#ifndef RUN_MOTOR_IN_SPEED_MODE_COMMAND_BUILDER_H
-#define RUN_MOTOR_IN_SPEED_MODE_COMMAND_BUILDER_H
+#ifndef SET_HOME_COMMAND_BUILDER_H
+#define SET_HOME_COMMAND_BUILDER_H
 
 #include "TWAICommandBuilderBase.hpp"
 #include "esp_log.h"
@@ -11,6 +11,8 @@ private:
     uint8_t direction;
     uint8_t speed;
     uint8_t acceleration;
+    uint8_t end_limit;
+    uint8_t home_trigger;
     bool absolute;
 
 public:
@@ -18,6 +20,12 @@ public:
     {
         msg.data_length_code = 8;
         data = new uint8_t[msg.data_length_code];
+    }
+
+    SetHomeParametersCommandBuilder &set_end_limit(uint8_t end_limit)
+    {
+        this->end_limit = end_limit;
+        return *this;
     }
 
     SetHomeParametersCommandBuilder &set_direction(uint8_t direction)
@@ -51,16 +59,18 @@ public:
             speed = 3000;
         }
 
-        uint8_t data[3];
-        data[0] = 0xF6;
-        data[1] = (direction ? 0x80 : 0x00) | ((speed >> 8) & 0x0F);
-        data[2] = speed & 0xFF;
-        data[3] = acceleration;
+        uint8_t data[6];               // Command code + parameters + CRC
+        data[0] = 0x90;                // Set Home command code
+        data[1] = home_trigger;        // Home trigger level: 0 = Low, 1 = High
+        data[2] = direction;           // Home direction: 0 = CW, 1 = CCW
+        data[3] = (speed >> 8) & 0xFF; // High byte of home speed
+        data[4] = speed & 0xFF;        // Low byte of home speed
+        data[5] = end_limit;           // End limit: 0 = disable, 1 = enable
 
-        ESP_LOGI(FUNCTION_NAME, "Running motor in speed mode: %u RPM, acceleration: %u, direction: %s", speed, acceleration, direction ? "CW" : "CCW");
+        ESP_LOGI(FUNCTION_NAME, "Setting Home: %s, %s, %u RPM, %s", home_trigger ? "High" : "Low", direction ? "CCW" : "CW", speed, end_limit ? "Enabled" : "Disabled");
 
         return ESP_OK;
     }
 };
 
-#endif // RUN_MOTOR_IN_SPEED_MODE_COMMAND_BUILDER_H
+#endif

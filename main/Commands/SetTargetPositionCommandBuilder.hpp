@@ -3,8 +3,9 @@
 
 #include "TWAICommandBuilderBase.hpp"
 #include "esp_log.h"
+#include "freertos/queue.h"
 
-class SetTargetPositionCommandBuilder : public TWAICommandBuilderBase
+class SetHoldingCurrentCommandBuilder : public TWAICommandBuilderBase
 {
 private:
     uint32_t position;
@@ -13,31 +14,31 @@ private:
     bool absolute;
 
 public:
-    SetTargetPositionCommandBuilder(uint32_t id, QueueHandle_t outQ) : TWAICommandBuilderBase(id, outQ)
+    SetHoldingCurrentCommandBuilder(uint32_t id, QueueHandle_t outQ) : TWAICommandBuilderBase(id, outQ)
     {
         msg.data_length_code = 8;
         data = new uint8_t[msg.data_length_code];
     }
 
-    SetTargetPositionCommandBuilder &set_position(uint32_t position)
+    SetHoldingCurrentCommandBuilder &set_position(uint32_t position)
     {
         this->position = position;
         return *this;
     }
 
-    SetTargetPositionCommandBuilder &set_speed(uint8_t speed)
+    SetHoldingCurrentCommandBuilder &set_speed(uint8_t speed)
     {
         this->speed = speed;
         return *this;
     }
 
-    SetTargetPositionCommandBuilder &set_acceleration(uint8_t acceleration)
+    SetHoldingCurrentCommandBuilder &set_acceleration(uint8_t acceleration)
     {
         this->acceleration = acceleration;
         return *this;
     }
 
-    SetTargetPositionCommandBuilder &set_absolute(bool absolute)
+    SetHoldingCurrentCommandBuilder &set_absolute(bool absolute)
     {
         this->absolute = absolute;
         return *this;
