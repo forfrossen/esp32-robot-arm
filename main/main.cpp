@@ -34,11 +34,11 @@ extern "C" void app_main()
           {"TWAIController::vTask_Reception", ESP_LOG_INFO},
           {"MotorController::vTask_queryPosition", ESP_LOG_ERROR},
           {"MotorController::sendCommand", ESP_LOG_INFO},
-          {"MotorController::handleReceivedMessage", ESP_LOG_INFO},
+          {"MotorController::handle_received_message", ESP_LOG_INFO},
           {"MotorController::decodeMessage", ESP_LOG_INFO},
           {"MotorController::handleQueryMotorPositionResponse", ESP_LOG_INFO},
           {"QueryMotorPositionCommand::execute", ESP_LOG_ERROR},
-          {"CommandMapper::getCommandNameFromCode", ESP_LOG_ERROR},
+          {"CommandMapper::get_command_name_from_code", ESP_LOG_ERROR},
       };
       // Apply log levels for specific FUNCTION_NAMEs
       for (const auto &x : logLevels)

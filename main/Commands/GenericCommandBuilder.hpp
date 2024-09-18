@@ -2,49 +2,67 @@
 #define GENERIC_COMMAND_BUILDER_H
 
 #include "TWAICommandBuilderBase.hpp"
+#include "TypeDefs.hpp"
 #include "esp_err.h"
 #include "esp_log.h"
-#include "freertos/queue.h" // Add this line to include the header file that defines QueueHandle_t
+#include "freertos/queue.h"
 #include "utils.hpp"
 #include <driver/twai.h>
 #include <vector>
 
-class GenericCommandBuilder : public TWAICommandBuilderBase
+class GenericCommandBuilder : public TWAICommandBuilderBase<GenericCommandBuilder>
 {
 private:
-    uint8_t commandCode;
     std::vector<uint8_t> payload;
 
 public:
-    GenericCommandBuilder(uint32_t id, QueueHandle_t outQ, QueueHandle_t inQ, uint8_t cmdCode, std::vector<uint8_t> payload) : TWAICommandBuilderBase(id, outQ, inQ), commandCode(cmdCode), payload(payload)
+    GenericCommandBuilder(TWAICommandFactorySettings settings) : TWAICommandBuilderBase<GenericCommandBuilder>(settings)
     {
-        msg.data_length_code = 2 + payload.size();
-        data = new uint8_t[msg.data_length_code];
+        ESP_LOGI(FUNCTION_NAME, "GenericCommandBuilder constructor called");
     }
 
-    GenericCommandBuilder(uint32_t id, QueueHandle_t outQ, QueueHandle_t inQ, uint8_t cmdCode) : TWAICommandBuilderBase(id, outQ, inQ), commandCode(cmdCode)
+    GenericCommandBuilder &init_new_command(uint8_t cmd_code)
     {
-        msg.data_length_code = 2;
-        data = new uint8_t[msg.data_length_code];
+        set_command_code(cmd_code);
+        set_data_length_code(2);
+        create_msg_data();
+        return *this;
     }
 
-    esp_err_t build_twai_message() override
+    GenericCommandBuilder &init_new_command(uint8_t cmd_code, std::vector<uint8_t> payload)
     {
-        data[0] = commandCode;
-        if (payload.size() > 0)
-        {
-            set_payload();
-        }
-        set_msg_data_crc();
-        return ESP_OK;
+        set_command_code(cmd_code);
+        payload = payload;
+        set_data_length_code(2 + payload.size());
+        create_msg_data();
+        return *this;
     }
 
-    void set_payload()
+    // (uint8_t cmd_code, std::vector<uint8_t> payload) override
+    // {
+    //     set_command_code(cmd_code);
+    //     set_payload(payload);
+    //     set_data_length_code();
+    //     return *this;
+    // }
+
+    void set_data()
     {
         for (int i = 0; i < payload.size(); i++)
         {
             data[i + 1] = payload[i];
         }
+    }
+
+    esp_err_t build_twai_message() override
+    {
+        data[0] = command_code;
+        if (payload.size() > 0)
+        {
+            set_data();
+        }
+        set_msg_data_crc();
+        return ESP_OK;
     }
 };
 #endif // GENERIC_COMMAND_BUILDER_H

@@ -1,11 +1,12 @@
 #ifndef SET_HOME_COMMAND_BUILDER_H
 #define SET_HOME_COMMAND_BUILDER_H
 
+#include "../../TypeDefs.hpp"
 #include "TWAICommandBuilderBase.hpp"
 #include "esp_log.h"
 #include "freertos/queue.h"
 
-class SetHomeParametersCommandBuilder : public TWAICommandBuilderBase
+class SetHomeParametersCommandBuilder : public TWAICommandBuilderBase<SetHomeParametersCommandBuilder>
 {
 private:
     uint8_t direction;

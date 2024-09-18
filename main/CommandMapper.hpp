@@ -49,19 +49,19 @@ static const char cmd31[] = "Relative position control mode";
 static const char cmd32[] = "Absolute position control mode";
 static const char cmd33[] = "Speed mode command";
 static const char cmd34[] = "Stop motor";
-static const char unknownCommand[] = "Unknown command";
+static const char unknown_command[] = "Unknown command";
 
 class CommandMapper
 {
 
 private:
     std::map<uint8_t, const char *>
-        commandMap;
+        command_map;
 
 public:
     CommandMapper()
     {
-        commandMap = {
+        command_map = {
             {0x30, cmd0},
             {0x31, cmd1},
             {0x32, cmd2},
@@ -97,24 +97,24 @@ public:
             {0xF5, cmd32},
             {0xF6, cmd33},
             {0xF7, cmd34},
-            {0xFF, unknownCommand}};
+            {0xFF, unknown_command}};
     }
 
-    // Declaration of the getCommandNameFromCode function
-    void getCommandNameFromCode(uint8_t code, char *commandName)
+    // Declaration of the get_command_name_from_code function
+    void get_command_name_from_code(uint8_t code, char *commandName)
     {
 
         ESP_LOGI(FUNCTION_NAME, "Looking for code: 0x%02X", code);
 
-        auto it = commandMap.find(code);
-        if (it != commandMap.end())
+        auto it = command_map.find(code);
+        if (it != command_map.end())
         {
             std::strcpy(commandName, it->second);
             ESP_LOGI(FUNCTION_NAME, "Found command name: %s", commandName);
         }
         else
         {
-            std::strcpy(commandName, unknownCommand);
+            std::strcpy(commandName, unknown_command);
             ESP_LOGE(FUNCTION_NAME, "Command not found, using unknown command");
         }
     };

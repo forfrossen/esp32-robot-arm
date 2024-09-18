@@ -166,7 +166,7 @@ void TWAIController::vTask_Transmission(void *pvParameters)
         if (xQueueReceive(twai_controller->outQ, &outQmsg, portMAX_DELAY) == pdPASS)
         {
             // outQmsg.data[outQmsg.data_length_code] = 32;
-            // twai_controller->calculateCRC(&outQmsg);
+            // twai_controller->calculate_crc(&outQmsg);
 
             ESP_LOGI(FUNCTION_NAME, "Sending message");
 

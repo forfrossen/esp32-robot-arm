@@ -1,7 +1,4 @@
 #include "MotorController.hpp"
-#include "Commands/Command.hpp"
-#include "esp_random.h"
-#include "utils.hpp"
 
 #define STEPS_PER_REVOLUTION 16384
 
@@ -13,16 +10,29 @@ void MotorController::vTask_queryPosition(void *pvParameters)
 
     for (;;)
     {
-
-        ESP_LOGE(FUNCTION_NAME, "Error counter exceeded 5. Stopping taskQueryMotorPosition");
-        vTaskDelete(NULL);
-
-        ESP_LOGI(FUNCTION_NAME, "New iteration of taskQueryMotorPosition");
-        instance->query_position();
+        if (instance->is_healthy() == ESP_OK)
+        {
+            ESP_LOGI(FUNCTION_NAME, "New iteration of taskQueryMotorPosition");
+            instance->command_factory->create_query_motor_position_command().build_and_send();
+        }
 
         vTaskDelay(4000 / portTICK_PERIOD_MS);
     }
 }
+
+void MotorController::vTask_queryStatus(void *pvParameters)
+{
+    MotorController *instance = static_cast<MotorController *>(pvParameters);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    for (;;)
+    {
+        ESP_LOGI(FUNCTION_NAME, "New iteration of taskQueryStatus");
+        instance->query_status();
+
+        vTaskDelay(4000 / portTICK_PERIOD_MS);
+    }
+}
+
 /*
 void MotorController::vTask_handleInQ(void *vParameters)
 {
@@ -32,47 +42,85 @@ void MotorController::vTask_handleInQ(void *vParameters)
         twai_message_t twai_message_t;
         xQueueReceive(instance->inQ, &twai_message_t, portMAX_DELAY);
         ESP_LOGI(FUNCTION_NAME, "Received message from inQ with ID: %lu", twai_message_t.identifier);
-        instance->handleReceivedMessage(&twai_message_t);
+        instance->handle_received_message(&twai_message_t);
     }
 }
 */
 
-void MotorController::task_sendPositon(void *pvParameters)
+void MotorController::vtask_sendPositon(void *pvParameters)
 {
     MotorController *instance = static_cast<MotorController *>(pvParameters);
     vTaskDelay(8000 / portTICK_PERIOD_MS);
     for (;;)
     {
-        ESP_LOGE(FUNCTION_NAME, "Error counter exceeded 5. Stopping taskQueryMotorPosition");
-        vTaskDelete(NULL);
+        vTaskDelay(6000 / portTICK_PERIOD_MS);
+
+        if (instance->is_healthy() != ESP_OK)
+        {
+            continue;
+        }
 
         ESP_LOGI(FUNCTION_NAME, "New iteration of taskSendRandomTargetPositionCommands");
         instance->set_target_position();
-        vTaskDelay(6000 / portTICK_PERIOD_MS);
     }
 }
 
-MotorController::MotorController(uint32_t id, TWAIController *twai_controller, CommandMapper *command_mapper) : canId(id), twai_controller(twai_controller), command_mapper(command_mapper), commandFactory(TWAICommandFactorySettings{id, twai_controller->outQ})
+MotorController::MotorController(uint32_t id,
+                                 SharedServices *shared_services,
+                                 SpecificServices *specific_services) : canId(id),
+                                                                        twai_controller(shared_services->twai_controller),
+                                                                        command_mapper(shared_services->command_mapper),
+                                                                        outQ(shared_services->twai_controller->outQ),
+                                                                        inQ(specific_services->inQ),
+                                                                        command_factory(specific_services->command_factory)
 {
     ESP_LOGI(FUNCTION_NAME, "New Servo42D_CAN object created with CAN ID: %lu", canId);
 
-    inQ = xQueueCreate(10, sizeof(twai_message_t));
-    ESP_ERROR_CHECK(twai_controller->registerInQueue(canId, inQ));
+    BaseType_t xReturned;
+    if (inQ == nullptr)
+    {
+        ESP_LOGE(FUNCTION_NAME, "inQ is nullptr");
+    }
+    if (outQ == nullptr)
+    {
+        ESP_LOGE(FUNCTION_NAME, "outQ is nullptr");
+    }
 
-    outQ = twai_controller->outQ;
-    configASSERT(inQ);
-    configASSERT(outQ);
-    commandFactory.set_inQ(inQ);
+    command_factory->query_motor_status_command().build_and_send();
 
-    // Temporary Tasks
-    xTaskCreatePinnedToCore(&MotorController::vTask_queryPosition, "TASK_queryPosition", 1024 * 3, this, 2, NULL, 1);
-    xTaskCreatePinnedToCore(&MotorController::task_sendPositon, "TASK_SendRandomTargetPositionCommands", 1024 * 3, this, 4, NULL, 1);
+    xReturned = xTaskCreatePinnedToCore(&MotorController::vTask_queryPosition, "TASK_queryPosition", 1024 * 3, this, 2, NULL, 1);
+    if (xReturned != pdPASS)
+    {
+        ESP_LOGE(FUNCTION_NAME, "Failed to create task_queryPosition");
+    }
 
+    xReturned = xTaskCreatePinnedToCore(&MotorController::vtask_sendPositon, "TASK_SendRandomTargetPositionCommands", 1024 * 3, this, 4, NULL, 1);
+    if (xReturned != pdPASS)
+    {
+        ESP_LOGE(FUNCTION_NAME, "Failed to create task_sendRandomTargetPositionCommands");
+    }
     // xTaskCreatePinnedToCore(&MotorController::vTask_handleInQ, "TASK_handleInQ", 1024 * 3, this, 2, NULL, 0);
 
     configASSERT(vTask_queryPosition);
     // configASSERT(vTask_handleInQ);
-    configASSERT(task_sendPositon);
+    configASSERT(vtask_sendPositon);
+}
+
+esp_err_t MotorController::is_healthy()
+{
+    return ESP_OK;
+    command_factory->query_motor_status_command().build_and_send();
+    if (!is_connected)
+    {
+        ESP_LOGE(FUNCTION_NAME, "Motor is not connected.");
+        return ESP_FAIL;
+    }
+    if (error_counter > 5)
+    {
+        ESP_LOGE(FUNCTION_NAME, "Error counter exceeded 5.");
+        return ESP_FAIL;
+    }
+    return ESP_OK;
 }
 
 esp_err_t MotorController::set_target_position()
@@ -86,8 +134,8 @@ esp_err_t MotorController::set_target_position()
     acceleration = 255;
     absolute = false;
 
-    setState(StateMachine::State::REQUESTED);
-    esp_err_t ret = commandFactory.create_set_target_position_command()
+    set_state(StateMachine::State::REQUESTED);
+    esp_err_t ret = command_factory->create_set_target_position_command()
                         .set_position(position)
                         .set_speed(speed)
                         .set_acceleration(acceleration)
@@ -97,19 +145,24 @@ esp_err_t MotorController::set_target_position()
     return ret;
 }
 
-esp_err_t MotorController::query_position()
+esp_err_t MotorController::query_status()
 {
-    esp_err_t ret = commandFactory.create_query_motor_position_command().build_and_send();
-    esp_err_t ret2 = commandFactory.query_motor_status_command().build_and_send();
+    esp_err_t ret = command_factory->query_motor_status_command().build_and_send();
     return ret;
 }
 
-void MotorController::setState(StateMachine::State newState)
+esp_err_t MotorController::query_position()
 {
-    stateMachine.setState(newState);
+    esp_err_t ret = command_factory->create_query_motor_position_command().build_and_send();
+    return ret;
 }
 
-void MotorController::handleReceivedMessage(twai_message_t *msg)
+void MotorController::set_state(StateMachine::State newState)
+{
+    state_machine.set_state(newState);
+}
+
+void MotorController::handle_received_message(twai_message_t *msg)
 {
 
     if (!msg->data[0])
@@ -119,7 +172,7 @@ void MotorController::handleReceivedMessage(twai_message_t *msg)
     }
 
     char commandName[50];
-    command_mapper->getCommandNameFromCode(msg->data[0], commandName);
+    command_mapper->get_command_name_from_code(msg->data[0], commandName);
 
     ESP_LOGI(FUNCTION_NAME, "ID: %lu\t length: %u\tcode: %d\tcommandName: %s", canId, msg->data_length_code, msg->data[0], commandName);
 
@@ -137,7 +190,7 @@ void MotorController::handleReceivedMessage(twai_message_t *msg)
         handleSetPositionResponse(msg);
         break;
     case 0xF1:
-        handleQueryStatusResponse(msg);
+        handle_query_status_response(msg);
         break;
     case 0x90:
         handeSetHomeResponse(msg);
@@ -152,43 +205,45 @@ void MotorController::handleReceivedMessage(twai_message_t *msg)
     }
 }
 
-void MotorController::handleQueryStatusResponse(twai_message_t *msg)
+void MotorController::handle_query_status_response(twai_message_t *msg)
 {
     uint8_t status = msg->data[1];
-
+    is_connected = true;
     switch (status)
     {
     case 0:
-        ESP_LOGI(FUNCTION_NAME, "Abfrage fehlgeschlagen");
-        motorMovingState = MotorMovingState::UNKNOWN;
+        ESP_LOGE(FUNCTION_NAME, "Abfrage fehlgeschlagen");
+        is_connected = false;
+        motor_moving_state = MotorMovingState::UNKNOWN;
         break;
     case 1:
         ESP_LOGI(FUNCTION_NAME, "Motor gestoppt");
-        motorMovingState = MotorMovingState::STOPPED;
+        motor_moving_state = MotorMovingState::STOPPED;
         break;
     case 2:
         ESP_LOGI(FUNCTION_NAME, "Motor beschleunigt");
-        motorMovingState = MotorMovingState::ACCELERATING;
+        motor_moving_state = MotorMovingState::ACCELERATING;
         break;
     case 3:
         ESP_LOGI(FUNCTION_NAME, "Motor verlangsamt");
-        motorMovingState = MotorMovingState::DECELERATING;
+        motor_moving_state = MotorMovingState::DECELERATING;
         break;
     case 4:
         ESP_LOGI(FUNCTION_NAME, "Motor volle Geschwindigkeit");
-        motorMovingState = MotorMovingState::FULL_SPEED;
+        motor_moving_state = MotorMovingState::FULL_SPEED;
         break;
     case 5:
         ESP_LOGI(FUNCTION_NAME, "Motor fährt nach Hause");
-        motorMovingState = MotorMovingState::HOMING;
+        motor_moving_state = MotorMovingState::HOMING;
         break;
     case 6:
         ESP_LOGI(FUNCTION_NAME, "Motor wird kalibriert");
-        motorMovingState = MotorMovingState::CALIBRATING;
+        motor_moving_state = MotorMovingState::CALIBRATING;
         break;
     default:
         ESP_LOGI(FUNCTION_NAME, "Unbekannter Status");
-        motorMovingState = MotorMovingState::UNKNOWN;
+        is_connected = false;
+        motor_moving_state = MotorMovingState::UNKNOWN;
         break;
     }
 }
@@ -230,23 +285,23 @@ void MotorController::handleSetPositionResponse(twai_message_t *msg)
     {
     case 0:
         F5Status = "Run failed";
-        stateMachine.setState(StateMachine::State::ERROR);
+        state_machine.set_state(StateMachine::State::ERROR);
         break;
     case 1:
         F5Status = "Run starting";
-        stateMachine.setState(StateMachine::State::MOVING);
+        state_machine.set_state(StateMachine::State::MOVING);
         break;
     case 2:
         F5Status = "Run complete";
-        stateMachine.setState(StateMachine::State::COMPLETED);
+        state_machine.set_state(StateMachine::State::COMPLETED);
         break;
     case 3:
         F5Status = "End limit stopped";
-        stateMachine.setState(StateMachine::State::COMPLETED);
+        state_machine.set_state(StateMachine::State::COMPLETED);
         break;
     default:
         F5Status = "Unknown status";
-        stateMachine.setState(StateMachine::State::ERROR);
+        state_machine.set_state(StateMachine::State::ERROR);
         break;
     }
 

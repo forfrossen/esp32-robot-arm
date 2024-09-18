@@ -1,8 +1,6 @@
 #ifndef UTILS_HPP
 #define UTILS_HPP
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
 #include <cstring>
 #include <string>
 
@@ -59,12 +57,5 @@ inline const char *getFunctionName(const char *prettyFunction)
 }
 
 #define FUNCTION_NAME getFunctionName(__PRETTY_FUNCTION__)
-
-struct TWAICommandFactorySettings
-{
-    uint32_t id;
-    QueueHandle_t outQ;
-    QueueHandle_t inQ = nullptr;
-};
 
 #endif // UTILS_HPP
