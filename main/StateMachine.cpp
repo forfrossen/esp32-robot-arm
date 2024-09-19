@@ -6,7 +6,7 @@
     case value:                    \
         return #value
 
-const char *StateMachine::stateToString(StateMachine::State state)
+const char *MotorControllerFSM::stateToString(MotorControllerFSM::State state)
 {
 
     switch (state)
@@ -21,14 +21,14 @@ const char *StateMachine::stateToString(StateMachine::State state)
     }
 }
 
-StateMachine::StateMachine() : state(State::IDLE) {}
+MotorControllerFSM::MotorControllerFSM() : state(State::IDLE) {}
 
-StateMachine::State StateMachine::get_state() const
+MotorControllerFSM::State MotorControllerFSM::get_state() const
 {
     return state;
 }
 
-void StateMachine::set_state(State newState)
+void MotorControllerFSM::set_state(State newState)
 {
     auto it = transitions.find(state);
     if (it == transitions.end())

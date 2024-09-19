@@ -13,7 +13,7 @@ void MotorController::vTask_queryPosition(void *pvParameters)
         if (instance->is_healthy() == ESP_OK)
         {
             ESP_LOGI(FUNCTION_NAME, "New iteration of taskQueryMotorPosition");
-            instance->command_factory->create_query_motor_position_command().build_and_send();
+            instance->query_position();
         }
 
         vTaskDelay(4000 / portTICK_PERIOD_MS);
@@ -66,13 +66,12 @@ void MotorController::vtask_sendPositon(void *pvParameters)
 }
 
 MotorController::MotorController(uint32_t id,
-                                 SharedServices *shared_services,
-                                 SpecificServices *specific_services) : canId(id),
-                                                                        twai_controller(shared_services->twai_controller),
-                                                                        command_mapper(shared_services->command_mapper),
-                                                                        outQ(shared_services->twai_controller->outQ),
-                                                                        inQ(specific_services->inQ),
-                                                                        command_factory(specific_services->command_factory)
+                                 const SpecificServices *specific_services) : canId(id),
+                                                                              command_lifecycle_registry(specific_services->command_lifecycle_registry),
+                                                                              command_factory(specific_services->command_factory),
+                                                                              command_mapper(specific_services->command_mapper),
+                                                                              outQ(specific_services->outQ),
+                                                                              inQ(specific_services->inQ)
 {
     ESP_LOGI(FUNCTION_NAME, "New Servo42D_CAN object created with CAN ID: %lu", canId);
 
@@ -86,7 +85,7 @@ MotorController::MotorController(uint32_t id,
         ESP_LOGE(FUNCTION_NAME, "outQ is nullptr");
     }
 
-    command_factory->query_motor_status_command().build_and_send();
+    command_factory->query_motor_status_command()->build_and_send();
 
     xReturned = xTaskCreatePinnedToCore(&MotorController::vTask_queryPosition, "TASK_queryPosition", 1024 * 3, this, 2, NULL, 1);
     if (xReturned != pdPASS)
@@ -106,10 +105,15 @@ MotorController::MotorController(uint32_t id,
     configASSERT(vtask_sendPositon);
 }
 
+esp_err_t MotorController::query_position()
+{
+    command_factory->query_motor_position_command()->build_and_send();
+    return ESP_OK;
+}
+
 esp_err_t MotorController::is_healthy()
 {
-    return ESP_OK;
-    command_factory->query_motor_status_command().build_and_send();
+    command_factory->query_motor_status_command()->build_and_send();
     if (!is_connected)
     {
         ESP_LOGE(FUNCTION_NAME, "Motor is not connected.");
@@ -134,30 +138,19 @@ esp_err_t MotorController::set_target_position()
     acceleration = 255;
     absolute = false;
 
-    set_state(StateMachine::State::REQUESTED);
-    esp_err_t ret = command_factory->create_set_target_position_command()
-                        .set_position(position)
-                        .set_speed(speed)
-                        .set_acceleration(acceleration)
-                        .set_absolute(absolute)
-                        .build_and_send();
+    set_state(MotorControllerFSM::State::REQUESTED);
+    esp_err_t ret = command_factory->create_set_target_position_command()->set_position(position).set_speed(speed).set_acceleration(acceleration).set_absolute(absolute).build_and_send();
 
     return ret;
 }
 
 esp_err_t MotorController::query_status()
 {
-    esp_err_t ret = command_factory->query_motor_status_command().build_and_send();
+    esp_err_t ret = command_factory->query_motor_status_command()->build_and_send();
     return ret;
 }
 
-esp_err_t MotorController::query_position()
-{
-    esp_err_t ret = command_factory->create_query_motor_position_command().build_and_send();
-    return ret;
-}
-
-void MotorController::set_state(StateMachine::State newState)
+void MotorController::set_state(MotorControllerFSM::State newState)
 {
     state_machine.set_state(newState);
 }
@@ -171,10 +164,10 @@ void MotorController::handle_received_message(twai_message_t *msg)
         return;
     }
 
-    char commandName[50];
-    command_mapper->get_command_name_from_code(msg->data[0], commandName);
+    char command_name[50];
+    command_mapper->get_command_name_from_code(msg->data[0], command_name);
 
-    ESP_LOGI(FUNCTION_NAME, "ID: %lu\t length: %u\tcode: %d\tcommandName: %s", canId, msg->data_length_code, msg->data[0], commandName);
+    ESP_LOGI(FUNCTION_NAME, "ID: %lu\t length: %u\tcode: %d\tcommandName: %s", canId, msg->data_length_code, msg->data[0], command_name);
 
     uint8_t *data = msg->data;
     uint8_t length = msg->data_length_code;
@@ -285,23 +278,23 @@ void MotorController::handleSetPositionResponse(twai_message_t *msg)
     {
     case 0:
         F5Status = "Run failed";
-        state_machine.set_state(StateMachine::State::ERROR);
+        state_machine.set_state(MotorControllerFSM::State::ERROR);
         break;
     case 1:
         F5Status = "Run starting";
-        state_machine.set_state(StateMachine::State::MOVING);
+        state_machine.set_state(MotorControllerFSM::State::MOVING);
         break;
     case 2:
         F5Status = "Run complete";
-        state_machine.set_state(StateMachine::State::COMPLETED);
+        state_machine.set_state(MotorControllerFSM::State::COMPLETED);
         break;
     case 3:
         F5Status = "End limit stopped";
-        state_machine.set_state(StateMachine::State::COMPLETED);
+        state_machine.set_state(MotorControllerFSM::State::COMPLETED);
         break;
     default:
         F5Status = "Unknown status";
-        state_machine.set_state(StateMachine::State::ERROR);
+        state_machine.set_state(MotorControllerFSM::State::ERROR);
         break;
     }
 

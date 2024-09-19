@@ -12,156 +12,160 @@ class TWAICommandFactory
 {
 private:
     TWAICommandFactorySettings settings;
-
     SetTargetPositionCommandBuilder *setTargetPositionCommandBuilder;
     RunMotorInSpeedModeCommandBuilder *runMotorInSpeedModeCommandBuilder;
 
 public:
     // Konstruktor setzt den Identifier
-    TWAICommandFactory(TWAICommandFactorySettings &settings) : settings(settings)
+    TWAICommandFactory(const TWAICommandFactorySettings &settings) : settings(settings)
     {
         ESP_LOGI(FUNCTION_NAME, "TWAICommandFactory constructor called");
     }
 
-    SetTargetPositionCommandBuilder create_set_target_position_command()
+    SetTargetPositionCommandBuilder *create_set_target_position_command()
     {
         ESP_LOGI(FUNCTION_NAME, "Creating Set Target Position Command");
-        setTargetPositionCommandBuilder = new SetTargetPositionCommandBuilder(settings);
-        return setTargetPositionCommandBuilder->init_new_command();
+        return new SetTargetPositionCommandBuilder(settings);
     }
 
-    RunMotorInSpeedModeCommandBuilder create_run_motor_in_speed_mode_command()
+    RunMotorInSpeedModeCommandBuilder *run_motor_in_speed_mode_command()
     {
         ESP_LOGI(FUNCTION_NAME, "Creating Run Motor In Speed Mode Command");
-        runMotorInSpeedModeCommandBuilder = new RunMotorInSpeedModeCommandBuilder(settings);
-        return runMotorInSpeedModeCommandBuilder->init_new_command();
+        return new RunMotorInSpeedModeCommandBuilder(settings);
     }
 
-    GenericCommandBuilder *generate_new_generic_builder()
+    GenericCommandBuilder *generate_new_generic_builder(uint8_t command_code)
     {
         ESP_LOGI(FUNCTION_NAME, "Creating Generic Command Builder");
-        GenericCommandBuilder *genericCommandBuilder = new GenericCommandBuilder(settings);
-        return genericCommandBuilder;
+        GenericCommandBuilder *generic_command_builder = new GenericCommandBuilder(settings, command_code);
+        return generic_command_builder;
     }
 
-    GenericCommandBuilder stop_motor_command()
+    GenericCommandBuilder *generate_new_generic_builder(uint8_t command_code, std::vector<uint8_t> payload)
+    {
+        ESP_LOGI(FUNCTION_NAME, "Creating Generic Command Builder");
+        GenericCommandBuilder *generic_command_builder = new GenericCommandBuilder(settings, command_code, payload);
+        return generic_command_builder;
+    }
+
+    GenericCommandBuilder *stop_motor_command()
     {
         ESP_LOGI(FUNCTION_NAME, "Stopping motor");
-        return generate_new_generic_builder()->init_new_command(0xF7);
+        return generate_new_generic_builder(0xF7);
     }
 
-    GenericCommandBuilder create_query_motor_position_command()
+    TWAICommandBuilderBase<GenericCommandBuilder> *query_motor_position_command()
     {
         ESP_LOGI(FUNCTION_NAME, "Querying motor position");
-        return generate_new_generic_builder()->init_new_command(0x30);
+        return generate_new_generic_builder(0x30);
     }
 
-    GenericCommandBuilder read_encoder_value()
+    TWAICommandBuilderBase<GenericCommandBuilder> *read_encoder_value()
     {
         ESP_LOGI(FUNCTION_NAME, "Reading encoder value");
-        return generate_new_generic_builder()->init_new_command(0x31);
+        return generate_new_generic_builder(0x31);
     }
 
-    GenericCommandBuilder read_realtime_speed_command()
+    TWAICommandBuilderBase<GenericCommandBuilder> *read_realtime_speed_command()
     {
         ESP_LOGI(FUNCTION_NAME, "Reading Realtime Speed");
-        return generate_new_generic_builder()->init_new_command(0x32);
+        return generate_new_generic_builder(0x32);
     }
 
-    GenericCommandBuilder read_pulses_received_command()
+    TWAICommandBuilderBase<GenericCommandBuilder> *read_pulses_received_command()
     {
         ESP_LOGI(FUNCTION_NAME, "Reading Pulses Received");
-        return generate_new_generic_builder()->init_new_command(0x33);
+        return generate_new_generic_builder(0x33);
     }
 
-    GenericCommandBuilder read_shaft_angle_error_command()
+    TWAICommandBuilderBase<GenericCommandBuilder> *read_shaft_angle_error_command()
     {
         ESP_LOGI(FUNCTION_NAME, "Reading Shaft Angle Error");
-        return generate_new_generic_builder()->init_new_command(0x39);
+        return generate_new_generic_builder(0x39);
     }
 
-    GenericCommandBuilder read_enable_pins_state_command()
+    TWAICommandBuilderBase<GenericCommandBuilder> *read_enable_pins_state_command()
     {
         ESP_LOGI(FUNCTION_NAME, "Reading Enable Pins State");
-        return generate_new_generic_builder()->init_new_command(0x3A);
+        return generate_new_generic_builder(0x3A);
     }
 
-    GenericCommandBuilder release_shaft_protection_command()
+    TWAICommandBuilderBase<GenericCommandBuilder> *release_shaft_protection_command()
     {
         ESP_LOGI(FUNCTION_NAME, "Releasing Shaft Protection");
-        return generate_new_generic_builder()->init_new_command(0x3D);
+        return generate_new_generic_builder(0x3D);
     }
 
-    GenericCommandBuilder read_shaft_protection_state_command()
+    TWAICommandBuilderBase<GenericCommandBuilder> *read_shaft_protection_state_command()
     {
         ESP_LOGI(FUNCTION_NAME, "Reading Shaft Protection State");
-        return generate_new_generic_builder()->init_new_command(0x3E);
+        return generate_new_generic_builder(0x3E);
     }
 
-    GenericCommandBuilder calibrate_encoder_command()
+    TWAICommandBuilderBase<GenericCommandBuilder> *calibrate_encoder_command()
     {
         ESP_LOGI(FUNCTION_NAME, "Calibrating encoder");
-        return generate_new_generic_builder()->init_new_command(0x80);
+        return generate_new_generic_builder(0x80);
     }
 
-    GenericCommandBuilder set_enable_pin_command(uint8_t enable)
+    TWAICommandBuilderBase<GenericCommandBuilder> *set_enable_pin_command(uint8_t enable)
     {
         ESP_LOGI(FUNCTION_NAME, "Setting enable pin %s", enable ? "on" : "off");
-        return generate_new_generic_builder()->init_new_command(0x85, {enable});
+        return generate_new_generic_builder(0x85, {enable});
     }
 
-    GenericCommandBuilder set_auto_screen_off_command(uint8_t enable)
+    TWAICommandBuilderBase<GenericCommandBuilder> *set_auto_screen_off_command(uint8_t enable)
     {
         ESP_LOGI(FUNCTION_NAME, "Setting auto screen %s", enable ? "on" : "off");
-        return generate_new_generic_builder()->init_new_command(0x87, {enable});
+        return generate_new_generic_builder(0x87, {enable});
     }
 
-    GenericCommandBuilder set_can_bit_rate_command(uint8_t bitRate)
+    TWAICommandBuilderBase<GenericCommandBuilder> *set_can_bit_rate_command(uint8_t bitRate)
     {
         ESP_LOGI(FUNCTION_NAME, "Setting CAN Bit Rate: %u", bitRate);
-        return generate_new_generic_builder()->init_new_command(0x8A, {bitRate});
+        return generate_new_generic_builder(0x8A, {bitRate});
     }
 
-    GenericCommandBuilder set_holding_current_command(uint8_t holdCurrent)
+    TWAICommandBuilderBase<GenericCommandBuilder> *set_holding_current_command(uint8_t holdCurrent)
     {
         ESP_LOGI(FUNCTION_NAME, "Setting Holding Current: %u", holdCurrent);
-        return generate_new_generic_builder()->init_new_command(0x9B, {holdCurrent});
+        return generate_new_generic_builder(0x9B, {holdCurrent});
     }
 
-    GenericCommandBuilder set_locked_rotor_protection_command(uint8_t enable)
+    TWAICommandBuilderBase<GenericCommandBuilder> *set_locked_rotor_protection_command(uint8_t enable)
     {
         ESP_LOGI(FUNCTION_NAME, "Setting Locked Rotor Protection: %u", enable);
-        return generate_new_generic_builder()->init_new_command(0x88, {enable});
+        return generate_new_generic_builder(0x88, {enable});
     }
 
-    GenericCommandBuilder set_subdivision_command(uint8_t subdivision)
+    TWAICommandBuilderBase<GenericCommandBuilder> *set_subdivision_command(uint8_t subdivision)
     {
         ESP_LOGI(FUNCTION_NAME, "Setting Subdivision: %u", subdivision);
-        return generate_new_generic_builder()->init_new_command(0x84, {subdivision});
+        return generate_new_generic_builder(0x84, {subdivision});
     }
 
-    GenericCommandBuilder set_subdivision_interpolation_command(uint8_t enable)
+    TWAICommandBuilderBase<GenericCommandBuilder> *set_subdivision_interpolation_command(uint8_t enable)
     {
         ESP_LOGI(FUNCTION_NAME, "Setting Subdivision Interpolation: %u", enable);
-        return generate_new_generic_builder()->init_new_command(0x89, {enable});
+        return generate_new_generic_builder(0x89, {enable});
     }
 
-    GenericCommandBuilder set_work_mode_command(uint8_t mode)
+    TWAICommandBuilderBase<GenericCommandBuilder> *set_work_mode_command(uint8_t mode)
     {
         ESP_LOGI(FUNCTION_NAME, "Setting Work Mode: %u", mode);
-        return generate_new_generic_builder()->init_new_command(0x82, {mode});
+        return generate_new_generic_builder(0x82, {mode});
     }
 
-    GenericCommandBuilder set_rotation_direction_command(uint8_t direction)
+    TWAICommandBuilderBase<GenericCommandBuilder> *set_rotation_direction_command(uint8_t direction)
     {
         ESP_LOGI(FUNCTION_NAME, "Setting Rotation Direction: %u", direction);
-        return generate_new_generic_builder()->init_new_command(0x86, {direction});
+        return generate_new_generic_builder(0x86, {direction});
     }
 
-    GenericCommandBuilder query_motor_status_command()
+    TWAICommandBuilderBase<GenericCommandBuilder> *query_motor_status_command()
     {
         ESP_LOGI(FUNCTION_NAME, "Querying motor status");
-        return generate_new_generic_builder()->init_new_command(0xF1);
+        return generate_new_generic_builder(0xF1);
     }
 };
 

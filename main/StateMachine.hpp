@@ -7,7 +7,7 @@
 #include <functional>
 #include <map>
 
-class StateMachine
+class MotorControllerFSM
 {
 public:
     enum class State
@@ -19,14 +19,14 @@ public:
         ERROR
     };
 
-    StateMachine();
+    MotorControllerFSM();
 
     State get_state() const;
     void set_state(State newState);
     void addTransition(State from, State to[]);
 
 private:
-    const char *stateToString(StateMachine::State state);
+    const char *stateToString(MotorControllerFSM::State state);
 
     State state;
 

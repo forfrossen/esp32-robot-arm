@@ -16,35 +16,8 @@ private:
     std::vector<uint8_t> payload;
 
 public:
-    GenericCommandBuilder(TWAICommandFactorySettings settings) : TWAICommandBuilderBase<GenericCommandBuilder>(settings)
-    {
-        ESP_LOGI(FUNCTION_NAME, "GenericCommandBuilder constructor called");
-    }
-
-    GenericCommandBuilder &init_new_command(uint8_t cmd_code)
-    {
-        set_command_code(cmd_code);
-        set_data_length_code(2);
-        create_msg_data();
-        return *this;
-    }
-
-    GenericCommandBuilder &init_new_command(uint8_t cmd_code, std::vector<uint8_t> payload)
-    {
-        set_command_code(cmd_code);
-        payload = payload;
-        set_data_length_code(2 + payload.size());
-        create_msg_data();
-        return *this;
-    }
-
-    // (uint8_t cmd_code, std::vector<uint8_t> payload) override
-    // {
-    //     set_command_code(cmd_code);
-    //     set_payload(payload);
-    //     set_data_length_code();
-    //     return *this;
-    // }
+    GenericCommandBuilder(TWAICommandFactorySettings settings, uint8_t command_name) : TWAICommandBuilderBase<GenericCommandBuilder>(settings, command_name) {}
+    GenericCommandBuilder(TWAICommandFactorySettings settings, uint8_t command_name, std::vector<uint8_t> payload) : TWAICommandBuilderBase<GenericCommandBuilder>(settings, command_name, payload) {}
 
     void set_data()
     {

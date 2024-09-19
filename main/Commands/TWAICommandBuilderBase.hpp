@@ -10,6 +10,7 @@
 #include <driver/twai.h>
 #include <vector>
 
+class CommandLifecycleRegistry;
 template <typename T>
 class TWAICommandBuilderBase
 {
@@ -21,12 +22,47 @@ protected:
     QueueHandle_t inQ;
     uint8_t *data;
     uint8_t command_id;
+    CommandLifecycleRegistry *command_lifecycle_registry;
+
+    // void vTask_handleIncoming(void *pvParameters)
+    // {
+    //     TWAICommandBuilderBase *instance = static_cast<TWAICommandBuilderBase *>(pvParameters);
+    //     for (;;)
+    //     {
+    //         twai_message_t msg;
+    //         xQueuePeek(instance->inQ, &msg, (TickType_t)0);
+    //         if (msg.identifier == instance->id && msg.data[0] == instance->command_id)
+    //         {
+    //             ESP_LOGI(FUNCTION_NAME, "Resolving message from inQ with ID: 0x%02lX for command: %02X", msg.identifier, msg.data[0]);
+    //             xQueueReceive(instance->inQ, &msg, (TickType_t)10);
+    //         }
+    //     }
+    // }
 
 public:
-    TWAICommandBuilderBase(TWAICommandFactorySettings &settings) : id(settings.id), outQ(settings.outQ), inQ(settings.inQ)
+    TWAICommandBuilderBase(TWAICommandFactorySettings &settings, uint8_t cmd_code) : id(settings.id), outQ(settings.outQ), inQ(settings.inQ), command_lifecycle_registry(settings.command_lifecycle_registry)
     {
         ESP_LOGI(FUNCTION_NAME, "TWAICommandBuilderBase constructor called");
+        set_default_values();
+        set_command_code(cmd_code);
+        set_data_length_code(2);
+        create_msg_data();
+        register_command();
+    }
 
+    TWAICommandBuilderBase(TWAICommandFactorySettings &settings, uint8_t cmd_code, std::vector<uint8_t> payload) : id(settings.id), outQ(settings.outQ), inQ(settings.inQ), command_lifecycle_registry(settings.command_lifecycle_registry)
+    {
+        ESP_LOGI(FUNCTION_NAME, "TWAICommandBuilderBase constructor called");
+        set_default_values();
+        set_command_code(cmd_code);
+        payload = payload;
+        set_data_length_code(2 + payload.size());
+        create_msg_data();
+        register_command();
+    }
+
+    void set_default_values()
+    {
         msg.extd = 0;
         msg.rtr = 0;
         msg.ss = 0;
@@ -34,24 +70,14 @@ public:
         msg.identifier = id;
     }
 
-    void vTask_handleIncoming(void *pvParameters)
-    {
-        TWAICommandBuilderBase *instance = static_cast<TWAICommandBuilderBase *>(pvParameters);
-        for (;;)
-        {
-            twai_message_t msg;
-            xQueuePeek(instance->inQ, &msg, (TickType_t)0);
-            if (msg.identifier == instance->id && msg.data[0] == instance->command_id)
-            {
-                ESP_LOGI(FUNCTION_NAME, "Resolving message from inQ with ID: 0x%02lX for command: %02X", msg.identifier, msg.data[0]);
-                xQueueReceive(instance->inQ, &msg, (TickType_t)10);
-            }
-        }
-    }
-
     ~TWAICommandBuilderBase()
     {
         delete[] data;
+    }
+
+    void register_command()
+    {
+        // command_lifecycle_registry->register_command(id, command_id);
     }
 
     void set_command_code(uint8_t code)
