@@ -31,7 +31,7 @@ public:
         CALIBRATING
     };
 
-    MotorController(uint32_t id, const SpecificServices *specific_services);
+    MotorController(std::shared_ptr<MotorControllerDependencies> dependencies);
 
     esp_err_t init();
     void handle_response(twai_message_t *msg);
@@ -58,18 +58,18 @@ public:
     void set_state(MotorControllerFSM::State new_state);
 
 private:
-    uint32_t canId;
     std::chrono::system_clock::time_point last_seen;
     bool is_connected = false;
     int error_counter = 0;
     MotorMovingState motor_moving_state = MotorMovingState::UNKNOWN;
     esp_err_t is_healthy();
 
-    CommandLifecycleRegistry *command_lifecycle_registry;
-    TWAICommandFactory *command_factory;
-    CommandMapper *command_mapper;
-    QueueHandle_t outQ;
+    uint32_t canId;
+    std::shared_ptr<TWAICommandFactory> command_factory;
     QueueHandle_t inQ;
+    QueueHandle_t outQ;
+    std::shared_ptr<CommandMapper> command_mapper;
+    std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
 
     MotorControllerFSM state_machine;
 

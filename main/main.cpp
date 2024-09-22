@@ -12,13 +12,14 @@
 #include "utils.hpp"
 #include <inttypes.h>
 #include <iostream>
+#include <memory>
 #include <regex>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <string>
 
-RobotArm *robot_arm;
+std::shared_ptr<RobotArm> robot_arm;
 
 const char compile_date[] = __DATE__ " " __TIME__;
 
@@ -61,7 +62,7 @@ extern "C" void app_main()
 
     // Allow other core to finish initialization
 
-    robot_arm = new RobotArm();
+    robot_arm = std::make_shared<RobotArm>();
 
     ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)

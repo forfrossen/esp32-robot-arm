@@ -9,34 +9,31 @@
 #include "TypeDefs.hpp"
 #include "freeRTOS/queue.h"
 #include "freertos/FreeRTOS.h"
-
-struct ServoRegistryEntry
-{
-    const MotorController *motorController;
-    const SpecificServices *specificServices;
-};
+#include <memory>
 
 class RobotArm
 {
 private:
-    std::map<uint8_t, ServoRegistryEntry> servos;
-    TWAIController *twai_controller = new TWAIController();
-    CommandMapper *command_mapper = new CommandMapper();
-    CommandLifecycleRegistry *command_lifecyle_registry = new CommandLifecycleRegistry();
+    std::map<uint8_t, std::shared_ptr<MotorController>> servos;
+    const std::shared_ptr<TWAIController> twai_controller = std::make_shared<TWAIController>();
+    const std::shared_ptr<CommandMapper> command_mapper = std::make_shared<CommandMapper>();
+    const std::shared_ptr<CommandLifecycleRegistry> command_lifecyle_registry = std::make_shared<CommandLifecycleRegistry>();
 
 public:
     RobotArm()
     {
         ESP_LOGI(FUNCTION_NAME, "RobotArm constructor called");
 
+        // twai_controller = std::make_shared<TWAIController>();
+        // command_mapper = std::make_shared<CommandMapper>();
+        // command_lifecyle_registry = std::make_shared<CommandLifecycleRegistry>();
+
         for (int i = 1; i < 4; i++)
         {
             if (i == 2)
             {
-
-                const SpecificServices *specific_services = specific_services_init(i);
-                servos[i] = {.motorController = new MotorController(i, specific_services),
-                             .specificServices = specific_services};
+                const std::shared_ptr<MotorControllerDependencies> motor_controller_dependencies = motor_controller_dependencies_init(i);
+                servos[i] = std::make_shared<MotorController>(MotorController(motor_controller_dependencies));
             }
         }
         // Servos[0x01] = new MotorController(0x01, twai_controller, command_mapper);
@@ -44,33 +41,25 @@ public:
         // Servos[0x03] = new MotorController(0x03, twai_controller, command_mapper);
     }
 
-    ~RobotArm()
+    const std::shared_ptr<MotorControllerDependencies> motor_controller_dependencies_init(uint32_t id)
     {
-        // Speicherfreigabe für die Servo-Objekte
-        for (auto &servo : servos)
-        {
-            delete servo.second.motorController;
-            delete servo.second.specificServices;
-        }
-
-        // Speicherfreigabe für die spezifischen Dienste
-        delete twai_controller;
-        delete command_mapper;
-        delete command_lifecyle_registry;
-    }
-
-    SpecificServices *specific_services_init(uint32_t id)
-    {
-        // SpecificServices *container = static_cast<SpecificServices *>(malloc(sizeof(SpecificServices)));
         QueueHandle_t inQ = xQueueCreate(10, sizeof(twai_message_t));
-        TWAICommandFactorySettings settings = {.id = id, .outQ = twai_controller->outQ, .inQ = inQ, .command_lifecycle_registry = command_lifecyle_registry};
-        TWAICommandFactory *command_factory = new TWAICommandFactory(settings);
-        SpecificServices *container = new SpecificServices({
-            .inQ = inQ,
-            .command_factory = command_factory,
-            .command_mapper = command_mapper,
-            .command_lifecycle_registry = command_lifecyle_registry,
-        });
+
+        auto settings = std::make_shared<TWAICommandFactorySettings>();
+        settings->id = id;
+        settings->outQ = twai_controller->outQ;
+        settings->inQ = inQ;
+        settings->command_lifecycle_registry = command_lifecyle_registry;
+
+        const std::shared_ptr<MotorControllerDependencies>
+            container = std::make_shared<MotorControllerDependencies>(MotorControllerDependencies{
+                .id = id,
+                .inQ = inQ,
+                .outQ = twai_controller->outQ,
+                .command_mapper = command_mapper,
+                .command_lifecycle_registry = command_lifecyle_registry,
+                .command_factory = std::make_shared<TWAICommandFactory>(settings),
+            });
         return container;
     }
 };

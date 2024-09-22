@@ -7,17 +7,18 @@
 #include "TypeDefs.hpp"
 #include "utils.hpp"
 #include <driver/twai.h>
+#include <memory>
 
 class TWAICommandFactory
 {
 private:
-    TWAICommandFactorySettings settings;
+    std::shared_ptr<TWAICommandFactorySettings> &settings;
     SetTargetPositionCommandBuilder *setTargetPositionCommandBuilder;
     RunMotorInSpeedModeCommandBuilder *runMotorInSpeedModeCommandBuilder;
 
 public:
     // Konstruktor setzt den Identifier
-    TWAICommandFactory(const TWAICommandFactorySettings &settings) : settings(settings)
+    TWAICommandFactory(std::shared_ptr<TWAICommandFactorySettings> settings) : settings(settings)
     {
         ESP_LOGI(FUNCTION_NAME, "TWAICommandFactory constructor called");
     }
@@ -37,15 +38,13 @@ public:
     GenericCommandBuilder *generate_new_generic_builder(uint8_t command_code)
     {
         ESP_LOGI(FUNCTION_NAME, "Creating Generic Command Builder");
-        GenericCommandBuilder *generic_command_builder = new GenericCommandBuilder(settings, command_code);
-        return generic_command_builder;
+        return new GenericCommandBuilder(settings, command_code);
     }
 
     GenericCommandBuilder *generate_new_generic_builder(uint8_t command_code, std::vector<uint8_t> payload)
     {
-        ESP_LOGI(FUNCTION_NAME, "Creating Generic Command Builder");
-        GenericCommandBuilder *generic_command_builder = new GenericCommandBuilder(settings, command_code, payload);
-        return generic_command_builder;
+        ESP_LOGI(FUNCTION_NAME, "Creating Generic Command Builder with payload");
+        return new GenericCommandBuilder(settings, command_code, payload);
     }
 
     GenericCommandBuilder *stop_motor_command()

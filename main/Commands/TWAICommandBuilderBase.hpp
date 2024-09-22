@@ -22,7 +22,7 @@ protected:
     QueueHandle_t inQ;
     uint8_t *data;
     uint8_t command_id;
-    CommandLifecycleRegistry *command_lifecycle_registry;
+    const std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
 
     // void vTask_handleIncoming(void *pvParameters)
     // {
@@ -40,21 +40,21 @@ protected:
     // }
 
 public:
-    TWAICommandBuilderBase(TWAICommandFactorySettings &settings, uint8_t cmd_code) : id(settings.id), outQ(settings.outQ), inQ(settings.inQ), command_lifecycle_registry(settings.command_lifecycle_registry)
+    TWAICommandBuilderBase(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code) : id(settings->id), outQ(settings->outQ), inQ(settings->inQ), command_lifecycle_registry(settings->command_lifecycle_registry)
     {
         ESP_LOGI(FUNCTION_NAME, "TWAICommandBuilderBase constructor called");
         set_default_values();
-        set_command_code(cmd_code);
+        set_command_code(command_code);
         set_data_length_code(2);
         create_msg_data();
         register_command();
     }
 
-    TWAICommandBuilderBase(TWAICommandFactorySettings &settings, uint8_t cmd_code, std::vector<uint8_t> payload) : id(settings.id), outQ(settings.outQ), inQ(settings.inQ), command_lifecycle_registry(settings.command_lifecycle_registry)
+    TWAICommandBuilderBase(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code, std::vector<uint8_t> payload) : id(settings->id), outQ(settings->outQ), inQ(settings->inQ), command_lifecycle_registry(settings->command_lifecycle_registry)
     {
         ESP_LOGI(FUNCTION_NAME, "TWAICommandBuilderBase constructor called");
         set_default_values();
-        set_command_code(cmd_code);
+        set_command_code(command_code);
         payload = payload;
         set_data_length_code(2 + payload.size());
         create_msg_data();

@@ -14,7 +14,7 @@ private:
     uint8_t acceleration;
 
 public:
-    RunMotorInSpeedModeCommandBuilder(TWAICommandFactorySettings settings) : TWAICommandBuilderBase<RunMotorInSpeedModeCommandBuilder>(settings, 0xF6)
+    RunMotorInSpeedModeCommandBuilder(std::shared_ptr<TWAICommandFactorySettings> settings) : TWAICommandBuilderBase<RunMotorInSpeedModeCommandBuilder>(settings, 0xF6)
     {
     }
 

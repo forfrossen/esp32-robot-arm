@@ -65,13 +65,13 @@ void MotorController::vtask_sendPositon(void *pvParameters)
     }
 }
 
-MotorController::MotorController(uint32_t id,
-                                 const SpecificServices *specific_services) : canId(id),
-                                                                              command_lifecycle_registry(specific_services->command_lifecycle_registry),
-                                                                              command_factory(specific_services->command_factory),
-                                                                              command_mapper(specific_services->command_mapper),
-                                                                              outQ(specific_services->outQ),
-                                                                              inQ(specific_services->inQ)
+MotorController::MotorController(
+    std::shared_ptr<MotorControllerDependencies> dependencies) : canId(dependencies->id),
+                                                                 command_factory(dependencies->command_factory),
+                                                                 inQ(dependencies->inQ),
+                                                                 outQ(dependencies->outQ),
+                                                                 command_mapper(dependencies->command_mapper),
+                                                                 command_lifecycle_registry(dependencies->command_lifecycle_registry)
 {
     ESP_LOGI(FUNCTION_NAME, "New Servo42D_CAN object created with CAN ID: %lu", canId);
 

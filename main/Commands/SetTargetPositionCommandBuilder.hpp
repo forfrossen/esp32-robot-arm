@@ -15,7 +15,7 @@ private:
     bool absolute;
 
 public:
-    SetTargetPositionCommandBuilder(TWAICommandFactorySettings settings) : TWAICommandBuilderBase<SetTargetPositionCommandBuilder>(settings, 0x00)
+    SetTargetPositionCommandBuilder(std::shared_ptr<TWAICommandFactorySettings> settings) : TWAICommandBuilderBase<SetTargetPositionCommandBuilder>(settings, 0x00)
     {
         set_data_length_code(8);
         create_msg_data();

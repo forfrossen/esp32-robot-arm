@@ -16,8 +16,8 @@ private:
     std::vector<uint8_t> payload;
 
 public:
-    GenericCommandBuilder(TWAICommandFactorySettings settings, uint8_t command_name) : TWAICommandBuilderBase<GenericCommandBuilder>(settings, command_name) {}
-    GenericCommandBuilder(TWAICommandFactorySettings settings, uint8_t command_name, std::vector<uint8_t> payload) : TWAICommandBuilderBase<GenericCommandBuilder>(settings, command_name, payload) {}
+    GenericCommandBuilder(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code) : TWAICommandBuilderBase<GenericCommandBuilder>(settings, command_code) {}
+    GenericCommandBuilder(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code, std::vector<uint8_t> payload) : TWAICommandBuilderBase<GenericCommandBuilder>(settings, command_code, payload) {}
 
     void set_data()
     {

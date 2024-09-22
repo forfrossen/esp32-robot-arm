@@ -28,6 +28,7 @@ public:
         ESP_LOGI(FUNCTION_NAME, "CommandLifecycleRegistry constructor called");
         arm_commands = {};
     };
+    ~CommandLifecycleRegistry() {}
 
     void register_new_motor(uint8_t motor_id)
     {
@@ -40,8 +41,6 @@ public:
         ESP_LOGI(FUNCTION_NAME, "Registering command with ID: 0x%lu", id);
         arm_commands.motor_commands.command_id = command_id;
     };
-
-    ~CommandLifecycleRegistry();
 
 private:
     ArmCommandLifecycleRegister arm_commands;
