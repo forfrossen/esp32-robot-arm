@@ -14,7 +14,8 @@
 class RobotArm
 {
 private:
-    std::map<uint8_t, std::shared_ptr<MotorController>> servos;
+    EventGroupHandle_t system_event_group;
+    std::map<uint8_t, MotorController *> servos;
     const std::shared_ptr<TWAIController> twai_controller = std::make_shared<TWAIController>();
     const std::shared_ptr<CommandMapper> command_mapper = std::make_shared<CommandMapper>();
     const std::shared_ptr<CommandLifecycleRegistry> command_lifecyle_registry = std::make_shared<CommandLifecycleRegistry>();
@@ -23,43 +24,49 @@ public:
     RobotArm()
     {
         ESP_LOGI(FUNCTION_NAME, "RobotArm constructor called");
-
-        // twai_controller = std::make_shared<TWAIController>();
-        // command_mapper = std::make_shared<CommandMapper>();
-        // command_lifecyle_registry = std::make_shared<CommandLifecycleRegistry>();
+        system_event_group = xEventGroupCreate();
+        if (system_event_group == NULL)
+        {
+            ESP_LOGE(FUNCTION_NAME, "Error creating event group");
+        }
 
         for (int i = 1; i < 4; i++)
         {
             if (i == 2)
             {
                 const std::shared_ptr<MotorControllerDependencies> motor_controller_dependencies = motor_controller_dependencies_init(i);
-                servos[i] = std::make_shared<MotorController>(MotorController(motor_controller_dependencies));
+                if (motor_controller_dependencies == nullptr)
+                {
+                    ESP_LOGE(FUNCTION_NAME, "Failed to create motor controller dependencies");
+                    return;
+                }
+                servos[i] = new MotorController(motor_controller_dependencies);
             }
         }
-        // Servos[0x01] = new MotorController(0x01, twai_controller, command_mapper);
-        // servos[2] = new MotorController(0x02, twai_controller, command_mapper);
-        // Servos[0x03] = new MotorController(0x03, twai_controller, command_mapper);
+    }
+
+    ~RobotArm()
+    {
+        ESP_LOGW(FUNCTION_NAME, "RobotArm destructor called");
+        for (auto const &x : servos)
+        {
+            delete x.second;
+        }
     }
 
     const std::shared_ptr<MotorControllerDependencies> motor_controller_dependencies_init(uint32_t id)
     {
         QueueHandle_t inQ = xQueueCreate(10, sizeof(twai_message_t));
+        if (inQ == nullptr)
+        {
+            ESP_LOGE(FUNCTION_NAME, "Failed to create queue");
+            return nullptr;
+        }
 
-        auto settings = std::make_shared<TWAICommandFactorySettings>();
-        settings->id = id;
-        settings->outQ = twai_controller->outQ;
-        settings->inQ = inQ;
-        settings->command_lifecycle_registry = command_lifecyle_registry;
+        std::shared_ptr<TWAICommandFactorySettings> settings = std::make_shared<TWAICommandFactorySettings>(id, inQ, twai_controller->outQ, command_lifecyle_registry);
+        std::shared_ptr<TWAICommandFactory> command_factory = std::make_shared<TWAICommandFactory>(settings);
+        const std::shared_ptr<MotorControllerDependencies> container = std::make_shared<MotorControllerDependencies>(id, inQ, twai_controller->outQ, system_event_group, command_mapper, command_lifecyle_registry, command_factory);
 
-        const std::shared_ptr<MotorControllerDependencies>
-            container = std::make_shared<MotorControllerDependencies>(MotorControllerDependencies{
-                .id = id,
-                .inQ = inQ,
-                .outQ = twai_controller->outQ,
-                .command_mapper = command_mapper,
-                .command_lifecycle_registry = command_lifecyle_registry,
-                .command_factory = std::make_shared<TWAICommandFactory>(settings),
-            });
         return container;
     }
 };

@@ -17,6 +17,11 @@ public:
     RunMotorInSpeedModeCommandBuilder(std::shared_ptr<TWAICommandFactorySettings> settings) : TWAICommandBuilderBase<RunMotorInSpeedModeCommandBuilder>(settings, 0xF6)
     {
     }
+    ~RunMotorInSpeedModeCommandBuilder()
+    {
+        ESP_LOGW(FUNCTION_NAME, "RunMotorInSpeedModeCommandBuilder destructor called");
+        delete[] data;
+    }
 
     RunMotorInSpeedModeCommandBuilder &init_new_command()
     {

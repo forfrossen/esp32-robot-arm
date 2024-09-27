@@ -20,6 +20,11 @@ public:
         set_data_length_code(8);
         create_msg_data();
     }
+    ~SetTargetPositionCommandBuilder()
+    {
+        ESP_LOGW(FUNCTION_NAME, "SetTargetPositionCommandBuilder destructor called");
+        delete[] data;
+    }
 
     SetTargetPositionCommandBuilder &set_position(uint32_t position)
     {

@@ -18,6 +18,11 @@ private:
 public:
     GenericCommandBuilder(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code) : TWAICommandBuilderBase<GenericCommandBuilder>(settings, command_code) {}
     GenericCommandBuilder(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code, std::vector<uint8_t> payload) : TWAICommandBuilderBase<GenericCommandBuilder>(settings, command_code, payload) {}
+    ~GenericCommandBuilder()
+    {
+        ESP_LOGW(FUNCTION_NAME, "GenericCommandBuilder destructor called");
+        delete[] data;
+    }
 
     void set_data()
     {

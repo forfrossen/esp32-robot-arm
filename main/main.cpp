@@ -19,12 +19,16 @@
 #include <string.h>
 #include <string>
 
-std::shared_ptr<RobotArm> robot_arm;
-
 const char compile_date[] = __DATE__ " " __TIME__;
+
+// static TWAIController twai_controller;
+// static CommandMapper command_mapper;
+// static CommandLifecycleRegistry command_lifecyle_registry;
+RobotArm *robot_arm;
 
 extern "C" void app_main()
 {
+
     static httpd_handle_t server = NULL;
     esp_err_t ret;
     esp_log_level_set("*", ESP_LOG_INFO);
@@ -60,9 +64,7 @@ extern "C" void app_main()
 
     ESP_ERROR_CHECK(esp_netif_init());
 
-    // Allow other core to finish initialization
-
-    robot_arm = std::make_shared<RobotArm>();
+    robot_arm = new RobotArm();
 
     ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)

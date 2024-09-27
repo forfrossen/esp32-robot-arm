@@ -17,13 +17,8 @@ class TWAICommandBuilderBase
 protected:
     uint8_t command_code;
     twai_message_t msg = {};
-    uint32_t id;
-    QueueHandle_t outQ;
-    QueueHandle_t inQ;
     uint8_t *data;
-    uint8_t command_id;
-    const std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
-
+    std::shared_ptr<TWAICommandFactorySettings> settings;
     // void vTask_handleIncoming(void *pvParameters)
     // {
     //     TWAICommandBuilderBase *instance = static_cast<TWAICommandBuilderBase *>(pvParameters);
@@ -40,7 +35,7 @@ protected:
     // }
 
 public:
-    TWAICommandBuilderBase(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code) : id(settings->id), outQ(settings->outQ), inQ(settings->inQ), command_lifecycle_registry(settings->command_lifecycle_registry)
+    TWAICommandBuilderBase(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code) : settings(settings)
     {
         ESP_LOGI(FUNCTION_NAME, "TWAICommandBuilderBase constructor called");
         set_default_values();
@@ -50,7 +45,7 @@ public:
         register_command();
     }
 
-    TWAICommandBuilderBase(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code, std::vector<uint8_t> payload) : id(settings->id), outQ(settings->outQ), inQ(settings->inQ), command_lifecycle_registry(settings->command_lifecycle_registry)
+    TWAICommandBuilderBase(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code, std::vector<uint8_t> payload) : settings(settings)
     {
         ESP_LOGI(FUNCTION_NAME, "TWAICommandBuilderBase constructor called");
         set_default_values();
@@ -61,18 +56,15 @@ public:
         register_command();
     }
 
+    virtual ~TWAICommandBuilderBase() = default;
+
     void set_default_values()
     {
         msg.extd = 0;
         msg.rtr = 0;
         msg.ss = 0;
         msg.dlc_non_comp = 0;
-        msg.identifier = id;
-    }
-
-    ~TWAICommandBuilderBase()
-    {
-        delete[] data;
+        msg.identifier = settings->id;
     }
 
     void register_command()
@@ -129,9 +121,8 @@ public:
 
     esp_err_t enqueue_message()
     {
-        command_id = msg.data[0];
 
-        if (!outQ)
+        if (!settings->outQ)
         {
             ESP_LOGE(FUNCTION_NAME, "outQ is NULL");
             return ESP_FAIL;
@@ -144,7 +135,7 @@ public:
             ESP_LOGI(FUNCTION_NAME, "Data[%d]: %02X", i, msg.data[i]);
         }
 
-        if (xQueueSendToBack(outQ, &msg, 0) != pdTRUE)
+        if (xQueueSendToBack(settings->outQ, &msg, 0) != pdTRUE)
         {
             ESP_LOGE(FUNCTION_NAME, " ==> Failed to enqueue message!");
             return ESP_FAIL;
