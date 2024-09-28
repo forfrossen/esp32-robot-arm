@@ -1,34 +1,32 @@
-#include "StateMachine.hpp"
-#include "utils.hpp"
-#include <iostream>
+#include "CommandStateMachine.hpp"
 
 #define ENUM_TO_STRING_CASE(value) \
     case value:                    \
         return #value
 
-const char *MotorControllerFSM::stateToString(MotorControllerFSM::State state)
+const char *CommandStateMachine::stateToString(CommandStateMachine::CommandState state)
 {
 
     switch (state)
     {
-        ENUM_TO_STRING_CASE(State::IDLE);
-        ENUM_TO_STRING_CASE(State::REQUESTED);
-        ENUM_TO_STRING_CASE(State::MOVING);
-        ENUM_TO_STRING_CASE(State::COMPLETED);
-        ENUM_TO_STRING_CASE(State::ERROR);
+        ENUM_TO_STRING_CASE(CommandState::IDLE);
+        ENUM_TO_STRING_CASE(CommandState::REQUESTED);
+        ENUM_TO_STRING_CASE(CommandState::MOVING);
+        ENUM_TO_STRING_CASE(CommandState::COMPLETED);
+        ENUM_TO_STRING_CASE(CommandState::ERROR);
     default:
         return "UNKNOWN_VALUE";
     }
 }
 
-MotorControllerFSM::MotorControllerFSM() : state(State::IDLE) {}
+CommandStateMachine::CommandStateMachine() : state(CommandState::IDLE) {}
 
-MotorControllerFSM::State MotorControllerFSM::get_state() const
+CommandStateMachine::CommandState CommandStateMachine::get_command_state() const
 {
     return state;
 }
 
-void MotorControllerFSM::set_state(State newState)
+void CommandStateMachine::set_command_state(CommandState newState)
 {
     auto it = transitions.find(state);
     if (it == transitions.end())
@@ -37,7 +35,7 @@ void MotorControllerFSM::set_state(State newState)
         return;
     }
 
-    const std::vector<State> &validTransitions = it->second;
+    const std::vector<CommandState> &validTransitions = it->second;
     if (std::find(validTransitions.begin(), validTransitions.end(), newState) != validTransitions.end())
     {
         state = newState;

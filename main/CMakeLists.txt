@@ -1,8 +1,10 @@
 idf_component_register(
   SRCS 
     "TWAIController.cpp"
+    "CommandStateMachine.cpp"
     "MotorController.cpp"
-    "StateMachine.cpp" 
+    "MotorContext.cpp"
+    "MotorResponseHandler.cpp"
     "Wifi.cpp"
     "main.cpp"
 REQUIRES driver

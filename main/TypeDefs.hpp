@@ -1,6 +1,7 @@
 #ifndef TYPEDEFS_HPP
 #define TYPEDEFS_HPP
 
+#include <esp_event.h>
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
@@ -22,10 +23,15 @@
 #define MOTOR_RECOVERING_BIT BIT2
 #define MOTOR_INIT_BIT BIT3
 
+// Define the event base for motor controller events
+ESP_EVENT_DEFINE_BASE(MOTOR_CONTROLLER_EVENT);
+
 class TWAICommandFactory;
 class CommandMapper;
 class TWAIController;
 class CommandLifecycleRegistry;
+class MotorContext;
+class MotorResponseHandler;
 
 struct TWAICommandFactorySettings
 {
@@ -48,6 +54,15 @@ struct TWAICommandFactorySettings
     }
 };
 
+enum MotorEvent
+{
+    MOTOR_EVENT_INIT,
+    MOTOR_EVENT_READY,
+    MOTOR_EVENT_RUNNING,
+    MOTOR_EVENT_ERROR,
+    MOTOR_EVENT_RECOVERING
+};
+
 struct MotorControllerDependencies
 {
     uint32_t id;
@@ -57,10 +72,21 @@ struct MotorControllerDependencies
     std::shared_ptr<CommandMapper> command_mapper;
     std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
     std::shared_ptr<TWAICommandFactory> command_factory;
+    std::shared_ptr<MotorContext> motor_context;
+    std::shared_ptr<MotorResponseHandler> motor_response_handler;
 
     // Constructor
-    MotorControllerDependencies(uint32_t id, QueueHandle_t inQ, QueueHandle_t outQ, EventGroupHandle_t system_event_group, std::shared_ptr<CommandMapper> command_mapper, std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry, std::shared_ptr<TWAICommandFactory> command_factory)
-        : id(id), inQ(inQ), outQ(outQ), system_event_group(system_event_group), command_mapper(command_mapper), command_lifecycle_registry(command_lifecycle_registry), command_factory(command_factory)
+    MotorControllerDependencies(
+        uint32_t id,
+        QueueHandle_t inQ,
+        QueueHandle_t outQ,
+        EventGroupHandle_t system_event_group,
+        std::shared_ptr<CommandMapper> command_mapper,
+        std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry,
+        std::shared_ptr<TWAICommandFactory> command_factory,
+        std::shared_ptr<MotorContext> motor_context,
+        std::shared_ptr<MotorResponseHandler> motor_response_handler)
+        : id(id), inQ(inQ), outQ(outQ), system_event_group(system_event_group), command_mapper(command_mapper), command_lifecycle_registry(command_lifecycle_registry), command_factory(command_factory), motor_context(motor_context), motor_response_handler(motor_response_handler)
     {
         ESP_LOGI("MotorControllerDependencies", "Constructor called");
     }

@@ -65,7 +65,9 @@ public:
 
         std::shared_ptr<TWAICommandFactorySettings> settings = std::make_shared<TWAICommandFactorySettings>(id, inQ, twai_controller->outQ, command_lifecyle_registry);
         std::shared_ptr<TWAICommandFactory> command_factory = std::make_shared<TWAICommandFactory>(settings);
-        const std::shared_ptr<MotorControllerDependencies> container = std::make_shared<MotorControllerDependencies>(id, inQ, twai_controller->outQ, system_event_group, command_mapper, command_lifecyle_registry, command_factory);
+        std::shared_ptr<MotorContext> motor_context = std::make_shared<MotorContext>(id);
+        std::shared_ptr<MotorResponseHandler> motor_response_handler = std::make_shared<MotorResponseHandler>(id, motor_context, command_mapper);
+        const std::shared_ptr<MotorControllerDependencies> container = std::make_shared<MotorControllerDependencies>(id, inQ, twai_controller->outQ, system_event_group, command_mapper, command_lifecyle_registry, command_factory, motor_context, motor_response_handler);
 
         return container;
     }
