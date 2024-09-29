@@ -93,8 +93,8 @@ void MotorController::vTask_query_status(void *pvParameters)
     for (;;)
     {
         ESP_LOGI(FUNCTION_NAME, "New iteration of vTask_query_status");
-
         esp_err_t ret = instance->query_status();
+        ret = instance->query_position();
         if (ret != ESP_OK)
         {
             ESP_LOGE(FUNCTION_NAME, "Error enqueing query-status-command. Error counter: %d", local_error_counter);
@@ -115,8 +115,10 @@ void MotorController::vTask_handleInQ(void *vParameters)
     {
         twai_message_t twai_message_t;
         xQueueReceive(instance->inQ, &twai_message_t, portMAX_DELAY);
-        ESP_LOGI(FUNCTION_NAME, "Received message from inQ with ID: %lu", twai_message_t.identifier);
+        xSemaphoreTake(instance->motor_mutex, portMAX_DELAY);
+        ESP_LOGI(FUNCTION_NAME, "Received message from inQ with TWAI ID: %lu", twai_message_t.identifier);
         instance->response_handler->handle_received_message(&twai_message_t);
+        xSemaphoreGive(instance->motor_mutex);
     }
 }
 
@@ -144,6 +146,9 @@ MotorController::MotorController(
                                                                  command_factory(dependencies->command_factory),
                                                                  inQ(dependencies->inQ),
                                                                  outQ(dependencies->outQ),
+                                                                 motor_event_group(xEventGroupCreate()),
+                                                                 system_event_group(dependencies->system_event_group),
+                                                                 motor_mutex(dependencies->motor_mutex),
                                                                  command_mapper(dependencies->command_mapper),
                                                                  command_lifecycle_registry(dependencies->command_lifecycle_registry),
                                                                  context(dependencies->motor_context),
@@ -151,8 +156,6 @@ MotorController::MotorController(
 {
     BaseType_t xRet;
     ESP_LOGI(FUNCTION_NAME, "New MotorController-Object created with CAN ID: %lu", canId);
-
-    motor_event_group = xEventGroupCreate();
 
     if (motor_event_group == NULL)
     {
@@ -211,7 +214,6 @@ void MotorController::init_event_loop()
 
 esp_err_t MotorController::init_tasks()
 {
-    xSemaphoreTake(motor_mutex, portMAX_DELAY);
     esp_err_t ret = ESP_OK;
     BaseType_t xReturned;
 
@@ -247,8 +249,6 @@ esp_err_t MotorController::init_tasks()
         ret = ESP_FAIL;
     }
     configASSERT(vtask_send_positon);
-
-    xSemaphoreGive(motor_mutex);
     return ret;
 }
 
@@ -259,6 +259,7 @@ void MotorController::post_event(MotorEvent event)
 
 esp_err_t MotorController::execute_query_command(std::function<TWAICommandBuilderBase<GenericCommandBuilder> *()> command_factory_method)
 {
+    ESP_LOGI(FUNCTION_NAME, "Executing query command");
     xSemaphoreTake(motor_mutex, portMAX_DELAY);
     auto cmd = command_factory_method();
     esp_err_t ret = cmd->build_and_send();

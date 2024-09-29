@@ -35,8 +35,28 @@ void MotorResponseHandler::check_for_error_and_do_transition(twai_message_t *msg
     }
 }
 
+void MotorResponseHandler::print_unknown_response_code(twai_message_t *msg)
+{
+    auto status = msg->data[1];
+    ESP_LOGW(FUNCTION_NAME, "Unknown status response: %02X", status);
+    for (int i = 0; i < msg->data_length_code; i++)
+    {
+        ESP_LOGI(FUNCTION_NAME, "Data[%d] - raw: %d \t - hex: %02X", i, msg->data[i], msg->data[i]);
+    }
+}
+
 void MotorResponseHandler::handle_received_message(twai_message_t *msg)
 {
+    char command_name[50];
+    command_mapper->get_command_name_from_code(msg->data[0], command_name);
+
+    ESP_LOGI(FUNCTION_NAME, "ID: %lu \t length: %u \t code: %02X \t commandName: %s", canId, msg->data_length_code, msg->data[0], command_name);
+
+    for (int i = 0; i < msg->data_length_code; i++)
+    {
+        ESP_LOGI(FUNCTION_NAME, "Data[%d] - raw: %d \t - hex: %02X", i, msg->data[i], msg->data[i]);
+    }
+
     check_for_error_and_do_transition(msg);
 
     switch (msg->data[0])
@@ -69,12 +89,6 @@ void MotorResponseHandler::handle_received_message(twai_message_t *msg)
 void MotorResponseHandler::handle_query_status_response(twai_message_t *msg)
 {
     uint8_t &status = msg->data[1];
-
-    char command_name[50];
-    command_mapper->get_command_name_from_code(msg->data[0], command_name);
-
-    ESP_LOGI(FUNCTION_NAME, "ID: %lu \t length: %u \t code: %02X \t commandName: %s", canId, msg->data_length_code, msg->data[0], command_name);
-
     uint8_t *data = msg->data;
     uint8_t length = msg->data_length_code;
 
@@ -109,11 +123,7 @@ void MotorResponseHandler::handle_query_status_response(twai_message_t *msg)
         context->set_motor_moving_state(MotorContext::MovingState::CALIBRATING);
         break;
     default:
-        ESP_LOGW(FUNCTION_NAME, "Unbekannter Status, Response: %02X", status);
-        for (int i = 0; i < length; i++)
-        {
-            ESP_LOGI(FUNCTION_NAME, "Data[%d] - raw: %d \t - hex: %02X", i, data[i], data[i]);
-        }
+        ESP_LOGW(FUNCTION_NAME, "Unknown status response: %02X", status);
         context->set_motor_moving_state(MotorContext::MovingState::UNKNOWN);
         break;
     }
@@ -121,11 +131,11 @@ void MotorResponseHandler::handle_query_status_response(twai_message_t *msg)
 
 void MotorResponseHandler::handle_query_motor_position_response(twai_message_t *msg)
 {
-    if (msg->data_length_code != 8 || msg->data[0] != 0x30)
-    {
-        ESP_LOGE(FUNCTION_NAME, "Invalid response length or code.");
-        return;
-    }
+    // if (msg->data_length_code != 8 || msg->data[0] != 0x30)
+    // {
+    //     ESP_LOGE(FUNCTION_NAME, "Invalid response length or code.");
+    //     return;
+    // }
 
     context->set_carry_value((msg->data[1] << 24) | (msg->data[2] << 16) | (msg->data[3] << 8) | msg->data[4]);
     context->set_encoder_value((msg->data[5] << 8) | msg->data[6]);

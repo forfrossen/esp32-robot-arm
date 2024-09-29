@@ -2,6 +2,7 @@ idf_component_register(
   SRCS 
     "TWAIController.cpp"
     "CommandStateMachine.cpp"
+    "CommandMapper.cpp"
     "MotorController.cpp"
     "MotorContext.cpp"
     "MotorResponseHandler.cpp"

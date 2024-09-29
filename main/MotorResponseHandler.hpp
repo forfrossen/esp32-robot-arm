@@ -34,6 +34,8 @@ private:
     void handle_received_error();
     void handle_received_no_error();
     void check_for_error_and_do_transition(twai_message_t *msg);
+
+    void print_unknown_response_code(twai_message_t *msg);
 };
 
 #endif // MOTORRESPONSEHANDLER_H

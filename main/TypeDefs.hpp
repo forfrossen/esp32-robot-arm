@@ -69,6 +69,7 @@ struct MotorControllerDependencies
     QueueHandle_t inQ;
     QueueHandle_t outQ;
     EventGroupHandle_t system_event_group;
+    SemaphoreHandle_t motor_mutex;
     std::shared_ptr<CommandMapper> command_mapper;
     std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
     std::shared_ptr<TWAICommandFactory> command_factory;
@@ -81,12 +82,20 @@ struct MotorControllerDependencies
         QueueHandle_t inQ,
         QueueHandle_t outQ,
         EventGroupHandle_t system_event_group,
+        SemaphoreHandle_t motor_mutex,
         std::shared_ptr<CommandMapper> command_mapper,
         std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry,
         std::shared_ptr<TWAICommandFactory> command_factory,
         std::shared_ptr<MotorContext> motor_context,
         std::shared_ptr<MotorResponseHandler> motor_response_handler)
-        : id(id), inQ(inQ), outQ(outQ), system_event_group(system_event_group), command_mapper(command_mapper), command_lifecycle_registry(command_lifecycle_registry), command_factory(command_factory), motor_context(motor_context), motor_response_handler(motor_response_handler)
+        : id(id), inQ(inQ), outQ(outQ),
+          system_event_group(system_event_group),
+          motor_mutex(motor_mutex),
+          command_mapper(command_mapper),
+          command_lifecycle_registry(command_lifecycle_registry),
+          command_factory(command_factory),
+          motor_context(motor_context),
+          motor_response_handler(motor_response_handler)
     {
         ESP_LOGI("MotorControllerDependencies", "Constructor called");
     }

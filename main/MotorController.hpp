@@ -53,6 +53,9 @@ private:
     std::shared_ptr<TWAICommandFactory> command_factory;
     QueueHandle_t inQ;
     QueueHandle_t outQ;
+    EventGroupHandle_t motor_event_group;
+    EventGroupHandle_t system_event_group;
+    SemaphoreHandle_t motor_mutex;
     std::shared_ptr<CommandMapper> command_mapper;
     std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
     std::shared_ptr<MotorContext> context;
@@ -60,9 +63,7 @@ private:
 
     int error_counter = 0;
 
-    SemaphoreHandle_t motor_mutex = xSemaphoreCreateMutex();
-
-    esp_err_t execute_query_command(std::function<TWAICommandBuilderBase<GenericCommandBuilder> *()> command_factory_method);
+        esp_err_t execute_query_command(std::function<TWAICommandBuilderBase<GenericCommandBuilder> *()> command_factory_method);
 
     esp_event_loop_handle_t motor_controller_event_loop_handle;
     static void motor_controller_event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);
@@ -83,9 +84,6 @@ private:
 
     TaskHandle_t task_handle_handle_unhealthy;
     static void vTask_handle_unhealthy(void *pvParameters);
-
-    EventGroupHandle_t motor_event_group;
-    EventGroupHandle_t system_event_group;
 };
 
 #endif // CANSERVO_H

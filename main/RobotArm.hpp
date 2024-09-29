@@ -67,7 +67,8 @@ public:
         std::shared_ptr<TWAICommandFactory> command_factory = std::make_shared<TWAICommandFactory>(settings);
         std::shared_ptr<MotorContext> motor_context = std::make_shared<MotorContext>(id);
         std::shared_ptr<MotorResponseHandler> motor_response_handler = std::make_shared<MotorResponseHandler>(id, motor_context, command_mapper);
-        const std::shared_ptr<MotorControllerDependencies> container = std::make_shared<MotorControllerDependencies>(id, inQ, twai_controller->outQ, system_event_group, command_mapper, command_lifecyle_registry, command_factory, motor_context, motor_response_handler);
+        SemaphoreHandle_t motor_mutex = xSemaphoreCreateMutex();
+        const std::shared_ptr<MotorControllerDependencies> container = std::make_shared<MotorControllerDependencies>(id, inQ, twai_controller->outQ, system_event_group, motor_mutex, command_mapper, command_lifecyle_registry, command_factory, motor_context, motor_response_handler);
 
         return container;
     }
