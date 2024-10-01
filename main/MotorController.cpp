@@ -23,7 +23,7 @@ void MotorController::motor_controller_event_handler(void *handler_args, esp_eve
 
     case MOTOR_EVENT_RECOVERING:
         ESP_LOGI("MotorEventLoopHandler", "Handling MOTOR_EVENT_RECOVERING.");
-
+        instance->init_tasks();
         break;
 
     default:
@@ -54,7 +54,7 @@ void MotorController::vTask_query_position(void *pvParameters)
 {
 
     MotorController *instance = static_cast<MotorController *>(pvParameters);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    vTaskDelay(8000 / portTICK_PERIOD_MS);
 
     for (;;)
     {
@@ -90,11 +90,13 @@ void MotorController::vTask_query_status(void *pvParameters)
 {
     MotorController *instance = static_cast<MotorController *>(pvParameters);
     int local_error_counter = 0;
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
     for (;;)
     {
         ESP_LOGI(FUNCTION_NAME, "New iteration of vTask_query_status");
+        // esp_err_t ret;
         esp_err_t ret = instance->query_status();
-        ret = instance->query_position();
+        // ret = instance->query_position();
         if (ret != ESP_OK)
         {
             ESP_LOGE(FUNCTION_NAME, "Error enqueing query-status-command. Error counter: %d", local_error_counter);
@@ -104,7 +106,7 @@ void MotorController::vTask_query_status(void *pvParameters)
             }
         }
 
-        vTaskDelay((1000 * (local_error_counter + 1)) / portTICK_PERIOD_MS);
+        vTaskDelay((4000 * (local_error_counter + 1)) / portTICK_PERIOD_MS);
     }
 }
 
@@ -113,11 +115,17 @@ void MotorController::vTask_handleInQ(void *vParameters)
     MotorController *instance = static_cast<MotorController *>(vParameters);
     for (;;)
     {
-        twai_message_t twai_message_t;
-        xQueueReceive(instance->inQ, &twai_message_t, portMAX_DELAY);
+        twai_message_t msg;
+        xQueueReceive(instance->inQ, &msg, portMAX_DELAY);
         xSemaphoreTake(instance->motor_mutex, portMAX_DELAY);
-        ESP_LOGI(FUNCTION_NAME, "Received message from inQ with TWAI ID: %lu", twai_message_t.identifier);
-        instance->response_handler->handle_received_message(&twai_message_t);
+        ESP_LOGI(FUNCTION_NAME, "Received message from inQ with TWAI ID: %lu \t length: %d \t code: %02X", msg.identifier, msg.data_length_code, msg.data[0]);
+
+        for (int i = 1; i < msg.data_length_code; i++)
+        {
+            ESP_LOGI(FUNCTION_NAME, "Data[%d] - raw: %d - hex: %02X", i, msg.data[i], msg.data[i]);
+        }
+
+        instance->response_handler->handle_received_message(&msg);
         xSemaphoreGive(instance->motor_mutex);
     }
 }
@@ -297,7 +305,7 @@ esp_err_t MotorController::set_target_position()
     acceleration = 255;
     absolute = false;
 
-    set_command_state(CommandStateMachine::CommandState::REQUESTED);
+    // set_command_state(CommandStateMachine::CommandState::REQUESTED);
     auto cmd = command_factory->create_set_target_position_command();
     esp_err_t ret = cmd->set_position(position).set_speed(speed).set_acceleration(acceleration).set_absolute(absolute).build_and_send();
     if (ret != ESP_OK)

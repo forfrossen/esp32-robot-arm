@@ -14,6 +14,7 @@
 class TWAIController
 {
 private:
+    SemaphoreHandle_t twai_mutex = NULL;
     std::map<uint32_t, QueueHandle_t> inQs;
     TaskHandle_t taskHandleReception;
     TaskHandle_t taskHandleTransmission;
@@ -29,8 +30,6 @@ private:
     static const uint16_t TIMESTAMP_LIMIT = 0xEA60;
 
 public:
-    // Singleton-Zugriffsmethode
-    static TWAIController &getInstance();
     esp_err_t init();
 
     enum ERROR

@@ -63,6 +63,8 @@ void Wifi::wifi_init_sta(void)
                 .authmode = ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD,
             },
             .sae_pwe_h2e = ESP_WIFI_SAE_MODE,
+            .failure_retry_cnt = 0,
+            .he_dcm_set = 0,
             .sae_h2e_identifier = EXAMPLE_H2E_IDENTIFIER,
         },
     };

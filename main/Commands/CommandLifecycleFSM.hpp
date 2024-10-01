@@ -1,6 +1,7 @@
 #ifndef COMMAND_LIFECYCLE_FSM_H
 #define COMMAND_LIFECYCLE_FSM_H
 
+#include "TypeDefs.hpp"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "utils.hpp"
@@ -9,53 +10,43 @@
 
 class CommandLifecycleFSM
 {
-    enum class State
-    {
-        CREATED,
-        SENT,
-        RECEIVED,
-        PROCESSED,
-        ERROR,
-        TIMEOUT,
-        UNKNOWN
-    };
 
 public:
     CommandLifecycleFSM() {};
     ~CommandLifecycleFSM() {};
 
 private:
-    const char *stateToString(State state)
+    const char *stateToString(CommandLifecycleState CommandLifecycleState)
     {
-        switch (state)
+        switch (CommandLifecycleState)
         {
-        case State::CREATED:
+        case CommandLifecycleState::CREATED:
             return "CREATED";
-        case State::SENT:
+        case CommandLifecycleState::SENT:
             return "SENT";
-        case State::RECEIVED:
+        case CommandLifecycleState::RECEIVED:
             return "RECEIVED";
-        case State::PROCESSED:
+        case CommandLifecycleState::PROCESSED:
             return "PROCESSED";
-        case State::ERROR:
+        case CommandLifecycleState::ERROR:
             return "ERROR";
-        case State::TIMEOUT:
+        case CommandLifecycleState::TIMEOUT:
             return "TIMEOUT";
-        case State::UNKNOWN:
+        case CommandLifecycleState::UNKNOWN:
             return "UNKNOWN";
         default:
             return "UNKNOWN";
         }
     };
 
-    State state;
+    CommandLifecycleState state;
 
-    std::map<State, std::vector<State>> transitions = {
-        {State::CREATED, {State::SENT, State::ERROR}},
-        {State::SENT, {State::RECEIVED, State::ERROR, State::TIMEOUT}},
-        {State::RECEIVED, {State::PROCESSED, State::ERROR}},
-        {State::TIMEOUT, {State::PROCESSED, State::ERROR}},
-        {State::UNKNOWN, {State::CREATED, State::ERROR}}};
+    std::map<CommandLifecycleState, std::vector<CommandLifecycleState>> transitions = {
+        {CommandLifecycleState::CREATED, {CommandLifecycleState::SENT, CommandLifecycleState::ERROR}},
+        {CommandLifecycleState::SENT, {CommandLifecycleState::RECEIVED, CommandLifecycleState::ERROR, CommandLifecycleState::TIMEOUT}},
+        {CommandLifecycleState::RECEIVED, {CommandLifecycleState::PROCESSED, CommandLifecycleState::ERROR}},
+        {CommandLifecycleState::TIMEOUT, {CommandLifecycleState::PROCESSED, CommandLifecycleState::ERROR}},
+        {CommandLifecycleState::UNKNOWN, {CommandLifecycleState::CREATED, CommandLifecycleState::ERROR}}};
 };
 
 #endif // COMMAND_LIFECYCLE_FSM_H

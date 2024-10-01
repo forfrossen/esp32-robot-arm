@@ -19,23 +19,10 @@ protected:
     twai_message_t msg = {};
     uint8_t *data;
     std::shared_ptr<TWAICommandFactorySettings> settings;
-    // void vTask_handleIncoming(void *pvParameters)
-    // {
-    //     TWAICommandBuilderBase *instance = static_cast<TWAICommandBuilderBase *>(pvParameters);
-    //     for (;;)
-    //     {
-    //         twai_message_t msg;
-    //         xQueuePeek(instance->inQ, &msg, (TickType_t)0);
-    //         if (msg.identifier == instance->id && msg.data[0] == instance->command_id)
-    //         {
-    //             ESP_LOGI(FUNCTION_NAME, "Resolving message from inQ with ID: 0x%02lX for command: %02X", msg.identifier, msg.data[0]);
-    //             xQueueReceive(instance->inQ, &msg, (TickType_t)10);
-    //         }
-    //     }
-    // }
+    std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
 
 public:
-    TWAICommandBuilderBase(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code) : settings(settings)
+    TWAICommandBuilderBase(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code) : settings(settings), command_lifecycle_registry(settings->command_lifecycle_registry)
     {
         ESP_LOGI(FUNCTION_NAME, "TWAICommandBuilderBase constructor called");
         set_default_values();
@@ -45,7 +32,7 @@ public:
         register_command();
     }
 
-    TWAICommandBuilderBase(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code, std::vector<uint8_t> payload) : settings(settings)
+    TWAICommandBuilderBase(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code, std::vector<uint8_t> payload) : settings(settings), command_lifecycle_registry(settings->command_lifecycle_registry)
     {
         ESP_LOGI(FUNCTION_NAME, "TWAICommandBuilderBase constructor called");
         set_default_values();
@@ -63,6 +50,7 @@ public:
         msg.extd = 0;
         msg.rtr = 0;
         msg.ss = 0;
+        msg.self = 0;
         msg.dlc_non_comp = 0;
         msg.identifier = settings->id;
     }
@@ -77,7 +65,7 @@ public:
         command_code = code;
     }
 
-    void set_data_length_code(int length)
+    void set_data_length_code(uint8_t length)
     {
         msg.data_length_code = length;
     }
@@ -116,7 +104,7 @@ public:
             crc += msg.data[i];
         }
 
-        return crc;
+        return crc & 0xFF;
     }
 
     esp_err_t enqueue_message()

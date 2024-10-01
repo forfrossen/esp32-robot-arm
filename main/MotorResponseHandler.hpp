@@ -18,6 +18,7 @@ public:
     void handle_received_message(twai_message_t *msg);
     void handle_query_status_response(twai_message_t *msg);
     void handle_query_motor_position_response(twai_message_t *msg);
+    void handle_query_motor_speed_response(twai_message_t *msg);
     void handle_set_position_response(twai_message_t *msg);
     void handle_set_home_response(twai_message_t *msg);
     void handle_set_work_mode_response(twai_message_t *msg);
@@ -34,8 +35,8 @@ private:
     void handle_received_error();
     void handle_received_no_error();
     void check_for_error_and_do_transition(twai_message_t *msg);
-
     void print_unknown_response_code(twai_message_t *msg);
+    void log_twai_message(twai_message_t *msg);
 };
 
 #endif // MOTORRESPONSEHANDLER_H

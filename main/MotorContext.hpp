@@ -44,6 +44,9 @@ public:
     uint16_t get_encoder_value() const { return encoder_value; };
     void set_encoder_value(uint16_t value) { encoder_value = value; };
 
+    uint64_t get_absolute_position() const { return absolute_position; };
+    void set_absolute_position(uint64_t value) { absolute_position = value; };
+
     MovingState get_motor_moving_state() const { return moving_state; };
     void set_motor_moving_state(MovingState state) { moving_state = state; };
 
@@ -66,6 +69,7 @@ private:
     std::chrono::system_clock::time_point last_seen;
     uint32_t carry_value;
     uint16_t encoder_value;
+    uint64_t absolute_position;
 
     EventGroupHandle_t event_group;
 

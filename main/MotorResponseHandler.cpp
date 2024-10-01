@@ -2,6 +2,33 @@
 
 MotorResponseHandler::~MotorResponseHandler() {}
 
+void MotorResponseHandler::log_twai_message(twai_message_t *msg)
+{
+
+    ESP_LOGI(FUNCTION_NAME, "TWAI Message: \t Identifier: 0x%02lu", msg->identifier);
+
+    if (msg->flags & TWAI_MSG_FLAG_RTR)
+    {
+        ESP_LOGI(FUNCTION_NAME, "Flags: Remote Transmission Request (RTR) ");
+    }
+    if (msg->flags & TWAI_MSG_FLAG_EXTD)
+    {
+        ESP_LOGI(FUNCTION_NAME, "Flags: Extended Identifier (EXTD) ");
+    }
+    if (msg->flags & TWAI_MSG_FLAG_SELF)
+    {
+        ESP_LOGI(FUNCTION_NAME, "Flags: Self Reception ");
+    }
+
+    // Log the data length code (DLC)
+    ESP_LOGI(FUNCTION_NAME, "Data Length Code (DLC): %d", msg->data_length_code);
+
+    for (int i = 0; i < msg->data_length_code; i++)
+    {
+        ESP_LOGI(FUNCTION_NAME, "  Data[%d]: \t 0x%02X \t %d ", i, msg->data[i], msg->data[i]);
+    }
+}
+
 bool MotorResponseHandler::is_response_error(twai_message_t *msg)
 {
     if (msg->data[1] == 0)
@@ -50,12 +77,8 @@ void MotorResponseHandler::handle_received_message(twai_message_t *msg)
     char command_name[50];
     command_mapper->get_command_name_from_code(msg->data[0], command_name);
 
-    ESP_LOGI(FUNCTION_NAME, "ID: %lu \t length: %u \t code: %02X \t commandName: %s", canId, msg->data_length_code, msg->data[0], command_name);
-
-    for (int i = 0; i < msg->data_length_code; i++)
-    {
-        ESP_LOGI(FUNCTION_NAME, "Data[%d] - raw: %d \t - hex: %02X", i, msg->data[i], msg->data[i]);
-    }
+    ESP_LOGI(FUNCTION_NAME, "ID: %02lu \t length: %d / %02u \t code: %02X \t commandName: %s", canId, msg->data_length_code, msg->data_length_code, msg->data[0], command_name);
+    log_twai_message(msg);
 
     check_for_error_and_do_transition(msg);
 
@@ -88,8 +111,7 @@ void MotorResponseHandler::handle_received_message(twai_message_t *msg)
 
 void MotorResponseHandler::handle_query_status_response(twai_message_t *msg)
 {
-    uint8_t &status = msg->data[1];
-    uint8_t *data = msg->data;
+    uint8_t status = msg->data[1] - msg->data[0] - 0xFF;
     uint8_t length = msg->data_length_code;
 
     switch (status)
@@ -136,14 +158,51 @@ void MotorResponseHandler::handle_query_motor_position_response(twai_message_t *
     //     ESP_LOGE(FUNCTION_NAME, "Invalid response length or code.");
     //     return;
     // }
+    uint8_t *data = msg->data;
+    uint8_t length = msg->data_length_code;
 
-    context->set_carry_value((msg->data[1] << 24) | (msg->data[2] << 16) | (msg->data[3] << 8) | msg->data[4]);
-    context->set_encoder_value((msg->data[5] << 8) | msg->data[6]);
+    uint32_t carry = (data[1] << 24) | (data[2] << 16) | (data[3] << 8) | data[4];
+    uint16_t encoderValue = (data[5] << 8) | data[6];
 
-    ESP_LOGI(FUNCTION_NAME, "Carry value: %lu", context->get_carry_value());
-    ESP_LOGI(FUNCTION_NAME, "Encoder value: %u", context->get_encoder_value());
+    // Optional: Überprüfen, ob Value außerhalb des gültigen Bereichs liegt
+    if (encoderValue > 0x3FFF)
+    {
+        carry += 1;
+        encoderValue -= 0x4000;
+    }
+    else if (encoderValue < 0)
+    {
+        carry -= 1;
+        encoderValue += 0x4000;
+    }
+
+    // Werte im Kontext speichern
+    context->set_carry_value(carry);
+    context->set_encoder_value(encoderValue);
+
+    // Absolute Position berechnen
+    int64_t absolutePosition = ((int64_t)carry << 14) + encoderValue;
+    context->set_absolute_position(absolutePosition);
+
+    ESP_LOGI(FUNCTION_NAME, "Carry value: %ld", carry);
+    ESP_LOGI(FUNCTION_NAME, "Encoder value: %u", encoderValue);
+    ESP_LOGI(FUNCTION_NAME, "Absolute position: %lld", absolutePosition);
 }
 
+void MotorResponseHandler::handle_query_motor_speed_response(twai_message_t *msg)
+{
+    // if (msg->data_length_code != 4 || msg->data[0] != 0x32)
+    // {
+    //     ESP_LOGE(FUNCTION_NAME, "Invalid response length or code.");
+    //     return;
+    // }
+
+    uint16_t speed = (msg->data[2] << 16) | (msg->data[3] << 8) | msg->data[4];
+    uint8_t crc = msg->data[3];
+
+    ESP_LOGI(FUNCTION_NAME, "Speed: %u", speed);
+    ESP_LOGI(FUNCTION_NAME, "CRC: %u", crc);
+}
 void MotorResponseHandler::handle_set_position_response(twai_message_t *msg)
 {
     if (msg->data_length_code != 3)

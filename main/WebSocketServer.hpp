@@ -119,7 +119,10 @@ static const httpd_uri_t ws = {
     .method = HTTP_GET,
     .handler = echo_handler,
     .user_ctx = NULL,
-    .is_websocket = true};
+    .is_websocket = true,
+    .handle_ws_control_frames = true,
+    .supported_subprotocol = NULL,
+};
 
 static httpd_handle_t start_webserver(void)
 {

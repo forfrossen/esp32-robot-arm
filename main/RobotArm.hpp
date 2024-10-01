@@ -32,7 +32,7 @@ public:
 
         for (int i = 1; i < 4; i++)
         {
-            if (i == 2)
+            if (i != 1)
             {
                 const std::shared_ptr<MotorControllerDependencies> motor_controller_dependencies = motor_controller_dependencies_init(i);
                 if (motor_controller_dependencies == nullptr)
@@ -63,7 +63,7 @@ public:
             return nullptr;
         }
 
-        std::shared_ptr<TWAICommandFactorySettings> settings = std::make_shared<TWAICommandFactorySettings>(id, inQ, twai_controller->outQ, command_lifecyle_registry);
+        std::shared_ptr<TWAICommandFactorySettings> settings = std::make_shared<TWAICommandFactorySettings>(id, twai_controller->outQ, inQ, command_lifecyle_registry);
         std::shared_ptr<TWAICommandFactory> command_factory = std::make_shared<TWAICommandFactory>(settings);
         std::shared_ptr<MotorContext> motor_context = std::make_shared<MotorContext>(id);
         std::shared_ptr<MotorResponseHandler> motor_response_handler = std::make_shared<MotorResponseHandler>(id, motor_context, command_mapper);

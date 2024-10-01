@@ -32,6 +32,7 @@ extern "C" void app_main()
     static httpd_handle_t server = NULL;
     esp_err_t ret;
     esp_log_level_set("*", ESP_LOG_INFO);
+    esp_log_level_set("CommandMapper::get_command_name_from_code", ESP_LOG_ERROR);
     /*
 
       const std::map<std::string, esp_log_level_t> logLevels = {

@@ -48,18 +48,15 @@ CommandMapper::CommandMapper() {}
 
 void CommandMapper::get_command_name_from_code(uint8_t code, char *command_name) const
 {
-    ESP_LOGI(FUNCTION_NAME, "Looking for code: 0x%02X", code);
-
     auto it = command_map.find(code);
     if (it != command_map.end())
     {
         std::strcpy(command_name, it->second);
-        ESP_LOGI(FUNCTION_NAME, "Found command name: %s", command_name);
     }
     else
     {
         const char *unknown_command = "Unknown command";
         std::strcpy(command_name, unknown_command);
-        ESP_LOGE(FUNCTION_NAME, "Command not found, using unknown command");
+        ESP_LOGW(FUNCTION_NAME, "Command not found, using unknown command");
     }
 }

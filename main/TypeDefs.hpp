@@ -54,6 +54,17 @@ struct TWAICommandFactorySettings
     }
 };
 
+enum class CommandLifecycleState
+{
+    CREATED,
+    SENT,
+    RECEIVED,
+    PROCESSED,
+    ERROR,
+    TIMEOUT,
+    UNKNOWN
+};
+
 enum MotorEvent
 {
     MOTOR_EVENT_INIT,

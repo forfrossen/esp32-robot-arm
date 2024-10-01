@@ -1,14 +1,9 @@
 #include "TWAIController.hpp"
 
-TWAIController &TWAIController::getInstance()
-{
-    static TWAIController instance;
-    return instance;
-}
-
 TWAIController::TWAIController()
 {
     esp_err_t ret;
+    twai_mutex = xSemaphoreCreateMutex();
     if (!_isConnected)
     {
         ret = init();
@@ -140,6 +135,7 @@ void TWAIController::vTask_Reception(void *pvParameters)
     {
         twai_message_t msg;
         esp_err_t ret = twai_receive(&msg, portMAX_DELAY);
+        xSemaphoreTake(twai_controller->twai_mutex, portMAX_DELAY);
         assert(ret == ESP_OK); // Ensure the message was received successfully
         ESP_LOGI(FUNCTION_NAME, "Message received");
 
@@ -150,7 +146,7 @@ void TWAIController::vTask_Reception(void *pvParameters)
         assert(xStatus == pdPASS);
 
         ESP_LOGI(FUNCTION_NAME, "\t==> Received message enqueued successfully!");
-
+        xSemaphoreGive(twai_controller->twai_mutex);
         // ESP_LOGE(FUNCTION_NAME, "\t==> Error enqueuing received message!");
         //  continue;
     }
@@ -165,6 +161,7 @@ void TWAIController::vTask_Transmission(void *pvParameters)
         twai_message_t outQmsg;
         if (xQueueReceive(twai_controller->outQ, &outQmsg, portMAX_DELAY) == pdPASS)
         {
+            xSemaphoreTake(twai_controller->twai_mutex, portMAX_DELAY);
             // outQmsg.data[outQmsg.data_length_code] = 32;
             // twai_controller->calculate_crc(&outQmsg);
 
@@ -179,6 +176,8 @@ void TWAIController::vTask_Transmission(void *pvParameters)
                 continue;
             }
             ESP_LOGI(FUNCTION_NAME, "\t==> Successfully sent message");
+            xSemaphoreGive(twai_controller->twai_mutex);
+            vTaskDelay(200 / portTICK_PERIOD_MS);
         }
     }
 }
