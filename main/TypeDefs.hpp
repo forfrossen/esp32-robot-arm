@@ -23,26 +23,39 @@
 #define MOTOR_RECOVERING_BIT BIT2
 #define MOTOR_INIT_BIT BIT3
 
-// Define the event base for motor controller events
-ESP_EVENT_DEFINE_BASE(MOTOR_CONTROLLER_EVENT);
-
 class TWAICommandFactory;
-class CommandMapper;
 class TWAIController;
 class CommandLifecycleRegistry;
 class MotorContext;
 class MotorResponseHandler;
 
+struct EventLoops
+{
+    esp_event_loop_handle_t system_event_loop;
+    esp_event_loop_handle_t motor_event_loop;
+};
+
+struct EventGroups
+{
+    EventGroupHandle_t system_event_group;
+    EventGroupHandle_t motor_event_group;
+};
+
+struct TWAIQueues
+{
+    QueueHandle_t inQ;
+    QueueHandle_t outQ;
+};
+
 struct TWAICommandFactorySettings
 {
     uint32_t id;
-    QueueHandle_t outQ;
-    QueueHandle_t inQ;
+    std::shared_ptr<TWAIQueues> twai_queues;
     std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
 
     // Constructor
-    TWAICommandFactorySettings(uint32_t id, QueueHandle_t outQ, QueueHandle_t inQ, std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry)
-        : id(id), outQ(outQ), inQ(inQ), command_lifecycle_registry(command_lifecycle_registry)
+    TWAICommandFactorySettings(uint32_t id, std::shared_ptr<TWAIQueues> twai_queues, std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry)
+        : id(id), twai_queues(twai_queues), command_lifecycle_registry(command_lifecycle_registry)
     {
         ESP_LOGI("TWAICommandFactorySettings", "Constructor called");
     }
@@ -65,23 +78,32 @@ enum class CommandLifecycleState
     UNKNOWN
 };
 
-enum MotorEvent
+typedef enum
 {
     MOTOR_EVENT_INIT,
     MOTOR_EVENT_READY,
     MOTOR_EVENT_RUNNING,
     MOTOR_EVENT_ERROR,
     MOTOR_EVENT_RECOVERING
-};
+} motor_event_id_t;
+
+typedef enum
+{
+    TWAI_READY_EVENT,
+    WIFI_READY_EVENT,
+    WEBSOCKET_READY_EVENT,
+    TWAI_ERROR_EVENT,
+    WIFI_ERROR_EVENT,
+    WEBSOCKET_ERROR_EVENT
+} system_event_id_t;
 
 struct MotorControllerDependencies
 {
     uint32_t id;
-    QueueHandle_t inQ;
-    QueueHandle_t outQ;
-    EventGroupHandle_t system_event_group;
     SemaphoreHandle_t motor_mutex;
-    std::shared_ptr<CommandMapper> command_mapper;
+    std::shared_ptr<TWAIQueues> twai_queues;
+    std::shared_ptr<EventGroups> event_groups;
+    std::shared_ptr<EventLoops> event_loops;
     std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
     std::shared_ptr<TWAICommandFactory> command_factory;
     std::shared_ptr<MotorContext> motor_context;
@@ -90,19 +112,19 @@ struct MotorControllerDependencies
     // Constructor
     MotorControllerDependencies(
         uint32_t id,
-        QueueHandle_t inQ,
-        QueueHandle_t outQ,
-        EventGroupHandle_t system_event_group,
         SemaphoreHandle_t motor_mutex,
-        std::shared_ptr<CommandMapper> command_mapper,
+        std::shared_ptr<TWAIQueues> twai_queues,
+        std::shared_ptr<EventGroups> event_groups,
+        std::shared_ptr<EventLoops> event_loops,
         std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry,
         std::shared_ptr<TWAICommandFactory> command_factory,
         std::shared_ptr<MotorContext> motor_context,
         std::shared_ptr<MotorResponseHandler> motor_response_handler)
-        : id(id), inQ(inQ), outQ(outQ),
-          system_event_group(system_event_group),
+        : id(id),
           motor_mutex(motor_mutex),
-          command_mapper(command_mapper),
+          twai_queues(twai_queues),
+          event_groups(event_groups),
+          event_loops(event_loops),
           command_lifecycle_registry(command_lifecycle_registry),
           command_factory(command_factory),
           motor_context(motor_context),

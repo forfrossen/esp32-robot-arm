@@ -30,12 +30,12 @@ esp_err_t TWAIController::init()
         ESP_LOGW(FUNCTION_NAME, "TWAIController already initialized.");
         return ESP_ERR_INVALID_STATE;
     }
-
     twai_general_config_t general_config = TWAI_GENERAL_CONFIG_DEFAULT(GPIO_NUM_17, GPIO_NUM_16, TWAI_MODE_NORMAL);
     twai_timing_config_t timing_config = TWAI_TIMING_CONFIG_500KBITS();
     twai_filter_config_t filter_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
     uint32_t alerts_to_enable = TWAI_ALERT_ALL;
 
+    general_config.controller_id = 0;
     esp_err_t ret = twai_driver_install(&general_config, &timing_config, &filter_config);
     if (ret != ESP_OK)
     {
@@ -98,10 +98,21 @@ esp_err_t TWAIController::setupQueues()
     return ESP_OK;
 }
 
-esp_err_t TWAIController::registerInQueue(uint32_t id, QueueHandle_t inQ)
+esp_err_t TWAIController::register_motor_id(uint32_t id)
 {
+    QueueHandle_t inQ = xQueueCreate(10, sizeof(twai_message_t));
+    if (inQ == nullptr)
+    {
+        ESP_LOGE(FUNCTION_NAME, "Failed to create queue");
+        return ESP_FAIL;
+    }
     inQs.emplace(id, inQ);
     return ESP_OK;
+}
+
+QueueHandle_t TWAIController::get_inQ_for_id(uint32_t id)
+{
+    return inQs[id];
 }
 
 TWAIController::ERROR TWAIController::disconnectCan()

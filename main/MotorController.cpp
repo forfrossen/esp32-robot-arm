@@ -1,10 +1,13 @@
 #include "MotorController.hpp"
 
-void MotorController::motor_controller_event_handler(void *handler_args, esp_event_base_t event_base, int32_t event_id, void *event_data)
+void MotorController::motor_controller_event_handler(void *args, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
-    MotorController *instance = static_cast<MotorController *>(handler_args);
+    MotorController *instance = static_cast<MotorController *>(args);
+    esp_err_t ret;
 
-    if (event_base != MOTOR_CONTROLLER_EVENT)
+    ESP_LOGI(FUNCTION_NAME, "GOT MOTOR EVENT FOR MOTOR %lu, EVENT_BASE: %s, EVENT_ID: %lu", instance->canId, event_base, event_id);
+
+    if (event_base != MOTOR_EVENT)
     {
         return;
     }
@@ -13,40 +16,38 @@ void MotorController::motor_controller_event_handler(void *handler_args, esp_eve
     {
     case MOTOR_EVENT_INIT:
         ESP_LOGI("MotorEventLoopHandler", "Handling MOTOR_EVENT_INIT.");
-        instance->init_event_loop();
+        ret = instance->start_basic_tasks();
+        if (ret != ESP_OK)
+        {
+            instance->context->transition_ready_state(MotorContext::MOTOR_ERROR);
+        }
         break;
-
     case MOTOR_EVENT_ERROR:
         ESP_LOGE("MotorEventLoopHandler", "Handling MOTOR_EVENT_ERROR.");
+        instance->stop_timed_tasks();
+        instance->stop_timed_tasks();
+        xEventGroupClearBits(instance->motor_event_group, MOTOR_READY_BIT);
+        xEventGroupSetBits(instance->motor_event_group, MOTOR_ERROR_BIT);
 
         break;
-
     case MOTOR_EVENT_RECOVERING:
         ESP_LOGI("MotorEventLoopHandler", "Handling MOTOR_EVENT_RECOVERING.");
-        instance->init_tasks();
-        break;
-
-    default:
-        break;
-    }
-}
-
-void MotorController::vTask_handle_unhealthy(void *pvParameters)
-{
-    MotorController *instance = static_cast<MotorController *>(pvParameters);
-    for (;;)
-    {
-        EventBits_t motor_bits = xEventGroupWaitBits(instance->motor_event_group, MotorContext::MOTOR_RECOVERING, pdFALSE, pdFALSE, portMAX_DELAY);
-
-        if (motor_bits & MotorContext::MOTOR_RECOVERING)
+        ret = instance->start_timed_tasks();
+        xEventGroupClearBits(instance->motor_event_group, MOTOR_ERROR_BIT);
+        if (ret != ESP_OK)
         {
-            ESP_LOGE(FUNCTION_NAME, "Motor in recovery state.");
-            instance->init_tasks();
-            instance->error_counter = 0;
+            instance->context->transition_ready_state(MotorContext::MOTOR_ERROR);
+        }
+        else
+        {
             instance->context->transition_ready_state(MotorContext::MOTOR_READY);
         }
-
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        break;
+    case MOTOR_EVENT_READY:
+        ESP_LOGI("MotorEventLoopHandler", "Handling MOTOR_EVENT_READY.");
+        xEventGroupSetBits(instance->motor_event_group, MOTOR_READY_BIT);
+    default:
+        break;
     }
 }
 
@@ -119,13 +120,7 @@ void MotorController::vTask_handleInQ(void *vParameters)
         xQueueReceive(instance->inQ, &msg, portMAX_DELAY);
         xSemaphoreTake(instance->motor_mutex, portMAX_DELAY);
         ESP_LOGI(FUNCTION_NAME, "Received message from inQ with TWAI ID: %lu \t length: %d \t code: %02X", msg.identifier, msg.data_length_code, msg.data[0]);
-
-        for (int i = 1; i < msg.data_length_code; i++)
-        {
-            ESP_LOGI(FUNCTION_NAME, "Data[%d] - raw: %d - hex: %02X", i, msg.data[i], msg.data[i]);
-        }
-
-        instance->response_handler->handle_received_message(&msg);
+        instance->response_handler->process_message(&msg);
         xSemaphoreGive(instance->motor_mutex);
     }
 }
@@ -152,50 +147,26 @@ void MotorController::vtask_send_positon(void *pvParameters)
 MotorController::MotorController(
     std::shared_ptr<MotorControllerDependencies> dependencies) : canId(dependencies->id),
                                                                  command_factory(dependencies->command_factory),
-                                                                 inQ(dependencies->inQ),
-                                                                 outQ(dependencies->outQ),
-                                                                 motor_event_group(xEventGroupCreate()),
-                                                                 system_event_group(dependencies->system_event_group),
+                                                                 inQ(dependencies->twai_queues->inQ),
+                                                                 outQ(dependencies->twai_queues->outQ),
+                                                                 system_event_group(dependencies->event_groups->system_event_group),
+                                                                 motor_event_group(dependencies->event_groups->motor_event_group),
+                                                                 system_event_loop(dependencies->event_loops->system_event_loop),
+                                                                 motor_event_loop(dependencies->event_loops->motor_event_loop),
                                                                  motor_mutex(dependencies->motor_mutex),
-                                                                 command_mapper(dependencies->command_mapper),
                                                                  command_lifecycle_registry(dependencies->command_lifecycle_registry),
                                                                  context(dependencies->motor_context),
                                                                  response_handler(dependencies->motor_response_handler)
 {
-    BaseType_t xRet;
     ESP_LOGI(FUNCTION_NAME, "New MotorController-Object created with CAN ID: %lu", canId);
+    esp_err_t err = esp_event_handler_register_with(motor_event_loop, MOTOR_EVENT, ESP_EVENT_ANY_ID, &MotorController::motor_controller_event_handler, this);
 
-    if (motor_event_group == NULL)
+    if (err != ESP_OK)
     {
-        ESP_LOGE(FUNCTION_NAME, "Error creating event group");
+        ESP_LOGE(FUNCTION_NAME, "Failed to register event handler: %s", esp_err_to_name(err));
     }
 
-    if (inQ == nullptr)
-    {
-        ESP_LOGE(FUNCTION_NAME, "inQ is nullptr");
-    }
-    if (outQ == nullptr)
-    {
-        ESP_LOGE(FUNCTION_NAME, "outQ is nullptr");
-    }
-
-    init_event_loop();
-
-    context->transition_ready_state(MotorContext::MOTOR_INIT);
-
-    xRet = xTaskCreatePinnedToCore(&MotorController::vTask_handleInQ, "TASK_handleInQ", 1024 * 3, this, 2, &task_handle_handle_inQ, 1);
-    if (xRet != pdPASS)
-    {
-        ESP_LOGE(FUNCTION_NAME, "Failed to create TASK_handleInQ");
-    }
-    configASSERT(task_handle_handle_inQ);
-
-    xRet = xTaskCreatePinnedToCore(&MotorController::vTask_query_status, "TASK_queryPosition", 1024 * 3, this, 1, &task_handle_query_status, 1);
-    if (xRet != pdPASS)
-    {
-        ESP_LOGE(FUNCTION_NAME, "Failed to create TASK_queryPosition");
-    }
-    configASSERT(task_handle_query_status);
+    context->transition_ready_state(MotorContext::MOTOR_INITIALIZED);
 }
 
 MotorController::~MotorController()
@@ -203,66 +174,60 @@ MotorController::~MotorController()
     vTaskDelete(task_handle_handle_inQ);
     vTaskDelete(task_handle_query_status);
     vTaskDelete(task_handle_send_position);
-    vTaskDelete(task_handle_handle_unhealthy);
-    esp_event_loop_delete(motor_controller_event_loop_handle);
+    esp_event_loop_delete(motor_event_loop);
 }
 
-void MotorController::init_event_loop()
+esp_err_t MotorController::start_basic_tasks()
 {
-    esp_event_loop_args_t loop_args = {
-        .queue_size = 10,
-        .task_name = "motor_controller_event_loop_task", // Name der Event Loop Task
-        .task_priority = uxTaskPriorityGet(NULL),
-        .task_stack_size = 4048,
-        .task_core_id = tskNO_AFFINITY};
-    ESP_ERROR_CHECK(esp_event_loop_create(&loop_args, &motor_controller_event_loop_handle));
+    BaseType_t xRet;
+    xRet = xTaskCreatePinnedToCore(&MotorController::vTask_handleInQ, "TASK_handleInQ", 1024 * 3, this, 2, &task_handle_handle_inQ, tskNO_AFFINITY);
+    ESP_RETURN_ON_FALSE(task_handle_handle_inQ != NULL, ESP_FAIL, FUNCTION_NAME, "Failed to create TASK_handleInQ");
+    ESP_LOGI(FUNCTION_NAME, "TASK_handleInQ created");
 
-    ESP_ERROR_CHECK(esp_event_handler_register_with(motor_controller_event_loop_handle, MOTOR_CONTROLLER_EVENT, ESP_EVENT_ANY_ID, &MotorController::motor_controller_event_handler, this));
+    xRet = xTaskCreatePinnedToCore(&MotorController::vTask_query_status, "TASK_queryStatus", 1024 * 3, this, 1, &task_handle_query_status, tskNO_AFFINITY);
+    ESP_RETURN_ON_FALSE(task_handle_query_status != NULL, ESP_FAIL, FUNCTION_NAME, "Failed to create TASK_queryStatus");
+    ESP_LOGI(FUNCTION_NAME, "TASK_queryStatus created");
+    return ESP_OK;
 }
 
-esp_err_t MotorController::init_tasks()
+esp_err_t MotorController::start_timed_tasks()
 {
-    esp_err_t ret = ESP_OK;
     BaseType_t xReturned;
 
     ESP_LOGI(FUNCTION_NAME, "Initializing tasks");
-
-    // xRet = xTaskCreatePinnedToCore(&MotorController::vTask_handle_unhealthy, "TASK_handleUnhealthy", 1024 * 3, this, 1, &task_handle_handle_unhealthy, 1);
-    // if (xRet != pdPASS)
-    // {
-    //     ESP_LOGE(FUNCTION_NAME, "Failed to create TASK_handleUnhealthy");
-    // }
-    // configASSERT(task_handle_handle_unhealthy);
 
     if (task_handle_query_position != nullptr)
     {
         vTaskDelete(task_handle_query_position);
     }
-    xReturned = xTaskCreatePinnedToCore(&MotorController::vTask_query_position, "TASK_queryPosition", 1024 * 3, this, 3, &task_handle_query_position, 1);
-    if (xReturned != pdPASS)
-    {
-        ESP_LOGE(FUNCTION_NAME, "Failed to create task_queryPosition");
-        ret = ESP_FAIL;
-    }
-    configASSERT(vTask_query_position);
-
+    xReturned = xTaskCreatePinnedToCore(&MotorController::vTask_query_position, "TASK_queryPosition", 1024 * 3, this, 3, &task_handle_query_position, tskNO_AFFINITY);
+    ESP_RETURN_ON_FALSE(xReturned != NULL, ESP_FAIL, FUNCTION_NAME, "Failed to create TASK_queryPosition");
+    ESP_LOGI(FUNCTION_NAME, "TASK_queryPosition created");
     if (task_handle_send_position != nullptr)
     {
         vTaskDelete(task_handle_send_position);
     }
-    xReturned = xTaskCreatePinnedToCore(&MotorController::vtask_send_positon, "TASK_SendRandomTargetPositionCommands", 1024 * 3, this, 4, &task_handle_send_position, 1);
-    if (xReturned != pdPASS)
-    {
-        ESP_LOGE(FUNCTION_NAME, "Failed to create task_sendRandomTargetPositionCommands");
-        ret = ESP_FAIL;
-    }
-    configASSERT(vtask_send_positon);
-    return ret;
+    xReturned = xTaskCreatePinnedToCore(&MotorController::vtask_send_positon, "TASK_SendRandomTargetPositionCommands", 1024 * 3, this, 4, &task_handle_send_position, tskNO_AFFINITY);
+    ESP_RETURN_ON_FALSE(xReturned != NULL, ESP_FAIL, FUNCTION_NAME, "Failed to create TASK_SendRandomTargetPositionCommands");
+    ESP_LOGI(FUNCTION_NAME, "TASK_SendRandomTargetPositionCommands created");
+    return ESP_OK;
 }
 
-void MotorController::post_event(MotorEvent event)
+void MotorController::stop_basic_tasks()
 {
-    esp_event_post_to(motor_controller_event_loop_handle, MOTOR_CONTROLLER_EVENT, event, NULL, 0, portMAX_DELAY);
+    vTaskDelete(task_handle_handle_inQ);
+    vTaskDelete(task_handle_query_status);
+}
+
+void MotorController::stop_timed_tasks()
+{
+    vTaskDelete(task_handle_query_position);
+    vTaskDelete(task_handle_send_position);
+}
+
+void MotorController::post_event(motor_event_id_t event)
+{
+    ESP_ERROR_CHECK(esp_event_post_to(motor_event_loop, MOTOR_EVENT, event, NULL, 0, portMAX_DELAY));
 }
 
 esp_err_t MotorController::execute_query_command(std::function<TWAICommandBuilderBase<GenericCommandBuilder> *()> command_factory_method)

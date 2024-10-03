@@ -48,13 +48,13 @@ public:
             return ESP_ERR_INVALID_ARG;
         }
 
-        if (!settings->inQ)
+        if (!settings->twai_queues->inQ)
         {
             ESP_LOGE(FUNCTION_NAME, "Settings->inQ not set");
             return ESP_ERR_INVALID_ARG;
         }
 
-        if (!settings->outQ)
+        if (!settings->twai_queues->outQ)
         {
             ESP_LOGE(FUNCTION_NAME, "Settings->outQ not set");
             return ESP_ERR_INVALID_ARG;

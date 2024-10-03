@@ -1,6 +1,7 @@
 #ifndef MOTORCONTEXT_HPP
 #define MOTORCONTEXT_HPP
 
+#include "Events.hpp"
 #include "TypeDefs.hpp"
 #include "esp_err.h"
 #include "esp_event.h"
@@ -9,6 +10,7 @@
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
+#include "utils.hpp"
 #include <chrono>
 #include <cstdint>
 
@@ -17,7 +19,8 @@ class MotorContext
 public:
     enum ReadyState
     {
-        MOTOR_INIT,
+        MOTOR_UNINITIALIZED,
+        MOTOR_INITIALIZED,
         MOTOR_READY,
         MOTOR_ERROR,
         MOTOR_RECOVERING
@@ -35,7 +38,7 @@ public:
         CALIBRATING
     };
 
-    MotorContext(uint32_t can_id) : can_id(can_id) {};
+    MotorContext(uint32_t can_id, esp_event_loop_handle_t motor_event_loop) : can_id(can_id), motor_event_loop(motor_event_loop) {};
     ~MotorContext() {}
 
     uint32_t get_carry_value() const { return carry_value; };
@@ -59,21 +62,21 @@ public:
 
     bool is_ready() const { return ready_state == ReadyState::MOTOR_READY; };
     bool is_recovering() const { return ready_state == ReadyState::MOTOR_RECOVERING; };
-    bool is_init() const { return ready_state == ReadyState::MOTOR_INIT; };
+    bool is_init() const { return ready_state == ReadyState::MOTOR_INITIALIZED; };
     bool is_error() const { return ready_state == ReadyState::MOTOR_ERROR; };
 
 private:
     uint32_t can_id;
-    ReadyState ready_state = ReadyState::MOTOR_INIT;
+    ReadyState ready_state = ReadyState::MOTOR_UNINITIALIZED;
     MovingState moving_state = MovingState::UNKNOWN;
     std::chrono::system_clock::time_point last_seen;
     uint32_t carry_value;
     uint16_t encoder_value;
     uint64_t absolute_position;
 
-    EventGroupHandle_t event_group;
+    esp_event_loop_handle_t motor_event_loop;
 
-    void post_event(MotorEvent event);
+    void post_event(motor_event_id_t event);
 };
 
 #endif // MOTORCONTEXT_HPP

@@ -110,7 +110,7 @@ public:
     esp_err_t enqueue_message()
     {
 
-        if (!settings->outQ)
+        if (!settings->twai_queues->outQ)
         {
             ESP_LOGE(FUNCTION_NAME, "outQ is NULL");
             return ESP_FAIL;
@@ -123,7 +123,7 @@ public:
             ESP_LOGI(FUNCTION_NAME, "Data[%d]: %02X", i, msg.data[i]);
         }
 
-        if (xQueueSendToBack(settings->outQ, &msg, 0) != pdTRUE)
+        if (xQueueSendToBack(settings->twai_queues->outQ, &msg, 0) != pdTRUE)
         {
             ESP_LOGE(FUNCTION_NAME, " ==> Failed to enqueue message!");
             return ESP_FAIL;

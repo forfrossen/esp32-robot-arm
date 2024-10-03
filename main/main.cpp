@@ -21,18 +21,14 @@
 
 const char compile_date[] = __DATE__ " " __TIME__;
 
-// static TWAIController twai_controller;
-// static CommandMapper command_mapper;
-// static CommandLifecycleRegistry command_lifecyle_registry;
 RobotArm *robot_arm;
+static httpd_handle_t server = NULL;
 
 extern "C" void app_main()
 {
 
-    static httpd_handle_t server = NULL;
     esp_err_t ret;
     esp_log_level_set("*", ESP_LOG_INFO);
-    esp_log_level_set("CommandMapper::get_command_name_from_code", ESP_LOG_ERROR);
     /*
 
       const std::map<std::string, esp_log_level_t> logLevels = {
@@ -44,7 +40,6 @@ extern "C" void app_main()
           {"MotorController::decodeMessage", ESP_LOG_INFO},
           {"MotorController::handleQueryMotorPositionResponse", ESP_LOG_INFO},
           {"QueryMotorPositionCommand::execute", ESP_LOG_ERROR},
-          {"CommandMapper::get_command_name_from_code", ESP_LOG_ERROR},
       };
       // Apply log levels for specific FUNCTION_NAMEs
       for (const auto &x : logLevels)
@@ -55,11 +50,6 @@ extern "C" void app_main()
     */
     ESP_LOGI(FUNCTION_NAME, "Hello world! Robot Arm starting up...");
 
-    /** Event handler for Ethernet events */
-    // static void eth_event_handler(void *arg, esp_event_base_t event_base,
-    //                             int32_t event_id, void *event_data)
-
-    // xTaskCreate(task_randomLogger, "LogMsgCreator", 128, NULL, 2, NULL);
     ESP_LOGI(FUNCTION_NAME, "Hallo, Test from Arm !!!");
     ESP_LOGI(FUNCTION_NAME, "Build date: %s", compile_date);
 

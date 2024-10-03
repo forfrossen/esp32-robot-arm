@@ -42,6 +42,8 @@
 #elif CONFIG_ESP_WIFI_AUTH_WAPI_PSK
 #define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WAPI_PSK
 #endif
+/* FreeRTOS event group to signal when we are connected*/
+static EventGroupHandle_t s_wifi_event_group;
 
 /* The event group allows multiple bits for each event, but we only care about two events:
  * - we are connected to the AP with an IP
@@ -54,7 +56,6 @@ class Wifi
 public:
     static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
     static void wifi_init_sta(void);
-    static EventGroupHandle_t s_wifi_event_group;
 
 private:
 };

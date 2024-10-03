@@ -1,9 +1,9 @@
 #ifndef MOTORCONTROLLER_H
 #define MOTORCONTROLLER_H
 
-#include "CommandMapper.hpp"
 #include "CommandStateMachine.hpp"
 #include "Commands/TWAICommandFactory.hpp"
+#include "Events.hpp"
 #include "MotorContext.hpp"
 #include "MotorResponseHandler.hpp"
 #include "TWAIController.hpp"
@@ -22,8 +22,6 @@
 #include <functional>
 #include <map>
 
-ESP_EVENT_DECLARE_BASE(MOTOR_CONTROLLER_EVENT);
-
 class MotorController
 {
 public:
@@ -39,8 +37,6 @@ public:
     MotorController(std::shared_ptr<MotorControllerDependencies> dependencies);
     ~MotorController();
 
-    esp_err_t init_tasks();
-
     esp_err_t set_target_position();
     esp_err_t query_position();
     esp_err_t query_status();
@@ -53,37 +49,37 @@ private:
     std::shared_ptr<TWAICommandFactory> command_factory;
     QueueHandle_t inQ;
     QueueHandle_t outQ;
-    EventGroupHandle_t motor_event_group;
     EventGroupHandle_t system_event_group;
+    EventGroupHandle_t motor_event_group;
+    esp_event_loop_handle_t system_event_loop;
+    esp_event_loop_handle_t motor_event_loop;
     SemaphoreHandle_t motor_mutex;
-    std::shared_ptr<CommandMapper> command_mapper;
     std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
     std::shared_ptr<MotorContext> context;
     std::shared_ptr<MotorResponseHandler> response_handler;
 
     int error_counter = 0;
 
-        esp_err_t execute_query_command(std::function<TWAICommandBuilderBase<GenericCommandBuilder> *()> command_factory_method);
+    esp_err_t execute_query_command(std::function<TWAICommandBuilderBase<GenericCommandBuilder> *()> command_factory_method);
 
-    esp_event_loop_handle_t motor_controller_event_loop_handle;
     static void motor_controller_event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);
-    void post_event(MotorEvent event);
-    void init_event_loop();
+    void post_event(motor_event_id_t event);
+    esp_err_t start_basic_tasks();
+    esp_err_t start_timed_tasks();
+    void stop_timed_tasks();
+    void stop_basic_tasks();
 
-    TaskHandle_t task_handle_handle_inQ;
+    TaskHandle_t task_handle_handle_inQ = nullptr;
     static void vTask_handleInQ(void *pvParameters);
 
-    TaskHandle_t task_handle_query_position;
+    TaskHandle_t task_handle_query_position = nullptr;
     static void vTask_query_position(void *pvParameters);
 
-    TaskHandle_t task_handle_send_position;
+    TaskHandle_t task_handle_send_position = nullptr;
     static void vtask_send_positon(void *pvParameters);
 
-    TaskHandle_t task_handle_query_status;
+    TaskHandle_t task_handle_query_status = nullptr;
     static void vTask_query_status(void *pvParameters);
-
-    TaskHandle_t task_handle_handle_unhealthy;
-    static void vTask_handle_unhealthy(void *pvParameters);
 };
 
 #endif // CANSERVO_H

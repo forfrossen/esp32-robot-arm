@@ -15,7 +15,6 @@ class TWAIController
 {
 private:
     SemaphoreHandle_t twai_mutex = NULL;
-    std::map<uint32_t, QueueHandle_t> inQs;
     TaskHandle_t taskHandleReception;
     TaskHandle_t taskHandleTransmission;
     TaskHandle_t taskHandleError;
@@ -64,7 +63,7 @@ public:
     ERROR disconnectCan();
     esp_err_t setupQueues();
 
-    esp_err_t registerInQueue(uint32_t canId, QueueHandle_t inQ);
+    esp_err_t register_motor_id(uint32_t canId);
 
     bool isConnected();
 
@@ -73,6 +72,9 @@ public:
     static void vTask_ERROR(void *pvParameters);
 
     QueueHandle_t outQ;
+
+    std::map<uint32_t, QueueHandle_t> inQs;
+    QueueHandle_t get_inQ_for_id(uint32_t);
 
     bool transmit(twai_message_t msg);
     void handleTransmitError(esp_err_t *error);

@@ -1,13 +1,13 @@
 idf_component_register(
   SRCS 
+    "main.cpp"
+    "Events.cpp"
     "TWAIController.cpp"
     "CommandStateMachine.cpp"
-    "CommandMapper.cpp"
     "MotorController.cpp"
     "MotorContext.cpp"
     "MotorResponseHandler.cpp"
     "Wifi.cpp"
-    "main.cpp"
 REQUIRES driver
 REQUIRES esp_event
 REQUIRES esp_wifi
