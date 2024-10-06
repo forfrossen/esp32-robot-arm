@@ -24,14 +24,14 @@ void MotorController::motor_controller_event_handler(void *args, esp_event_base_
             instance->context->transition_ready_state(MotorContext::MOTOR_ERROR);
         }
         break;
+
     case MOTOR_EVENT_ERROR:
         ESP_LOGE("MotorEventLoopHandler", "Handling MOTOR_EVENT_ERROR.");
-        instance->stop_timed_tasks();
-        instance->stop_timed_tasks();
         xEventGroupClearBits(instance->motor_event_group, MOTOR_READY_BIT);
         xEventGroupSetBits(instance->motor_event_group, MOTOR_ERROR_BIT);
-
+        // instance->stop_timed_tasks();
         break;
+
     case MOTOR_EVENT_RECOVERING:
         ESP_LOGI("MotorEventLoopHandler", "Handling MOTOR_EVENT_RECOVERING.");
         ret = instance->start_timed_tasks();
@@ -45,9 +45,11 @@ void MotorController::motor_controller_event_handler(void *args, esp_event_base_
             instance->context->transition_ready_state(MotorContext::MOTOR_READY);
         }
         break;
+
     case MOTOR_EVENT_READY:
         ESP_LOGI("MotorEventLoopHandler", "Handling MOTOR_EVENT_READY.");
         xEventGroupSetBits(instance->motor_event_group, MOTOR_READY_BIT);
+        break;
     default:
         break;
     }
@@ -195,6 +197,13 @@ esp_err_t MotorController::start_basic_tasks()
 esp_err_t MotorController::start_timed_tasks()
 {
     BaseType_t xReturned;
+    esp_err_t ret;
+    ret = set_working_current(1600);
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(FUNCTION_NAME, "Error enqueueing setting working current command");
+        context->transition_ready_state(MotorContext::MOTOR_ERROR);
+    }
 
     ESP_LOGI(FUNCTION_NAME, "Initializing tasks");
 
@@ -260,6 +269,12 @@ esp_err_t MotorController::query_status()
                                  { return command_factory->query_motor_status_command(); });
 }
 
+esp_err_t MotorController::set_working_current(uint16_t current_ma)
+{
+    return execute_query_command([this, current_ma]()
+                                 { return command_factory->set_working_current(current_ma); });
+}
+
 esp_err_t MotorController::set_target_position()
 {
     xSemaphoreTake(motor_mutex, portMAX_DELAY);
@@ -268,8 +283,8 @@ esp_err_t MotorController::set_target_position()
     int acceleration = esp_random() % 255;
     bool absolute = esp_random() % 2;
 
-    speed = 250;
-    acceleration = 255;
+    speed = 1000;
+    acceleration = 10;
     absolute = false;
 
     // set_command_state(CommandStateMachine::CommandState::REQUESTED);

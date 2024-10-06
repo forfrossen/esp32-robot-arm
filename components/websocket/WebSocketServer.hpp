@@ -63,6 +63,17 @@ static esp_err_t echo_handler(httpd_req_t *req)
     if (req->method == HTTP_GET)
     {
         ESP_LOGI(FUNCTION_NAME, "Handshake done, the new connection was opened");
+        // Get WebSocket session ID
+        int ws_fd = httpd_req_to_sockfd(req);
+
+        // Send a welcome message
+        const char *message = "Welcome to ESP32 WebSocket Server!";
+        httpd_ws_frame_t ws_pkt;
+        memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
+        ws_pkt.payload = (uint8_t *)message;
+        ws_pkt.len = strlen(message);
+        ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+        httpd_ws_send_frame(req, &ws_pkt);
         return ESP_OK;
     }
     httpd_ws_frame_t ws_pkt;

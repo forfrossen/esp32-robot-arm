@@ -40,6 +40,8 @@ public:
     esp_err_t query_position();
     esp_err_t query_status();
 
+    esp_err_t set_working_current(uint16_t currentMa);
+
     CommandStateMachine::CommandState get_command_state() const;
     void set_command_state(CommandStateMachine::CommandState new_state);
 

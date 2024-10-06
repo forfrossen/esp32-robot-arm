@@ -41,16 +41,15 @@ public:
 
         for (int i = 1; i < 4; i++)
         {
-            if (i == 2)
+            // if (i == 1)            {
+            const std::shared_ptr<MotorControllerDependencies> motor_controller_dependencies = motor_controller_dependencies_init(i);
+            if (motor_controller_dependencies == nullptr)
             {
-                const std::shared_ptr<MotorControllerDependencies> motor_controller_dependencies = motor_controller_dependencies_init(i);
-                if (motor_controller_dependencies == nullptr)
-                {
-                    ESP_LOGE(FUNCTION_NAME, "Failed to create motor controller dependencies for motor %d", i);
-                    continue;
-                }
-                servos[i] = new MotorController(motor_controller_dependencies);
+                ESP_LOGE(FUNCTION_NAME, "Failed to create motor controller dependencies for motor %d", i);
+                continue;
             }
+            servos[i] = new MotorController(motor_controller_dependencies);
+            // }
         }
     }
 

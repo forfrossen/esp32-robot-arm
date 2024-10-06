@@ -56,7 +56,7 @@ extern "C" void app_main()
 
     ESP_ERROR_CHECK(esp_netif_init());
 
-    robot_arm = new RobotArm();
+    // robot_arm = new RobotArm();
 
     ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)

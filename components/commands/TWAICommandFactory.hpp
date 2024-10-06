@@ -156,70 +156,70 @@ public:
         return new GenericCommandBuilder(settings, 0x80);
     }
 
-    TWAICommandBuilderBase<GenericCommandBuilder> *set_enable_pin_command(uint8_t enable)
+    TWAICommandBuilderBase<GenericCommandBuilder> *query_motor_status_command()
     {
-        ESP_LOGI(FUNCTION_NAME, "Setting enable pin %s", enable ? "on" : "off");
-        return new GenericCommandBuilder(settings, 0x85, {enable});
-    }
-
-    TWAICommandBuilderBase<GenericCommandBuilder> *set_auto_screen_off_command(uint8_t enable)
-    {
-        ESP_LOGI(FUNCTION_NAME, "Setting auto screen %s", enable ? "on" : "off");
-        return new GenericCommandBuilder(settings, 0x87, {enable});
-    }
-
-    TWAICommandBuilderBase<GenericCommandBuilder> *set_can_bit_rate_command(uint8_t bitRate)
-    {
-        ESP_LOGI(FUNCTION_NAME, "Setting CAN Bit Rate: %u", bitRate);
-        return new GenericCommandBuilder(settings, 0x8A, {bitRate});
-    }
-
-    TWAICommandBuilderBase<GenericCommandBuilder> *set_holding_current_command(uint8_t holdCurrent)
-    {
-        ESP_LOGI(FUNCTION_NAME, "Setting Holding Current: %u", holdCurrent);
-        return new GenericCommandBuilder(settings, 0x9B, {holdCurrent});
-    }
-
-    TWAICommandBuilderBase<GenericCommandBuilder> *set_locked_rotor_protection_command(uint8_t enable)
-    {
-        ESP_LOGI(FUNCTION_NAME, "Setting Locked Rotor Protection: %u", enable);
-        return new GenericCommandBuilder(settings, 0x88, {enable});
-    }
-
-    TWAICommandBuilderBase<GenericCommandBuilder> *set_subdivision_command(uint8_t subdivision)
-    {
-        ESP_LOGI(FUNCTION_NAME, "Setting Subdivision: %u", subdivision);
-        return new GenericCommandBuilder(settings, 0x84, {subdivision});
-    }
-
-    TWAICommandBuilderBase<GenericCommandBuilder> *set_subdivision_interpolation_command(uint8_t enable)
-    {
-        ESP_LOGI(FUNCTION_NAME, "Setting Subdivision Interpolation: %u", enable);
-        return new GenericCommandBuilder(settings, 0x89, {enable});
+        ESP_LOGI(FUNCTION_NAME, "Querying motor status");
+        return new GenericCommandBuilder(settings, 0xF1);
     }
 
     TWAICommandBuilderBase<GenericCommandBuilder> *set_work_mode_command(uint8_t mode)
     {
         ESP_LOGI(FUNCTION_NAME, "Setting Work Mode: %u", mode);
-        return new GenericCommandBuilder(settings, 0x82, {mode});
+        return new GenericCommandBuilder(settings, 0x82, std::vector<uint8_t>{mode});
+    }
+
+    TWAICommandBuilderBase<GenericCommandBuilder> *set_working_current(uint16_t current_ma)
+    {
+        ESP_LOGI(FUNCTION_NAME, "Setting Working Current: %u", current_ma);
+        return new GenericCommandBuilder(settings, 0x83, std::vector<uint16_t>{current_ma});
+    }
+
+    TWAICommandBuilderBase<GenericCommandBuilder> *set_subdivision_command(uint8_t subdivision)
+    {
+        ESP_LOGI(FUNCTION_NAME, "Setting Subdivision: %u", subdivision);
+        return new GenericCommandBuilder(settings, 0x84, std::vector<uint8_t>{subdivision});
+    }
+
+    TWAICommandBuilderBase<GenericCommandBuilder> *set_enable_pin_command(uint8_t enable)
+    {
+        ESP_LOGI(FUNCTION_NAME, "Setting enable pin %s", enable ? "on" : "off");
+        return new GenericCommandBuilder(settings, 0x85, std::vector<uint8_t>{enable});
     }
 
     TWAICommandBuilderBase<GenericCommandBuilder> *set_rotation_direction_command(uint8_t direction)
     {
         ESP_LOGI(FUNCTION_NAME, "Setting Rotation Direction: %u", direction);
-        return new GenericCommandBuilder(settings, 0x86, {direction});
+        return new GenericCommandBuilder(settings, 0x86, std::vector<uint8_t>{direction});
     }
 
-    TWAICommandBuilderBase<GenericCommandBuilder> *query_motor_status_command()
+    TWAICommandBuilderBase<GenericCommandBuilder> *set_auto_screen_off_command(uint8_t enable)
     {
-        ESP_LOGI(FUNCTION_NAME, "Querying motor status");
-        // Check if settings is valid
-        if (!settings)
-        {
-            ESP_LOGE(FUNCTION_NAME, "Settings not available");
-            abort(); // Halt the program
-        }
-        return new GenericCommandBuilder(settings, 0xF1);
+        ESP_LOGI(FUNCTION_NAME, "Setting auto screen %s", enable ? "on" : "off");
+        return new GenericCommandBuilder(settings, 0x87, std::vector<uint8_t>{enable});
+    }
+
+    TWAICommandBuilderBase<GenericCommandBuilder> *set_locked_rotor_protection_command(uint8_t enable)
+    {
+        ESP_LOGI(FUNCTION_NAME, "Setting Locked Rotor Protection: %u", enable);
+        return new GenericCommandBuilder(settings, 0x88, std::vector<uint8_t>{enable});
+    }
+
+    TWAICommandBuilderBase<GenericCommandBuilder> *set_subdivision_interpolation_command(uint8_t enable)
+    {
+        ESP_LOGI(FUNCTION_NAME, "Setting Subdivision Interpolation: %u", enable);
+        return new GenericCommandBuilder(settings, 0x89, std::vector<uint8_t>{enable});
+    }
+
+    TWAICommandBuilderBase<GenericCommandBuilder> *set_can_bit_rate_command(uint8_t bitRate)
+    {
+        ESP_LOGI(FUNCTION_NAME, "Setting CAN Bit Rate: %u", bitRate);
+        return new GenericCommandBuilder(settings, 0x8A, std::vector<uint8_t>{bitRate});
+    }
+
+    TWAICommandBuilderBase<GenericCommandBuilder> *set_holding_current_command(uint8_t holdCurrent)
+    {
+        ESP_LOGI(FUNCTION_NAME, "Setting Holding Current: %u", holdCurrent);
+        return new GenericCommandBuilder(settings, 0x9B, std::vector<uint8_t>{holdCurrent});
     }
 };
 

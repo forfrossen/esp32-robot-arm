@@ -15,6 +15,9 @@ void ResponseHandler::process_message(twai_message_t *msg)
     case 0x82:
         handle_set_work_mode_response(msg);
         break;
+    case 0x83:
+        handle_set_current_response(msg);
+        break;
     case 0x90:
         handle_set_home_response(msg);
         break;
