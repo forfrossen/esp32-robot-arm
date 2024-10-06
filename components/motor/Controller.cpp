@@ -1,4 +1,6 @@
-#include "MotorController.hpp"
+#include "Controller.hpp"
+#include "Events.hpp"
+ESP_EVENT_DEFINE_BASE(MOTOR_EVENT);
 
 void MotorController::motor_controller_event_handler(void *args, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {

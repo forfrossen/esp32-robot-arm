@@ -27,7 +27,7 @@ class TWAICommandFactory;
 class TWAIController;
 class CommandLifecycleRegistry;
 class MotorContext;
-class MotorResponseHandler;
+class ResponseHandler;
 
 struct EventLoops
 {
@@ -71,7 +71,7 @@ enum class CommandLifecycleState
 {
     CREATED,
     SENT,
-    RECEIVED,
+    EXECUTING,
     PROCESSED,
     ERROR,
     TIMEOUT,
@@ -107,7 +107,7 @@ struct MotorControllerDependencies
     std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
     std::shared_ptr<TWAICommandFactory> command_factory;
     std::shared_ptr<MotorContext> motor_context;
-    std::shared_ptr<MotorResponseHandler> motor_response_handler;
+    std::shared_ptr<ResponseHandler> motor_response_handler;
 
     // Constructor
     MotorControllerDependencies(
@@ -119,7 +119,7 @@ struct MotorControllerDependencies
         std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry,
         std::shared_ptr<TWAICommandFactory> command_factory,
         std::shared_ptr<MotorContext> motor_context,
-        std::shared_ptr<MotorResponseHandler> motor_response_handler)
+        std::shared_ptr<ResponseHandler> motor_response_handler)
         : id(id),
           motor_mutex(motor_mutex),
           twai_queues(twai_queues),

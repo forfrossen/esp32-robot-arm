@@ -1,11 +1,11 @@
 #ifndef TWAI_COMMAND_FACTORY_H
 #define TWAI_COMMAND_FACTORY_H
 
+#include "../common/utils.hpp"
 #include "GenericCommandBuilder.hpp"
 #include "RunMotorInSpeedModeCommandBuilder.hpp"
 #include "SetTargetPositionCommandBuilder.hpp"
 #include "TypeDefs.hpp"
-#include "utils.hpp"
 #include <driver/twai.h>
 #include <memory>
 

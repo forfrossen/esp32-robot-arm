@@ -1,7 +1,7 @@
 #ifndef SET_identifier_COMMAND_H
 #define SET_identifier_COMMAND_H
 
-#include "../../MotorController.hpp"
+#include "../../Controller.hpp"
 #include "../Command.hpp"
 #include "esp_log.h"
 

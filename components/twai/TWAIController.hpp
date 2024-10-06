@@ -1,11 +1,11 @@
 #ifndef TWAICONTROLLER_H
 #define TWAICONTROLLER_H
 
+#include "../common/utils.hpp"
 #include "driver/gpio.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
-#include "utils.hpp"
 #include <cstdint>
 #include <cstring>
 #include <driver/twai.h>

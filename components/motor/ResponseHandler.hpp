@@ -1,18 +1,19 @@
 #ifndef MOTORRESPONSEHANDLER_H
 #define MOTORRESPONSEHANDLER_H
 
+#include "Context.hpp"
+#include "Controller.hpp"
 #include "MksEnums.hpp"
-#include "MotorContext.hpp"
 #include "TypeDefs.hpp"
 #include "esp_log.h"
 #include "utils.hpp"
 #include <driver/twai.h>
 
-class MotorResponseHandler
+class ResponseHandler
 {
 public:
-    MotorResponseHandler(uint32_t canId, std::shared_ptr<MotorContext> context) : canId(canId), context(context) {};
-    ~MotorResponseHandler();
+    ResponseHandler(uint32_t canId, std::shared_ptr<MotorContext> context) : canId(canId), context(context) {};
+    ~ResponseHandler();
 
     void process_message(twai_message_t *msg);
     void handle_query_status_response(twai_message_t *msg);

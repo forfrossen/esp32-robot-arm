@@ -1,10 +1,10 @@
 #ifndef COMMAND_LIFECYCLE_REGISTRY_H
 #define COMMAND_LIFECYCLE_REGISTRY_H
 
+#include "../common/utils.hpp"
 #include "CommandLifecycleFSM.hpp"
 #include "esp_err.h"
 #include "esp_log.h"
-#include "utils.hpp"
 #include <chrono>
 #include <functional>
 #include <map>

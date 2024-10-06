@@ -2,10 +2,9 @@
 #define MOTORCONTROLLER_H
 
 #include "CommandStateMachine.hpp"
-#include "Commands/TWAICommandFactory.hpp"
-#include "Events.hpp"
-#include "MotorContext.hpp"
-#include "MotorResponseHandler.hpp"
+#include "Context.hpp"
+#include "ResponseHandler.hpp"
+#include "TWAICommandFactory.hpp"
 #include "TWAIController.hpp"
 #include "TypeDefs.hpp"
 #include "esp_check.h"
@@ -56,7 +55,7 @@ private:
     SemaphoreHandle_t motor_mutex;
     std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
     std::shared_ptr<MotorContext> context;
-    std::shared_ptr<MotorResponseHandler> response_handler;
+    std::shared_ptr<ResponseHandler> response_handler;
 
     int error_counter = 0;
 

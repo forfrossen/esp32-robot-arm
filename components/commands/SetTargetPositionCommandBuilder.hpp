@@ -1,8 +1,8 @@
 #ifndef SET_TARGET_POSITION_COMMAND_BUILDER_H
 #define SET_TARGET_POSITION_COMMAND_BUILDER_H
 
-#include "../TypeDefs.hpp"
 #include "TWAICommandBuilderBase.hpp"
+#include "TypeDefs.hpp"
 #include "esp_log.h"
 #include "freertos/queue.h"
 

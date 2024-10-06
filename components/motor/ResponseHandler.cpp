@@ -1,8 +1,8 @@
-#include "MotorResponseHandler.hpp"
+#include "ResponseHandler.hpp"
 
-MotorResponseHandler::~MotorResponseHandler() {}
+ResponseHandler::~ResponseHandler() {}
 
-void MotorResponseHandler::process_message(twai_message_t *msg)
+void ResponseHandler::process_message(twai_message_t *msg)
 {
     log_twai_message(msg);
     check_for_error_and_do_transition(msg);
@@ -31,7 +31,7 @@ void MotorResponseHandler::process_message(twai_message_t *msg)
     }
 }
 
-void MotorResponseHandler::log_twai_message(twai_message_t *msg)
+void ResponseHandler::log_twai_message(twai_message_t *msg)
 {
 
     ESP_LOGI(FUNCTION_NAME, "ID: 0x%02lu \t length: %d / %02u \t code: 0x%02X \t commandName: %s", canId, msg->data_length_code, msg->data_length_code, msg->data[0], GET_CMD_NAME(GET_CMD(msg)).c_str());
@@ -43,7 +43,7 @@ void MotorResponseHandler::log_twai_message(twai_message_t *msg)
     ESP_LOGI(FUNCTION_NAME, "  Data CRC: \t 0x%02X \t %d ", msg->data[msg->data_length_code], msg->data[msg->data_length_code]);
 }
 
-bool MotorResponseHandler::is_response_error(twai_message_t *msg)
+bool ResponseHandler::is_response_error(twai_message_t *msg)
 {
     if (msg->data[1] == 0)
     {
@@ -51,7 +51,7 @@ bool MotorResponseHandler::is_response_error(twai_message_t *msg)
     }
     return false;
 }
-void MotorResponseHandler::handle_received_no_error()
+void ResponseHandler::handle_received_no_error()
 {
     if (context->is_error())
     {
@@ -63,12 +63,12 @@ void MotorResponseHandler::handle_received_no_error()
     }
 }
 
-void MotorResponseHandler::handle_message_error()
+void ResponseHandler::handle_message_error()
 {
     context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);
 }
 
-void MotorResponseHandler::check_for_error_and_do_transition(twai_message_t *msg)
+void ResponseHandler::check_for_error_and_do_transition(twai_message_t *msg)
 {
     if (is_response_error(msg))
     {
@@ -82,7 +82,7 @@ void MotorResponseHandler::check_for_error_and_do_transition(twai_message_t *msg
     }
 }
 
-void MotorResponseHandler::print_unknown_response_code(twai_message_t *msg)
+void ResponseHandler::print_unknown_response_code(twai_message_t *msg)
 {
     auto status = msg->data[1];
     ESP_LOGW(FUNCTION_NAME, "Unknown status response: %02X", status);
@@ -92,7 +92,7 @@ void MotorResponseHandler::print_unknown_response_code(twai_message_t *msg)
     }
 }
 
-void MotorResponseHandler::handle_query_status_response(twai_message_t *msg)
+void ResponseHandler::handle_query_status_response(twai_message_t *msg)
 {
     uint8_t status = msg->data[1];
 
@@ -133,7 +133,7 @@ void MotorResponseHandler::handle_query_status_response(twai_message_t *msg)
     }
 }
 
-void MotorResponseHandler::handle_query_motor_position_response(twai_message_t *msg)
+void ResponseHandler::handle_query_motor_position_response(twai_message_t *msg)
 {
     uint8_t *data = msg->data;
 
@@ -165,7 +165,7 @@ void MotorResponseHandler::handle_query_motor_position_response(twai_message_t *
     ESP_LOGI(FUNCTION_NAME, "Absolute position: %lld", absolutePosition);
 }
 
-void MotorResponseHandler::handle_query_motor_speed_response(twai_message_t *msg)
+void ResponseHandler::handle_query_motor_speed_response(twai_message_t *msg)
 {
     uint16_t speed = (msg->data[2] << 16) | (msg->data[3] << 8) | msg->data[4];
     uint8_t crc = msg->data[3];
@@ -173,7 +173,7 @@ void MotorResponseHandler::handle_query_motor_speed_response(twai_message_t *msg
     ESP_LOGI(FUNCTION_NAME, "Speed: %u", speed);
 }
 
-void MotorResponseHandler::handle_set_position_response(twai_message_t *msg)
+void ResponseHandler::handle_set_position_response(twai_message_t *msg)
 {
     uint8_t status = msg->data[1];
 
@@ -208,7 +208,7 @@ void MotorResponseHandler::handle_set_position_response(twai_message_t *msg)
     }
 }
 
-void MotorResponseHandler::handle_set_home_response(twai_message_t *msg)
+void ResponseHandler::handle_set_home_response(twai_message_t *msg)
 {
     uint8_t status = msg->data[1];
     std::string statusMessage;
@@ -232,7 +232,7 @@ void MotorResponseHandler::handle_set_home_response(twai_message_t *msg)
     ESP_LOGI(FUNCTION_NAME, "Set Home Response: %s", statusMessage.c_str());
 }
 
-void MotorResponseHandler::handle_set_work_mode_response(twai_message_t *msg)
+void ResponseHandler::handle_set_work_mode_response(twai_message_t *msg)
 {
     if (msg->data[1] == 1)
     {
@@ -244,7 +244,7 @@ void MotorResponseHandler::handle_set_work_mode_response(twai_message_t *msg)
     }
 }
 
-void MotorResponseHandler::handle_set_current_response(twai_message_t *msg)
+void ResponseHandler::handle_set_current_response(twai_message_t *msg)
 {
     if (msg->data[1] == 1)
     {

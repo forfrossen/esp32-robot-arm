@@ -4,7 +4,6 @@
 #include "MksEnums.hpp"
 #include <algorithm>
 #include <cstring>
-#include <driver/twai.h>
 #include <string>
 
 inline const char *findFunctionNameStart(const char *prettyFunction)

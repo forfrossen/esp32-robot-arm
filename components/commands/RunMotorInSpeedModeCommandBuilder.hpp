@@ -1,8 +1,8 @@
 #ifndef RUN_MOTOR_IN_SPEED_MODE_COMMAND_BUILDER_H
 #define RUN_MOTOR_IN_SPEED_MODE_COMMAND_BUILDER_H
 
-#include "../TypeDefs.hpp"
 #include "TWAICommandBuilderBase.hpp"
+#include "TypeDefs.hpp"
 #include "esp_log.h"
 #include "freertos/queue.h"
 

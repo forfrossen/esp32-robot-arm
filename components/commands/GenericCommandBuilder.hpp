@@ -1,12 +1,12 @@
 #ifndef GENERIC_COMMAND_BUILDER_H
 #define GENERIC_COMMAND_BUILDER_H
 
+#include "../common/utils.hpp"
 #include "TWAICommandBuilderBase.hpp"
 #include "TypeDefs.hpp"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "freertos/queue.h"
-#include "utils.hpp"
 #include <driver/twai.h>
 #include <vector>
 

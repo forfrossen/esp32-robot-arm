@@ -1,16 +1,19 @@
 idf_component_register(
   SRCS 
     "main.cpp"
-    "Events.cpp"
-    "TWAIController.cpp"
-    "CommandStateMachine.cpp"
-    "MotorController.cpp"
-    "MotorContext.cpp"
-    "MotorResponseHandler.cpp"
-    "Wifi.cpp"
+    "../components/common/Events.cpp"
 REQUIRES driver
 REQUIRES esp_event
 REQUIRES esp_wifi
-REQUIRES nvs_flash
 REQUIRES esp_http_server
-INCLUDE_DIRS "." "Commands" "Commands/SetParameters")
+REQUIRES nvs_flash
+INCLUDE_DIRS 
+    "." 
+    "../components/commands" 
+    "../components/commands/SetParameters"
+    "../components/common"
+    "../components/motor"
+    "../components/twai"
+    "../components/websocket"
+    "../components/wifi"
+)

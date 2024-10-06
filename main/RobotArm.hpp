@@ -1,10 +1,10 @@
 #ifndef ROBOTARM_HPP
 #define ROBOTARM_HPP
-
-#include "Commands/CommandLifecycleRegistry.hpp"
-#include "Commands/TWAICommandFactory.hpp"
 #include "Events.hpp"
-#include "MotorController.hpp"
+
+#include "CommandLifecycleRegistry.hpp"
+#include "Controller.hpp"
+#include "TWAICommandFactory.hpp"
 #include "TWAIController.hpp"
 #include "TypeDefs.hpp"
 #include "freeRTOS/queue.h"
@@ -98,7 +98,7 @@ public:
         std::shared_ptr<EventLoops> event_loops = std::make_shared<EventLoops>(system_event_loop, motor_event_loop);
 
         std::shared_ptr<MotorContext> motor_context = std::make_shared<MotorContext>(id, motor_event_loop);
-        std::shared_ptr<MotorResponseHandler> motor_response_handler = std::make_shared<MotorResponseHandler>(id, motor_context);
+        std::shared_ptr<ResponseHandler> motor_response_handler = std::make_shared<ResponseHandler>(id, motor_context);
 
         SemaphoreHandle_t motor_mutex = xSemaphoreCreateMutex();
         if (motor_mutex == NULL)
