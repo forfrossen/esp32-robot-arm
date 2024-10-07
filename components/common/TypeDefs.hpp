@@ -140,4 +140,54 @@ struct MotorControllerDependencies
     }
 };
 
+static const std::type_info &void_type = typeid(void);
+static const std::type_info &uint8_t_type = typeid(uint8_t);
+static const std::type_info &uint16_t_type = typeid(uint16_t);
+static const std::type_info &uint32_t_type = typeid(uint32_t);
+
+struct CommandPayloadInfo
+{
+    const std::type_info &data1_type;
+    const std::type_info &data2_type;
+    const std::type_info &data3_type;
+    const std::type_info &data4_type;
+    const std::type_info &data5_type;
+    const std::type_info &data6_type;
+    const std::type_info &data7_type;
+
+    // Variadic template constructor
+    template <typename... Types>
+    CommandPayloadInfo(const Types &...types)
+        : data1_type(getTypeInfo<0>(types...)),
+          data2_type(getTypeInfo<1>(types...)),
+          data3_type(getTypeInfo<2>(types...)),
+          data4_type(getTypeInfo<3>(types...)),
+          data5_type(getTypeInfo<4>(types...)),
+          data6_type(getTypeInfo<5>(types...)),
+          data7_type(getTypeInfo<6>(types...)) {}
+
+private:
+    // Helper function to return the type info or void_type if out of bounds
+    template <std::size_t Index, typename T, typename... Rest>
+    const std::type_info &getTypeInfo(const T &first, const Rest &...rest) const
+    {
+        if constexpr (Index == 0)
+        {
+            return first;
+        }
+        else
+        {
+            return getTypeInfo<Index - 1>(rest...);
+        }
+    }
+
+    template <std::size_t Index>
+    const std::type_info &getTypeInfo() const
+    {
+        return void_type; // Return void_type if the requested index is out of bounds
+    }
+};
+
+typedef std::map<CommandIds, std::optional<CommandPayloadInfo>> CommandPayloadMap;
+
 #endif // TYPEDEFS_HPP

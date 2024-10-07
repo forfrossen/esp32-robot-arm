@@ -8,6 +8,7 @@
 #include "TypeDefs.hpp"
 #include <driver/twai.h>
 #include <memory>
+#include <typeinfo>
 
 class TWAICommandFactory
 {
@@ -15,6 +16,7 @@ private:
     std::shared_ptr<TWAICommandFactorySettings> settings;
     SetTargetPositionCommandBuilder *setTargetPositionCommandBuilder;
     RunMotorInSpeedModeCommandBuilder *runMotorInSpeedModeCommandBuilder;
+    static CommandPayloadMap command_payload_map;
 
 public:
     // Konstruktor setzt den Identifier
@@ -23,7 +25,46 @@ public:
         ESP_LOGI(FUNCTION_NAME, "TWAICommandFactory constructor called");
         ESP_ERROR_CHECK(check_settings());
         ESP_LOGI(FUNCTION_NAME, "Settings OK!");
+
+        command_payload_map = {
+            {CommandIds::MOTOR_CALIBRATION, std::nullopt},
+            {CommandIds::READ_MOTOR_SPEED, std::nullopt},
+            {CommandIds::EMERGENCY_STOP, std::nullopt},
+            {CommandIds::READ_ENCODER_VALUE_CARRY, std::nullopt},
+            {CommandIds::READ_ENCODED_VALUE_ADDITION, std::nullopt},
+            {CommandIds::READ_MOTOR_SPEED, std::nullopt},
+            {CommandIds::READ_NUM_PULSES_RECEIVED, std::nullopt},
+            {CommandIds::READ_IO_PORT_STATUS, std::nullopt},
+            {CommandIds::READ_MOTOR_SHAFT_ANGLE_ERROR, std::nullopt},
+            {CommandIds::READ_EN_PINS_STATUS, std::nullopt},
+            {CommandIds::READ_GO_BACK_TO_ZERO_STATUS_WHEN_POWER_ON, std::nullopt},
+            {CommandIds::RELEASE_MOTOR_SHAFT_LOCKED_PROTECTION_STATE, std::nullopt},
+            {CommandIds::READ_MOTOR_SHAFT_PROTECTION_STATE, std::nullopt},
+            {CommandIds::RESTORE_DEFAULT_PARAMETERS, std::nullopt},
+            {CommandIds::RESTART, std::nullopt},
+            {CommandIds::GO_HOME, std::nullopt},
+            {CommandIds::SET_CURRENT_AXIS_TO_ZERO, std::nullopt},
+            {CommandIds::EMERGENCY_STOP, std::nullopt},
+            {CommandIds::QUERY_MOTOR_STATUS, std::nullopt},
+            {CommandIds::ENABLE_MOTOR, std::nullopt},
+
+            // Commands with a single parameter as payload
+            {CommandIds::SET_WORKING_CURRENT, CommandPayloadInfo(uint16_t_type)},
+            {CommandIds::SET_SUBDIVISIONS, CommandPayloadInfo(uint8_t_type)},
+            {CommandIds::SET_EN_PIN_CONFIG, CommandPayloadInfo(uint8_t_type)},
+            {CommandIds::SET_MOTOR_ROTATION_DIRECTION, CommandPayloadInfo(uint8_t_type)},
+            {CommandIds::SET_AUTO_TURN_OFF_SCREEN, CommandPayloadInfo(uint8_t_type)},
+            {CommandIds::SET_MOTOR_SHAFT_LOCKED_ROTOR_PROTECTION, CommandPayloadInfo(uint8_t_type)},
+            {CommandIds::SET_SUBDIVISION_INTERPOLATION, CommandPayloadInfo(uint8_t_type)},
+            {CommandIds::SET_CAN_BITRATE, CommandPayloadInfo(uint8_t_type)},
+            {CommandIds::SET_CAN_ID, CommandPayloadInfo(uint16_t_type)},
+            {CommandIds::SET_KEY_LOCK_ENABLE, CommandPayloadInfo(uint8_t_type)},
+
+            {CommandIds::SET_HOME, CommandPayloadInfo(uint8_t_type, uint8_t_type, uint16_t_type, uint8_t_type)}
+
+        };
     }
+
     ~TWAICommandFactory()
     {
         ESP_LOGW(FUNCTION_NAME, "TWAICommandFactory destructor called");
