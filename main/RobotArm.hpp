@@ -23,7 +23,7 @@ private:
     esp_event_loop_handle_t system_event_loop;
     EventGroupHandle_t system_event_group;
     std::map<uint8_t, MotorController *> servos;
-    std::shared_ptr<TWAIController> twai_controller = std::make_shared<TWAIController>();
+    std::shared_ptr<TWAIController> twai_controller;
     std::shared_ptr<CommandLifecycleRegistry> command_lifecyle_registry = std::make_shared<CommandLifecycleRegistry>();
 
 public:
@@ -31,13 +31,15 @@ public:
     {
         ESP_LOGI(FUNCTION_NAME, "RobotArm constructor called");
         system_event_group = xEventGroupCreate();
-        // ESP_ERROR_CHECK(esp_event_loop_create(&system_loop_args, &system_event_loop));
-        ESP_ERROR_CHECK(esp_event_loop_create(&system_loop_args, &system_event_loop));
 
         if (system_event_group == NULL)
         {
             ESP_LOGE(FUNCTION_NAME, "Error creating event group");
         }
+
+        ESP_ERROR_CHECK(esp_event_loop_create(&system_loop_args, &system_event_loop));
+
+        twai_controller = std::make_shared<TWAIController>(system_event_loop);
 
         for (int i = 1; i < 4; i++)
         {
@@ -68,23 +70,25 @@ public:
 
     const std::shared_ptr<MotorControllerDependencies> motor_controller_dependencies_init(uint32_t id)
     {
-
-        twai_controller->register_motor_id(id);
-        std::shared_ptr<TWAIQueues> twai_queues = std::make_shared<TWAIQueues>(twai_controller->inQs[id], twai_controller->outQ);
-        std::shared_ptr<TWAICommandFactorySettings> settings = std::make_shared<TWAICommandFactorySettings>(id, twai_queues, command_lifecyle_registry);
-        std::shared_ptr<TWAICommandFactory> command_factory = std::make_shared<TWAICommandFactory>(settings);
-
         std::string task_name_str = "motor_event_task_" + std::to_string(id);
-
         esp_event_loop_args_t motor_loop_args = {
             .queue_size = 5,
             .task_name = task_name_str.c_str(),
             .task_priority = 5,
             .task_stack_size = 1024 * 3,
             .task_core_id = tskNO_AFFINITY};
+
         esp_event_loop_handle_t motor_event_loop;
-        // ESP_ERROR_CHECK(esp_event_loop_create(&motor_loop_args, &motor_event_loop));
         ESP_ERROR_CHECK(esp_event_loop_create(&motor_loop_args, &motor_event_loop));
+
+        twai_controller->register_motor_id(id, motor_event_loop);
+
+        std::shared_ptr<TWAICommandFactorySettings> settings = std::make_shared<TWAICommandFactorySettings>(id, command_lifecyle_registry);
+        std::shared_ptr<TWAICommandFactory> command_factory = std::make_shared<TWAICommandFactory>(settings);
+
+        // ESP_ERROR_CHECK(esp_event_loop_create(&motor_loop_args, &motor_event_loop));
+
+        std::shared_ptr<event_loops_t> event_loops = std::make_shared<EventLoops>(system_event_loop, motor_event_loop);
 
         EventGroupHandle_t motor_event_group = xEventGroupCreate();
         if (motor_event_group == NULL)
@@ -92,12 +96,10 @@ public:
             ESP_LOGE(FUNCTION_NAME, "Failed to create motor event group for motor %lu", id);
             return nullptr;
         }
+        std::shared_ptr<event_groups_t> event_groups = std::make_shared<EventGroups>(system_event_group, motor_event_group);
 
-        std::shared_ptr<EventGroups> event_groups = std::make_shared<EventGroups>(system_event_group, motor_event_group);
-        std::shared_ptr<EventLoops> event_loops = std::make_shared<EventLoops>(system_event_loop, motor_event_loop);
-
-        std::shared_ptr<MotorContext> motor_context = std::make_shared<MotorContext>(id, motor_event_loop);
-        std::shared_ptr<ResponseHandler> motor_response_handler = std::make_shared<ResponseHandler>(id, motor_context);
+        std::shared_ptr<MotorContext> motor_context = std::make_shared<MotorContext>(id, event_loops);
+        std::shared_ptr<ResponseHandler> motor_response_handler = std::make_shared<ResponseHandler>(id, motor_context, event_loops);
 
         SemaphoreHandle_t motor_mutex = xSemaphoreCreateMutex();
         if (motor_mutex == NULL)
@@ -105,10 +107,8 @@ public:
             ESP_LOGE(FUNCTION_NAME, "Failed to create motor mutex for motor %lu", id);
             return nullptr;
         }
-
-        event_groups = std::make_shared<EventGroups>(system_event_group, motor_event_group);
         const std::shared_ptr<MotorControllerDependencies> container = std::make_shared<MotorControllerDependencies>(
-            id, motor_mutex, twai_queues, event_groups, event_loops, command_lifecyle_registry, command_factory, motor_context, motor_response_handler);
+            id, motor_mutex, event_groups, event_loops, command_lifecyle_registry, command_factory, motor_context, motor_response_handler);
         return container;
     }
 };

@@ -17,7 +17,7 @@ private:
     bool absolute;
 
 public:
-    SetHomeParametersCommandBuilder(uint32_t id, QueueHandle_t outQ, QueueHandle_t inQ) : TWAICommandBuilderBase(id, outQ, inQ)
+    SetHomeParametersCommandBuilder(uint32_t id) : TWAICommandBuilderBase(id)
     {
         msg.data_length_code = 8;
         data = new uint8_t[msg.data_length_code];

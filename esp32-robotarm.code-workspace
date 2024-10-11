@@ -76,7 +76,8 @@
       "cinttypes": "cpp",
       "typeinfo": "cpp",
       "variant": "cpp",
-      "*.tpp": "cpp"
+      "*.tpp": "cpp",
+      "esp_err.h": "c"
     },
     "editor.detectIndentation": false,
     "editor.tabSize": 4,

@@ -1,11 +1,16 @@
 #ifndef TYPEDEFS_HPP
 #define TYPEDEFS_HPP
 
+#include <array>
 #include <esp_event.h>
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
+#include <map>
 #include <memory>
+#include <optional>
+
+#include "MksEnums.hpp"
 
 #define MAX_PROCESSED_MESSAGES 10
 
@@ -29,33 +34,37 @@ class CommandLifecycleRegistry;
 class MotorContext;
 class ResponseHandler;
 
-struct EventLoops
+typedef struct EventLoops
 {
     esp_event_loop_handle_t system_event_loop;
     esp_event_loop_handle_t motor_event_loop;
-};
+    EventLoops(esp_event_loop_handle_t system_event_loop, esp_event_loop_handle_t motor_event_loop)
+        : system_event_loop(system_event_loop), motor_event_loop(motor_event_loop)
+    {
+        ESP_LOGI("EventLoops", "Constructor called");
+    }
+} event_loops_t;
 
-struct EventGroups
+typedef struct EventGroups
 {
     EventGroupHandle_t system_event_group;
     EventGroupHandle_t motor_event_group;
-};
-
-struct TWAIQueues
-{
-    QueueHandle_t inQ;
-    QueueHandle_t outQ;
-};
+    EventGroups(EventGroupHandle_t system_event_group, EventGroupHandle_t motor_event_group)
+        : system_event_group(system_event_group), motor_event_group(motor_event_group)
+    {
+        ESP_LOGI("EventGroups", "Constructor called");
+    }
+} event_groups_t;
 
 struct TWAICommandFactorySettings
 {
     uint32_t id;
-    std::shared_ptr<TWAIQueues> twai_queues;
+    esp_event_loop_handle_t system_event_loop;
     std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
 
     // Constructor
-    TWAICommandFactorySettings(uint32_t id, std::shared_ptr<TWAIQueues> twai_queues, std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry)
-        : id(id), twai_queues(twai_queues), command_lifecycle_registry(command_lifecycle_registry)
+    TWAICommandFactorySettings(uint32_t id, std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry)
+        : id(id), command_lifecycle_registry(command_lifecycle_registry)
     {
         ESP_LOGI("TWAICommandFactorySettings", "Constructor called");
     }
@@ -80,11 +89,9 @@ enum class CommandLifecycleState
 
 typedef enum
 {
-    MOTOR_EVENT_INIT,
-    MOTOR_EVENT_READY,
-    MOTOR_EVENT_RUNNING,
-    MOTOR_EVENT_ERROR,
-    MOTOR_EVENT_RECOVERING
+    STATE_TRANSITION_EVENT,
+    INCOMING_MESSAGE_EVENT,
+    OUTGOING_MESSAGE_EVENT,
 } motor_event_id_t;
 
 typedef enum
@@ -94,14 +101,15 @@ typedef enum
     WEBSOCKET_READY_EVENT,
     TWAI_ERROR_EVENT,
     WIFI_ERROR_EVENT,
-    WEBSOCKET_ERROR_EVENT
+    WEBSOCKET_ERROR_EVENT,
+    PROPERTY_CHANGE_EVENT,
 } system_event_id_t;
 
 struct MotorControllerDependencies
 {
     uint32_t id;
     SemaphoreHandle_t motor_mutex;
-    std::shared_ptr<TWAIQueues> twai_queues;
+
     std::shared_ptr<EventGroups> event_groups;
     std::shared_ptr<EventLoops> event_loops;
     std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
@@ -113,7 +121,6 @@ struct MotorControllerDependencies
     MotorControllerDependencies(
         uint32_t id,
         SemaphoreHandle_t motor_mutex,
-        std::shared_ptr<TWAIQueues> twai_queues,
         std::shared_ptr<EventGroups> event_groups,
         std::shared_ptr<EventLoops> event_loops,
         std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry,
@@ -122,7 +129,6 @@ struct MotorControllerDependencies
         std::shared_ptr<ResponseHandler> motor_response_handler)
         : id(id),
           motor_mutex(motor_mutex),
-          twai_queues(twai_queues),
           event_groups(event_groups),
           event_loops(event_loops),
           command_lifecycle_registry(command_lifecycle_registry),
@@ -140,54 +146,83 @@ struct MotorControllerDependencies
     }
 };
 
-static const std::type_info &void_type = typeid(void);
-static const std::type_info &uint8_t_type = typeid(uint8_t);
-static const std::type_info &uint16_t_type = typeid(uint16_t);
-static const std::type_info &uint32_t_type = typeid(uint32_t);
+enum class PayloadType
+{
+    VOID,
+    UINT8,
+    UINT16,
+    UINT32,
+    // Add more types as needed
+};
 
 struct CommandPayloadInfo
 {
-    const std::type_info &data1_type;
-    const std::type_info &data2_type;
-    const std::type_info &data3_type;
-    const std::type_info &data4_type;
-    const std::type_info &data5_type;
-    const std::type_info &data6_type;
-    const std::type_info &data7_type;
+    std::array<PayloadType, 7> payload_types;
 
     // Variadic template constructor
     template <typename... Types>
-    CommandPayloadInfo(const Types &...types)
-        : data1_type(getTypeInfo<0>(types...)),
-          data2_type(getTypeInfo<1>(types...)),
-          data3_type(getTypeInfo<2>(types...)),
-          data4_type(getTypeInfo<3>(types...)),
-          data5_type(getTypeInfo<4>(types...)),
-          data6_type(getTypeInfo<5>(types...)),
-          data7_type(getTypeInfo<6>(types...)) {}
-
-private:
-    // Helper function to return the type info or void_type if out of bounds
-    template <std::size_t Index, typename T, typename... Rest>
-    const std::type_info &getTypeInfo(const T &first, const Rest &...rest) const
+    CommandPayloadInfo(Types... types)
     {
-        if constexpr (Index == 0)
+        static_assert(sizeof...(types) <= 7, "Too many payload types provided, max is 7");
+        std::size_t index = 0;
+        // Initialize with provided types
+        ((payload_types[index++] = types), ...);
+        // Fill remaining slots with VOID
+        while (index < payload_types.size())
         {
-            return first;
-        }
-        else
-        {
-            return getTypeInfo<Index - 1>(rest...);
+            payload_types[index++] = PayloadType::VOID;
         }
     }
 
-    template <std::size_t Index>
-    const std::type_info &getTypeInfo() const
+    // Helper function to get the payload type at an index
+    PayloadType getType(std::size_t index) const
     {
-        return void_type; // Return void_type if the requested index is out of bounds
+        if (index < payload_types.size())
+        {
+            return payload_types[index];
+        }
+        else
+        {
+            return PayloadType::VOID; // Return VOID if out of bounds
+        }
     }
 };
 
 typedef std::map<CommandIds, std::optional<CommandPayloadInfo>> CommandPayloadMap;
 
+const std::map<CommandIds, CommandPayloadInfo> g_command_payload_map = {
+    {CommandIds::MOTOR_CALIBRATION, CommandPayloadInfo()},
+    {CommandIds::READ_MOTOR_SPEED, CommandPayloadInfo()},
+    {CommandIds::EMERGENCY_STOP, CommandPayloadInfo()},
+    {CommandIds::READ_ENCODER_VALUE_CARRY, CommandPayloadInfo()},
+    {CommandIds::READ_ENCODED_VALUE_ADDITION, CommandPayloadInfo()},
+    {CommandIds::READ_MOTOR_SPEED, CommandPayloadInfo()},
+    {CommandIds::READ_NUM_PULSES_RECEIVED, CommandPayloadInfo()},
+    {CommandIds::READ_IO_PORT_STATUS, CommandPayloadInfo()},
+    {CommandIds::READ_MOTOR_SHAFT_ANGLE_ERROR, CommandPayloadInfo()},
+    {CommandIds::READ_EN_PINS_STATUS, CommandPayloadInfo()},
+    {CommandIds::READ_GO_BACK_TO_ZERO_STATUS_WHEN_POWER_ON, CommandPayloadInfo()},
+    {CommandIds::RELEASE_MOTOR_SHAFT_LOCKED_PROTECTION_STATE, CommandPayloadInfo()},
+    {CommandIds::READ_MOTOR_SHAFT_PROTECTION_STATE, CommandPayloadInfo()},
+    {CommandIds::RESTORE_DEFAULT_PARAMETERS, CommandPayloadInfo()},
+    {CommandIds::RESTART, CommandPayloadInfo()},
+    {CommandIds::GO_HOME, CommandPayloadInfo()},
+    {CommandIds::SET_CURRENT_AXIS_TO_ZERO, CommandPayloadInfo()},
+    {CommandIds::EMERGENCY_STOP, CommandPayloadInfo()},
+    {CommandIds::QUERY_MOTOR_STATUS, CommandPayloadInfo()},
+    {CommandIds::ENABLE_MOTOR, CommandPayloadInfo()},
+
+    // Commands with a single parameter as payload
+    {CommandIds::SET_WORKING_CURRENT, CommandPayloadInfo(PayloadType::UINT16)},
+    {CommandIds::SET_SUBDIVISIONS, CommandPayloadInfo(PayloadType::UINT8)},
+    {CommandIds::SET_EN_PIN_CONFIG, CommandPayloadInfo(PayloadType::UINT8)},
+    {CommandIds::SET_MOTOR_ROTATION_DIRECTION, CommandPayloadInfo(PayloadType::UINT8)},
+    {CommandIds::SET_AUTO_TURN_OFF_SCREEN, CommandPayloadInfo(PayloadType::UINT8)},
+    {CommandIds::SET_MOTOR_SHAFT_LOCKED_ROTOR_PROTECTION, CommandPayloadInfo(PayloadType::UINT8)},
+    {CommandIds::SET_SUBDIVISION_INTERPOLATION, CommandPayloadInfo(PayloadType::UINT8)},
+    {CommandIds::SET_CAN_BITRATE, CommandPayloadInfo(PayloadType::UINT8)},
+    {CommandIds::SET_CAN_ID, CommandPayloadInfo(PayloadType::UINT16)},
+    {CommandIds::SET_KEY_LOCK_ENABLE, CommandPayloadInfo(PayloadType::UINT8)},
+
+    {CommandIds::SET_HOME, CommandPayloadInfo(PayloadType::UINT8, PayloadType::UINT8, PayloadType::UINT16, PayloadType::UINT8)}};
 #endif // TYPEDEFS_HPP

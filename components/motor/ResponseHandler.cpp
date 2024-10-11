@@ -1,31 +1,73 @@
 #include "ResponseHandler.hpp"
+ResponseHandler::ResponseHandler(uint32_t canId, std::shared_ptr<MotorContext> context, std::shared_ptr<EventLoops> event_loops) : canId(canId), context(context), system_event_loop(event_loops->system_event_loop)
+{
+    ESP_LOGI(FUNCTION_NAME, "ResponseHandler constructor called");
+    esp_err_t err = esp_event_handler_register_with(system_event_loop, SYSTEM_EVENTS, INCOMING_MESSAGE_EVENT, &incoming_message_event_handler, this);
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(FUNCTION_NAME, "Failed to register event handler: %s", esp_err_to_name(err));
+    }
+};
 
 ResponseHandler::~ResponseHandler() {}
+
+void ResponseHandler::incoming_message_event_handler(void *args, esp_event_base_t event_base, int32_t event_id, void *event_data)
+{
+    ResponseHandler *instance = static_cast<ResponseHandler *>(args);
+    esp_err_t ret;
+
+    ESP_LOGI(FUNCTION_NAME, "GOT MOTOR EVENT FOR MOTOR %lu, EVENT_BASE: %s, EVENT_ID: %lu", instance->canId, event_base, event_id);
+
+    if (event_base != SYSTEM_EVENTS)
+    {
+        return;
+    }
+
+    if (event_id != INCOMING_MESSAGE_EVENT)
+    {
+        return;
+    }
+
+    twai_message_t *msg = (twai_message_t *)event_data;
+
+    instance->process_message(msg);
+}
 
 void ResponseHandler::process_message(twai_message_t *msg)
 {
     log_twai_message(msg);
     check_for_error_and_do_transition(msg);
 
-    switch (msg->data[0])
+    CommandIds commandId = static_cast<CommandIds>(msg->data[0]);
+
+    switch (commandId)
     {
-    case 0x30:
+    case CommandIds::SET_WORKING_CURRENT:
+    case CommandIds::SET_HOLDING_CURRENT:
+    case CommandIds::SET_HOME:
+        handle_set_command_response(msg);
+
+    // Handle read commands that return uint16_t
+    case CommandIds::READ_MOTOR_SPEED:
+        handle_read_uint16_response(msg);
+        break;
+    case CommandIds::READ_ENCODER_VALUE_CARRY:
         handle_query_motor_position_response(msg);
         break;
-    case 0x82:
+    case CommandIds::SET_WORK_MODE:
         handle_set_work_mode_response(msg);
         break;
-    case 0x83:
-        handle_set_current_response(msg);
-        break;
-    case 0x90:
-        handle_set_home_response(msg);
-        break;
-    case 0xF1:
+    // case CommandIds::SET_WORKING_CURRENT:
+    //     handle_set_current_response(msg);
+    //     break;
+    // case CommandIds::SET_HOME:
+    //     handle_set_home_response(msg);
+    //     break;
+    case CommandIds::QUERY_MOTOR_STATUS:
         handle_query_status_response(msg);
         break;
-    case 0xF4:
-    case 0xF5:
+    case CommandIds::RUN_MOTOR_RELATIVE_MOTION_BY_AXIS:
+    case CommandIds::RUN_MOTOR_ABSOLUTE_MOTION_BY_AXIS:
         handle_set_position_response(msg);
         break;
     default:
@@ -37,7 +79,7 @@ void ResponseHandler::process_message(twai_message_t *msg)
 void ResponseHandler::log_twai_message(twai_message_t *msg)
 {
 
-    ESP_LOGI(FUNCTION_NAME, "ID: 0x%02lu \t length: %d / %02u \t code: 0x%02X \t commandName: %s", canId, msg->data_length_code, msg->data_length_code, msg->data[0], GET_CMD_NAME(GET_CMD(msg)).c_str());
+    ESP_LOGI(FUNCTION_NAME, "ID: 0x%02lu \t length: %d / %02u \t code: 0x%02X \t commandName: %s", canId, msg->data_length_code, msg->data_length_code, msg->data[0], GET_MSGCMD(&msg));
 
     for (int i = 0; i < msg->data_length_code - 1; i++)
     {
@@ -93,6 +135,28 @@ void ResponseHandler::print_unknown_response_code(twai_message_t *msg)
     {
         ESP_LOGI(FUNCTION_NAME, "Data[%d] - raw: %d \t - hex: %02X", i, msg->data[i], msg->data[i]);
     }
+}
+
+void ResponseHandler::handle_set_command_response(twai_message_t *msg)
+{
+    uint8_t status = msg->data[1];
+
+    if (status == 0)
+    {
+        ESP_LOGE(FUNCTION_NAME, "Set command failed for command: %s", GET_MSGCMD(&msg));
+        return;
+    }
+
+    else
+    {
+        ESP_LOGI(FUNCTION_NAME, "Set command successful for command: %s", GET_MSGCMD(&msg));
+    }
+}
+
+void ResponseHandler::handle_read_uint16_response(twai_message_t *msg)
+{
+    uint16_t response = (msg->data[1] << 8) | msg->data[2];
+    ESP_LOGI(FUNCTION_NAME, "Response: %u", response);
 }
 
 void ResponseHandler::handle_query_status_response(twai_message_t *msg)

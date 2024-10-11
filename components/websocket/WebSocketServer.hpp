@@ -189,4 +189,28 @@ static void connect_handler(void *arg, esp_event_base_t event_base,
     }
 }
 
+static void property_change_event_handler(void *args, esp_event_base_t event_base, int32_t event_id, void *event_data)
+{
+
+    esp_err_t ret;
+
+    ESP_LOGI(FUNCTION_NAME, "GOT PROPERTY CHANGE EVENT, EVENT_BASE: %s, EVENT_ID: %lu", event_base, event_id);
+
+    if (event_base != SYSTEM_EVENTS && event_id != system_event_id_t::PROPERTY_CHANGE_EVENT)
+    {
+        return;
+    }
+
+    // MotorPropertyChangeEventData<T> *data = (MotorPropertyChangeEventData<T> *)event_data;
+    // ESP_LOGI(FUNCTION_NAME, "Property %s changed to %d", magic_enum::enum_name(data->property), data->value);
+
+    // const char *message = "Welcome to ESP32 WebSocket Server!";
+    // httpd_ws_frame_t ws_pkt;
+    // memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
+    // ws_pkt.payload = (uint8_t *)message;
+    // ws_pkt.len = strlen(message);
+    // ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+    // httpd_ws_send_frame(req, &ws_pkt);
+}
+
 #endif // WEB_SOCKET_SERVER_H

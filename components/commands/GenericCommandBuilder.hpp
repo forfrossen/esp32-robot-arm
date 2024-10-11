@@ -2,69 +2,76 @@
 #define GENERIC_COMMAND_BUILDER_H
 
 #include "../common/utils.hpp"
+#include "Events.hpp"
 #include "TWAICommandBuilderBase.hpp"
 #include "TypeDefs.hpp"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "freertos/queue.h"
 #include <driver/twai.h>
+#include <variant>
 #include <vector>
+
+// Command Argument Types (for input arguments)
+using CommandArg = std::variant<uint8_t, uint16_t, float, int32_t, bool>;
+
+// Command Return Types (for output/return values)
+using CommandReturn = std::variant<std::monostate, uint8_t, uint16_t, float, int32_t, bool>; // std::monostate is for void return types
+
+// Command Signature: Defines the argument type and the return type for each command
+struct CommandSignature
+{
+    std::function<CommandReturn(CommandArg)> command_handler; // A function that takes a CommandArg and returns CommandReturn
+};
 
 class GenericCommandBuilder : public TWAICommandBuilderBase<GenericCommandBuilder>
 {
 private:
-    std::variant<std::vector<uint8_t>, std::vector<uint16_t>, std::vector<uint32_t>> payload;
-
 public:
-    GenericCommandBuilder(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code) : TWAICommandBuilderBase<GenericCommandBuilder>(settings, command_code) {}
-    GenericCommandBuilder(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code, std::vector<uint8_t> payload) : TWAICommandBuilderBase<GenericCommandBuilder>(settings, command_code), payload(payload) {}
-    GenericCommandBuilder(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code, std::vector<uint16_t> payload) : TWAICommandBuilderBase<GenericCommandBuilder>(settings, command_code), payload(payload) {}
-    GenericCommandBuilder(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code, std::vector<uint32_t> payload) : TWAICommandBuilderBase<GenericCommandBuilder>(settings, command_code), payload(payload) {}
+    GenericCommandBuilder(std::shared_ptr<TWAICommandFactorySettings> settings, CommandIds command_code) : TWAICommandBuilderBase<GenericCommandBuilder>(settings, command_code)
+    {
+        ESP_LOGI(FUNCTION_NAME, "GenericCommandBuilder constructor called");
+    }
+
     ~GenericCommandBuilder()
     {
         ESP_LOGW(FUNCTION_NAME, "GenericCommandBuilder destructor called");
         delete[] data;
     }
 
-    void set_data()
+    template <typename... Args>
+    void with(Args... args)
     {
-        std::visit([this](auto &&arg)
-                   {
-            using T = std::decay_t<decltype(arg)>;
-            for (size_t i = 0; i < arg.size(); ++i)
-            {
-                if constexpr (std::is_same_v<T, std::vector<uint8_t>>)
-                {
-                    data[i + 1] = arg[i];
-                }
-                else if constexpr (std::is_same_v<T, std::vector<uint16_t>>)
-                {
-                    data[i + 1] = static_cast<uint8_t>(arg[i] & 0xFF);
-                    data[i + 2] = static_cast<uint8_t>((arg[i] >> 8) & 0xFF);
-                }
-                else if constexpr (std::is_same_v<T, std::vector<uint32_t>>)
-                {
-                    data[i + 1] = static_cast<uint8_t>(arg[i] & 0xFF);
-                    data[i + 2] = static_cast<uint8_t>((arg[i] >> 8) & 0xFF);
-                    data[i + 3] = static_cast<uint8_t>((arg[i] >> 16) & 0xFF);
-                    data[i + 4] = static_cast<uint8_t>((arg[i] >> 24) & 0xFF);
-                }
-            } }, payload);
+        static_assert((... && (std::is_same_v<Args, uint8_t> ||
+                               std::is_same_v<Args, uint16_t> ||
+                               std::is_same_v<Args, uint32_t>)),
+                      "Arguments must be of type uint8_t, uint16_t, or uint32_t");
+
+        data[0] = command_code;
+
+        size_t index = 1;
+        ([&]
+         {
+        if constexpr (std::is_same_v<Args, uint8_t>)
+        {
+            if (index < 8) data[index++] = args;
+        }
+        else if constexpr (std::is_same_v<Args, uint16_t>)
+        {
+            if (index < 8) data[index++] = static_cast<uint8_t>(args & 0xFF);
+            if (index < 8) data[index++] = static_cast<uint8_t>((args >> 8) & 0xFF);
+        }
+        else if constexpr (std::is_same_v<Args, uint32_t>)
+        {
+            if (index < 8) data[index++] = static_cast<uint8_t>(args & 0xFF);
+            if (index < 8) data[index++] = static_cast<uint8_t>((args >> 8) & 0xFF);
+            if (index < 8) data[index++] = static_cast<uint8_t>((args >> 16) & 0xFF);
+            if (index < 8) data[index++] = static_cast<uint8_t>((args >> 24) & 0xFF);
+        } }(), ...);
     }
 
     esp_err_t build_twai_message() override
     {
-        data[0] = command_code;
-        if (!std::holds_alternative<std::vector<uint8_t>>(payload) && !std::holds_alternative<std::vector<uint16_t>>(payload) && !std::holds_alternative<std::vector<uint32_t>>(payload))
-        {
-            return ESP_ERR_INVALID_ARG;
-        }
-        if (std::visit([](auto &&arg)
-                       { return arg.size(); }, payload) > 0)
-        {
-            set_data();
-        }
-        set_msg_data_crc();
         return ESP_OK;
     }
 };

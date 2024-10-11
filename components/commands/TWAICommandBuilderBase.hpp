@@ -2,6 +2,7 @@
 #define TWAI_COMMAND_BUILDER_BASE_HPP
 
 #include "../common/utils.hpp"
+#include "Events.hpp"
 #include "TypeDefs.hpp"
 #include "esp_err.h"
 #include "esp_log.h"
@@ -22,23 +23,19 @@ protected:
     std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
 
 public:
-    TWAICommandBuilderBase(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code) : settings(settings), command_lifecycle_registry(settings->command_lifecycle_registry)
+    TWAICommandBuilderBase(std::shared_ptr<TWAICommandFactorySettings> settings, CommandIds command_code) : settings(settings), command_lifecycle_registry(settings->command_lifecycle_registry)
     {
         ESP_LOGI(FUNCTION_NAME, "TWAICommandBuilderBase constructor called");
         set_default_values();
         set_command_code(command_code);
-        set_data_length_code(2);
-        create_msg_data();
-        register_command();
-    }
+        auto it = g_command_payload_map.find(command_code);
+        if (it == g_command_payload_map.end())
+        {
+            ESP_LOGE(FUNCTION_NAME, "Command code not found in command_payload_map");
+            return;
+        }
 
-    TWAICommandBuilderBase(std::shared_ptr<TWAICommandFactorySettings> settings, uint8_t command_code, std::vector<uint8_t> payload) : settings(settings), command_lifecycle_registry(settings->command_lifecycle_registry)
-    {
-        ESP_LOGI(FUNCTION_NAME, "TWAICommandBuilderBase constructor called");
-        set_default_values();
-        set_command_code(command_code);
-        payload = payload;
-        set_data_length_code(2 + payload.size());
+        set_data_length_code(2 + calculate_payload_size(it->second));
         create_msg_data();
         register_command();
     }
@@ -55,14 +52,43 @@ public:
         msg.identifier = settings->id;
     }
 
+    uint8_t calculate_payload_size(const CommandPayloadInfo &payload_info)
+    {
+        uint8_t total_size = 2;
+
+        for (const auto &type : payload_info.payload_types)
+        {
+            switch (type)
+            {
+            case PayloadType::UINT8:
+                total_size += sizeof(uint8_t);
+                break;
+            case PayloadType::UINT16:
+                total_size += sizeof(uint16_t);
+                break;
+            case PayloadType::UINT32:
+                total_size += sizeof(uint32_t);
+                break;
+            case PayloadType::VOID:
+                // No size to add for VOID
+                break;
+            default:
+                ESP_LOGE(FUNCTION_NAME, "Unsupported payload type");
+            }
+        }
+        assert(total_size <= 8);
+
+        return total_size;
+    }
+
     void register_command()
     {
         // command_lifecycle_registry->register_command(id, command_id);
     }
 
-    void set_command_code(uint8_t code)
+    void set_command_code(CommandIds code)
     {
-        command_code = code;
+        command_code = static_cast<uint8_t>(code);
     }
 
     void set_data_length_code(uint8_t length)
@@ -82,7 +108,8 @@ public:
         build_twai_message();
         set_msg_data();
         set_msg_data_crc();
-        return enqueue_message();
+        ESP_ERROR_CHECK(post_event(&msg));
+        return ESP_OK;
     }
 
     void set_msg_data()
@@ -107,32 +134,10 @@ public:
         return crc & 0xFF;
     }
 
-    esp_err_t enqueue_message()
+    esp_err_t post_event(twai_message_t *msg)
     {
-
-        if (!settings->twai_queues->outQ)
-        {
-            ESP_LOGE(FUNCTION_NAME, "outQ is NULL");
-            return ESP_FAIL;
-        }
-
-        // DEBUGGING MSG
-        ESP_LOGI(FUNCTION_NAME, "ID: %lu\t length: %u\t code: 0x%02X", msg.identifier, msg.data_length_code, msg.data[0]);
-        for (int i = 0; i < msg.data_length_code; i++)
-        {
-            ESP_LOGI(FUNCTION_NAME, "Data[%d]: %02X", i, msg.data[i]);
-        }
-
-        if (xQueueSendToBack(settings->twai_queues->outQ, &msg, 0) != pdTRUE)
-        {
-            ESP_LOGE(FUNCTION_NAME, " ==> Failed to enqueue message!");
-            return ESP_FAIL;
-        }
-        else
-        {
-            ESP_LOGI(FUNCTION_NAME, "    ==> Message enqueued successfully!");
-            return ESP_OK;
-        }
+        ESP_LOGI(FUNCTION_NAME, "Posting event to TWAI_EVENTS");
+        return esp_event_post_to(settings->system_event_loop, SYSTEM_EVENTS, OUTGOING_MESSAGE_EVENT, msg, sizeof(twai_message_t), portMAX_DELAY);
     }
 };
 

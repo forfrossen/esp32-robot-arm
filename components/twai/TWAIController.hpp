@@ -2,8 +2,10 @@
 #define TWAICONTROLLER_H
 
 #include "../common/utils.hpp"
+#include "TypeDefs.hpp"
 #include "driver/gpio.h"
 #include "esp_err.h"
+#include "esp_event.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include <cstdint>
@@ -15,8 +17,6 @@ class TWAIController
 {
 private:
     SemaphoreHandle_t twai_mutex = NULL;
-    TaskHandle_t taskHandleReception;
-    TaskHandle_t taskHandleTransmission;
     TaskHandle_t taskHandleError;
 
     bool interrupt = false;
@@ -56,14 +56,36 @@ public:
         ERROR_MCP2515_MERRF,
     };
 
-    TWAIController();
+    TWAIController(esp_event_loop_handle_t system_event_loop) : system_event_loop(system_event_loop)
+    {
+        esp_err_t ret;
+        ESP_LOGI(FUNCTION_NAME, "TWAIController constructor called");
+        twai_mutex = xSemaphoreCreateMutex();
+        if (!_isConnected)
+        {
+            ret = init();
+            if (ret != ESP_OK)
+            {
+                ESP_LOGE(FUNCTION_NAME, "TWAIController initialization failed.");
+            }
+        }
+        ESP_LOGI(FUNCTION_NAME, "TWAIController initialized.");
+
+        // ret = setupQueues();
+        // if (ret != ESP_OK)
+        // {
+        //     ESP_LOGE(FUNCTION_NAME, "TWAIController setupQueues failed.");
+        // }
+        // ESP_LOGI(FUNCTION_NAME, "TWAIController setupQueues successful.");
+    }
+
     ~TWAIController();
 
     ERROR connectCan();
     ERROR disconnectCan();
     esp_err_t setupQueues();
 
-    esp_err_t register_motor_id(uint32_t canId);
+    esp_err_t register_motor_id(uint32_t canId, esp_event_loop_handle_t motor_event_loop);
 
     bool isConnected();
 
@@ -71,14 +93,17 @@ public:
     static void vTask_Reception(void *pvParameters);
     static void vTask_ERROR(void *pvParameters);
 
-    QueueHandle_t outQ;
-
-    std::map<uint32_t, QueueHandle_t> inQs;
-    QueueHandle_t get_inQ_for_id(uint32_t);
+    std::map<uint32_t, esp_event_loop_handle_t> motor_event_loops;
+    esp_event_loop_handle_t get_event_loop_for_id(uint32_t);
+    esp_event_loop_handle_t system_event_loop;
 
     bool transmit(twai_message_t msg);
     void handleTransmitError(esp_err_t *error);
     void handleAlerts(uint32_t alerts);
+
+    void post_event(uint32_t id, twai_message_t *msg);
+
+    static void outgoing_message_event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);
 };
 
 #endif // CANBUS_H

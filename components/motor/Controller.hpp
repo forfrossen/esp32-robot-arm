@@ -63,7 +63,8 @@ private:
 
     esp_err_t execute_query_command(std::function<TWAICommandBuilderBase<GenericCommandBuilder> *()> command_factory_method);
 
-    static void motor_controller_event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);
+    static void state_transition_event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);
+
     void post_event(motor_event_id_t event);
     esp_err_t start_basic_tasks();
     esp_err_t start_timed_tasks();

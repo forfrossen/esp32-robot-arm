@@ -3,4 +3,4 @@ idf_component_register(
     "TWAIController.cpp"
 REQUIRES driver
 REQUIRES esp_event
-INCLUDE_DIRS ".")
+INCLUDE_DIRS "." "../common")

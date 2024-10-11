@@ -7,4 +7,5 @@ REQUIRES esp_http_server
 
 INCLUDE_DIRS 
     "." 
+    "../magic_enum"
 )
