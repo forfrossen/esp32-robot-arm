@@ -1,12 +1,12 @@
 #ifndef RUN_MOTOR_IN_SPEED_MODE_COMMAND_BUILDER_H
 #define RUN_MOTOR_IN_SPEED_MODE_COMMAND_BUILDER_H
 
-#include "TWAICommandBuilderBase.hpp"
+#include "CommandBase.hpp"
 #include "TypeDefs.hpp"
 #include "esp_log.h"
 #include "freertos/queue.h"
 
-class RunMotorInSpeedModeCommandBuilder : public TWAICommandBuilderBase<RunMotorInSpeedModeCommandBuilder>
+class RunMotorInSpeedModeCommand : public CommandBase<RunMotorInSpeedModeCommand>
 {
 private:
     uint8_t direction;
@@ -14,36 +14,36 @@ private:
     uint8_t acceleration;
 
 public:
-    RunMotorInSpeedModeCommandBuilder(std::shared_ptr<TWAICommandFactorySettings> settings) : TWAICommandBuilderBase<RunMotorInSpeedModeCommandBuilder>(settings, RUN_MOTOR_SPEED_MODE)
+    RunMotorInSpeedModeCommand(std::shared_ptr<CommandFactorySettings> settings) : CommandBase<RunMotorInSpeedModeCommand>(settings, RUN_MOTOR_SPEED_MODE)
     {
     }
-    ~RunMotorInSpeedModeCommandBuilder()
+    ~RunMotorInSpeedModeCommand()
     {
-        ESP_LOGW(FUNCTION_NAME, "RunMotorInSpeedModeCommandBuilder destructor called");
+        ESP_LOGW(FUNCTION_NAME, "RunMotorInSpeedModeCommand destructor called");
         delete[] data;
     }
 
-    RunMotorInSpeedModeCommandBuilder &init_new_command()
+    RunMotorInSpeedModeCommand &init_new_command()
     {
         set_command_code(RUN_MOTOR_SPEED_MODE);
-        set_data_length_code(4);
+        // set_data_length_code(4);
         create_msg_data();
         return *this;
     }
 
-    RunMotorInSpeedModeCommandBuilder &set_direction(uint8_t direction)
+    RunMotorInSpeedModeCommand &set_direction(uint8_t direction)
     {
         this->direction = direction;
         return *this;
     }
 
-    RunMotorInSpeedModeCommandBuilder &set_speed(uint16_t speed)
+    RunMotorInSpeedModeCommand &set_speed(uint16_t speed)
     {
         this->speed = speed;
         return *this;
     }
 
-    RunMotorInSpeedModeCommandBuilder &set_acceleration(uint8_t acceleration)
+    RunMotorInSpeedModeCommand &set_acceleration(uint8_t acceleration)
     {
         this->acceleration = acceleration;
         return *this;

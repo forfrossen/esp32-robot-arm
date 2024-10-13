@@ -4,4 +4,4 @@ idf_component_register(
 REQUIRES driver
 REQUIRES esp_event
 
-INCLUDE_DIRS "." "./SetParameters" "../common")
+INCLUDE_DIRS "." "../common")

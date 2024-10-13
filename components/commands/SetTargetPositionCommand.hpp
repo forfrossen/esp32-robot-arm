@@ -1,12 +1,12 @@
 #ifndef SET_TARGET_POSITION_COMMAND_BUILDER_H
 #define SET_TARGET_POSITION_COMMAND_BUILDER_H
 
-#include "TWAICommandBuilderBase.hpp"
+#include "CommandBase.hpp"
 #include "TypeDefs.hpp"
 #include "esp_log.h"
 #include "freertos/queue.h"
 
-class SetTargetPositionCommandBuilder : public TWAICommandBuilderBase<SetTargetPositionCommandBuilder>
+class SetTargetPositionCommand : public CommandBase<SetTargetPositionCommand>
 {
 private:
     uint32_t position;
@@ -15,39 +15,41 @@ private:
     bool absolute;
 
 public:
-    SetTargetPositionCommandBuilder(std::shared_ptr<TWAICommandFactorySettings> settings) : TWAICommandBuilderBase<SetTargetPositionCommandBuilder>(settings, RUN_MOTOR_RELATIVE_MOTION_BY_AXIS)
+    SetTargetPositionCommand(std::shared_ptr<CommandFactorySettings> settings) : CommandBase<SetTargetPositionCommand>(settings, RUN_MOTOR_RELATIVE_MOTION_BY_AXIS)
     {
-        set_data_length_code(8);
+        // set_data_length_code(8);
         create_msg_data();
     }
-    ~SetTargetPositionCommandBuilder()
+    ~SetTargetPositionCommand()
     {
-        ESP_LOGW(FUNCTION_NAME, "SetTargetPositionCommandBuilder destructor called");
+        ESP_LOGW(FUNCTION_NAME, "SetTargetPositionCommand destructor called");
         delete[] data;
     }
 
-    SetTargetPositionCommandBuilder &set_position(uint32_t position)
+    SetTargetPositionCommand &set_position(uint32_t position)
     {
         this->position = position;
         return *this;
     }
 
-    SetTargetPositionCommandBuilder &set_speed(uint8_t speed)
+    SetTargetPositionCommand &set_speed(uint8_t speed)
     {
         this->speed = speed;
         return *this;
     }
 
-    SetTargetPositionCommandBuilder &set_acceleration(uint8_t acceleration)
+    SetTargetPositionCommand &set_acceleration(uint8_t acceleration)
     {
         this->acceleration = acceleration;
         return *this;
     }
 
-    SetTargetPositionCommandBuilder &set_absolute(bool absolute)
+    SetTargetPositionCommand &set_absolute(bool absolute)
     {
         this->absolute = absolute;
-        command_code = absolute ? 0xF5 : 0xF4;
+        command_code = absolute ? RUN_MOTOR_ABSOLUTE_MOTION_BY_AXIS : RUN_MOTOR_RELATIVE_MOTION_BY_AXIS;
+        cmd_code = static_cast<uint8_t>(command_code);
+        set_command_code(command_code);
         return *this;
     }
 

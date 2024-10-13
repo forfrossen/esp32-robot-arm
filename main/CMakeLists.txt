@@ -10,7 +10,6 @@ REQUIRES nvs_flash
 INCLUDE_DIRS 
     "." 
     "../components/commands" 
-    "../components/commands/SetParameters"
     "../components/common"
     "../components/motor"
     "../components/twai"

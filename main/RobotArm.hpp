@@ -2,9 +2,9 @@
 #define ROBOTARM_HPP
 #include "Events.hpp"
 
+#include "CommandFactory.hpp"
 #include "CommandLifecycleRegistry.hpp"
 #include "Controller.hpp"
-#include "TWAICommandFactory.hpp"
 #include "TWAIController.hpp"
 #include "TypeDefs.hpp"
 #include "freeRTOS/queue.h"
@@ -84,8 +84,8 @@ public:
 
         twai_controller->register_motor_id(id, motor_event_loop);
 
-        std::shared_ptr<TWAICommandFactorySettings> settings = std::make_shared<TWAICommandFactorySettings>(id, command_lifecyle_registry);
-        std::shared_ptr<TWAICommandFactory> command_factory = std::make_shared<TWAICommandFactory>(settings);
+        std::shared_ptr<CommandFactorySettings> settings = std::make_shared<CommandFactorySettings>(id, command_lifecyle_registry);
+        std::shared_ptr<CommandFactory> command_factory = std::make_shared<CommandFactory>(settings);
 
         // ESP_ERROR_CHECK(esp_event_loop_create(&motor_loop_args, &motor_event_loop));
 

@@ -28,7 +28,7 @@
 #define MOTOR_RECOVERING_BIT BIT2
 #define MOTOR_INIT_BIT BIT3
 
-class TWAICommandFactory;
+class CommandFactory;
 class TWAIController;
 class CommandLifecycleRegistry;
 class MotorContext;
@@ -56,23 +56,23 @@ typedef struct EventGroups
     }
 } event_groups_t;
 
-struct TWAICommandFactorySettings
+struct CommandFactorySettings
 {
     uint32_t id;
     esp_event_loop_handle_t system_event_loop;
     std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
 
     // Constructor
-    TWAICommandFactorySettings(uint32_t id, std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry)
+    CommandFactorySettings(uint32_t id, std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry)
         : id(id), command_lifecycle_registry(command_lifecycle_registry)
     {
-        ESP_LOGI("TWAICommandFactorySettings", "Constructor called");
+        ESP_LOGI("CommandFactorySettings", "Constructor called");
     }
 
     // Destructor
-    ~TWAICommandFactorySettings()
+    ~CommandFactorySettings()
     {
-        ESP_LOGI("TWAICommandFactorySettings", "Destructor called");
+        ESP_LOGI("CommandFactorySettings", "Destructor called");
     }
 };
 
@@ -113,7 +113,7 @@ struct MotorControllerDependencies
     std::shared_ptr<EventGroups> event_groups;
     std::shared_ptr<EventLoops> event_loops;
     std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
-    std::shared_ptr<TWAICommandFactory> command_factory;
+    std::shared_ptr<CommandFactory> command_factory;
     std::shared_ptr<MotorContext> motor_context;
     std::shared_ptr<ResponseHandler> motor_response_handler;
 
@@ -124,7 +124,7 @@ struct MotorControllerDependencies
         std::shared_ptr<EventGroups> event_groups,
         std::shared_ptr<EventLoops> event_loops,
         std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry,
-        std::shared_ptr<TWAICommandFactory> command_factory,
+        std::shared_ptr<CommandFactory> command_factory,
         std::shared_ptr<MotorContext> motor_context,
         std::shared_ptr<ResponseHandler> motor_response_handler)
         : id(id),
@@ -164,6 +164,9 @@ struct CommandPayloadInfo
     CommandPayloadInfo(Types... types)
     {
         static_assert(sizeof...(types) <= 7, "Too many payload types provided, max is 7");
+        // Static assert to ensure all types are of type PayloadType
+        static_assert((... && std::is_same_v<Types, PayloadType>),
+                      "All arguments must be of type PayloadType");
         std::size_t index = 0;
         // Initialize with provided types
         ((payload_types[index++] = types), ...);

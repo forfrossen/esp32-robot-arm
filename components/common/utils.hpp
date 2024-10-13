@@ -62,6 +62,20 @@ inline const char *getFunctionName(const char *prettyFunction)
 
 #define FUNCTION_NAME getFunctionName(__PRETTY_FUNCTION__)
 
+#define CHECK_THAT(cond, err_code, TAG)                           \
+    do                                                            \
+    {                                                             \
+        if (!(cond))                                              \
+        {                                                         \
+            ESP_LOGE(TAG, "Failed to meet condition: %s", #cond); \
+            return err_code;                                      \
+        }                                                         \
+        else                                                      \
+        {                                                         \
+            ESP_LOGI(TAG, "Condition met: %s", #cond);            \
+        }                                                         \
+    } while (0)
+
 // #define GET_CMD(msg) replace_underscores(magic_enum::enum_name(static_cast<CommandIds>((msg).data[0])).data()).c_str()
 #define GET_MSGCMD(msg) replace_underscores(magic_enum::enum_name(static_cast<CommandIds>(*reinterpret_cast<uint8_t *>(msg->data))).data()).c_str()
 #define GET_CMDPTR(cmd) replace_underscores(magic_enum::enum_name(static_cast<CommandIds>(*reinterpret_cast<uint8_t *>(cmd))).data()).c_str()
@@ -79,8 +93,8 @@ inline std::string replace_underscores(const std::string &str)
     {                                                                               \
         if (xSemaphoreTake(mutex, portMAX_DELAY) == pdTRUE)                         \
         {                                                                           \
-            auto cmd = command_factory->generate_new_generic_builder(command_id);   \
-            ret = cmd->build_and_send();                                            \
+            auto cmd = command_factory->generate_new_generic_command(command_id);   \
+            ret = cmd->execute();                                                   \
             xSemaphoreGive(mutex);                                                  \
         }                                                                           \
         else                                                                        \
@@ -97,7 +111,7 @@ inline std::string replace_underscores(const std::string &str)
         esp_err_t err = ESP_FAIL;                                                   \
         if (xSemaphoreTake(mutex, portMAX_DELAY) == pdTRUE)                         \
         {                                                                           \
-            ret = cmd->build_and_send();                                            \
+            ret = cmd->execute();                                                   \
             xSemaphoreGive(mutex);                                                  \
         }                                                                           \
         else                                                                        \

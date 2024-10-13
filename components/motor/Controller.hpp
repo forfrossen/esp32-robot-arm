@@ -1,10 +1,10 @@
 #ifndef MOTORCONTROLLER_H
 #define MOTORCONTROLLER_H
 
+#include "CommandFactory.hpp"
 #include "CommandStateMachine.hpp"
 #include "Context.hpp"
 #include "ResponseHandler.hpp"
-#include "TWAICommandFactory.hpp"
 #include "TWAIController.hpp"
 #include "TypeDefs.hpp"
 #include "esp_check.h"
@@ -48,7 +48,7 @@ public:
 private:
     uint32_t canId;
     std::shared_ptr<MotorControllerDependencies> dependencies;
-    std::shared_ptr<TWAICommandFactory> command_factory;
+    std::shared_ptr<CommandFactory> command_factory;
     QueueHandle_t inQ;
     QueueHandle_t outQ;
     EventGroupHandle_t system_event_group;
@@ -63,7 +63,7 @@ private:
 
     int error_counter = 0;
 
-    esp_err_t execute_query_command(GenericCommandBuilder *cmd);
+    esp_err_t execute_query_command(GenericCommand *cmd);
 
     static void state_transition_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data);
 

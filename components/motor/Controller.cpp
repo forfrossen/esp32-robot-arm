@@ -269,7 +269,7 @@ esp_err_t MotorController::query_status()
 esp_err_t MotorController::set_working_current(uint16_t current_ma)
 {
     esp_err_t ret = ESP_FAIL;
-    auto cmd = command_factory->generate_new_generic_builder(SET_WORKING_CURRENT);
+    auto cmd = command_factory->generate_new_generic_command(SET_WORKING_CURRENT);
     cmd->with(current_ma);
     SEND_COMMAND_BY_ID_WITH_PAYLOAD(motor_mutex, command_factory, cmd, context, ret);
     return ret;
@@ -289,7 +289,7 @@ esp_err_t MotorController::set_target_position()
 
     // set_command_state(CommandStateMachine::CommandState::REQUESTED);
     auto cmd = command_factory->create_set_target_position_command();
-    esp_err_t ret = cmd->set_position(position).set_speed(speed).set_acceleration(acceleration).set_absolute(absolute).build_and_send();
+    esp_err_t ret = cmd->set_position(position).set_speed(speed).set_acceleration(acceleration).set_absolute(absolute).execute();
     if (ret != ESP_OK)
     {
         ESP_LOGE(FUNCTION_NAME, "Error enqueing query-status-command");
