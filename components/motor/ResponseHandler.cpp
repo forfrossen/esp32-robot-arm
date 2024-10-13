@@ -2,10 +2,10 @@
 
 // ESP_EVENT_DEFINE_BASE(MOTOR_EVENTS);
 
-ResponseHandler::ResponseHandler(uint32_t canId, std::shared_ptr<MotorContext> context, std::shared_ptr<EventLoops> event_loops) : canId(canId), context(context), system_event_loop(event_loops->system_event_loop)
+ResponseHandler::ResponseHandler(uint32_t canId, std::shared_ptr<MotorContext> context, std::shared_ptr<EventLoops> event_loops) : canId(canId), context(context), system_event_loop(event_loops->system_event_loop), motor_event_loop(event_loops->motor_event_loop)
 {
     ESP_LOGI(FUNCTION_NAME, "ResponseHandler constructor called");
-    esp_err_t err = esp_event_handler_instance_register_with(system_event_loop, SYSTEM_EVENTS, INCOMING_MESSAGE_EVENT, &incoming_message_event_handler, this, &incoming_message_event_handler_instance);
+    esp_err_t err = esp_event_handler_instance_register_with(motor_event_loop, MOTOR_EVENTS, INCOMING_MESSAGE_EVENT, &incoming_message_event_handler, this, &incoming_message_event_handler_instance);
     if (err != ESP_OK)
     {
         ESP_LOGE(FUNCTION_NAME, "Failed to register event handler: %s", esp_err_to_name(err));
@@ -38,7 +38,7 @@ void ResponseHandler::incoming_message_event_handler(void *args, esp_event_base_
 
 void ResponseHandler::process_message(twai_message_t *msg)
 {
-    log_twai_message(msg);
+    log_message(msg);
     check_for_error_and_do_transition(msg);
 
     CommandIds commandId = static_cast<CommandIds>(msg->data[0]);
@@ -79,7 +79,7 @@ void ResponseHandler::process_message(twai_message_t *msg)
     }
 }
 
-void ResponseHandler::log_twai_message(twai_message_t *msg)
+void ResponseHandler::log_message(twai_message_t *msg)
 {
 
     ESP_LOGI(FUNCTION_NAME, "ID: 0x%02lu \t length: %d / %02u \t code: 0x%02X \t commandName: %s", canId, msg->data_length_code, msg->data_length_code, msg->data[0], GET_MSGCMD(&msg));
@@ -88,7 +88,7 @@ void ResponseHandler::log_twai_message(twai_message_t *msg)
     {
         ESP_LOGI(FUNCTION_NAME, "  Data[%d]: \t 0x%02X \t %d ", i, msg->data[i], msg->data[i]);
     }
-    ESP_LOGI(FUNCTION_NAME, "  Data CRC: \t 0x%02X \t %d ", msg->data[msg->data_length_code], msg->data[msg->data_length_code]);
+    ESP_LOGI(FUNCTION_NAME, "  Data CRC: \t 0x%02X \t %d ", msg->data[msg->data_length_code - 1], msg->data[msg->data_length_code - 1]);
 }
 
 bool ResponseHandler::is_response_error(twai_message_t *msg)

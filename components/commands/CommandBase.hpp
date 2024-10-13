@@ -217,6 +217,7 @@ public:
         msg.value().data[msg.value().data_length_code - 1] = crc;
         xSemaphoreGive(msg_mutex);
         CHECK_THAT(msg.value().data[msg.value().data_length_code - 1] != 0, FUNCTION_NAME);
+        ESP_LOGI(FUNCTION_NAME, "CRC: 0x%02X", msg.value().data[msg.value().data_length_code - 1]);
         return ESP_OK;
     }
 

@@ -42,11 +42,14 @@ esp_err_t TWAIController::init()
     }
     ESP_LOGI(FUNCTION_NAME, "Driver started");
 
+    xTaskCreatePinnedToCore(vTask_ERROR, "ErrorDetectionTask", 1024 * 2, this, 1, &taskHandleError, 1);
+    assert(taskHandleError != NULL); // Ensure the task was created successfully
+
+    xTaskCreatePinnedToCore(vTask_Reception, "InQueuesTask", 1024 * 3, this, 3, &vTask_Reception_handle, 0);
+    assert(vTask_Reception_handle != NULL); // Ensure the task was created successfully
+
     ret = esp_event_handler_register_with(system_event_loop, SYSTEM_EVENTS, OUTGOING_MESSAGE_EVENT, &outgoing_message_event_handler, this);
     ESP_LOGI(FUNCTION_NAME, "Outgoing message event handler registered");
-
-    xTaskCreatePinnedToCore(vTask_ERROR, "ErrorDetectionTask", 3000, this, 1, &taskHandleError, 1);
-    assert(taskHandleError != NULL); // Ensure the task was created successfully
 
     _isConnected = true;
     return ESP_OK;
@@ -72,10 +75,6 @@ esp_err_t TWAIController::setupQueues()
 
     // xTaskCreatePinnedToCore(vTask_Transmission, "OutQueueTask", 3000, this, 3, &taskHandleTransmission, 0);
     // assert(taskHandleTransmission != NULL); // Ensure the task was created successfully
-
-    xTaskCreatePinnedToCore(vTask_Reception, "InQueuesTask", 1024 * 2, this, 3, &vTask_Reception_handle, 0);
-    assert(vTask_Reception_handle != NULL); // Ensure the task was created successfully
-    ESP_ERROR_CHECK(esp_event_handler_register(SYSTEM_EVENTS, OUTGOING_MESSAGE_EVENT, &outgoing_message_event_handler, this));
 
     // xTaskCreatePinnedToCore(vTask_ERROR, "ErrorDetectionTask", 3000, this, 1, &taskHandleError, 1);
     // assert(taskHandleError != NULL); // Ensure the task was created successfully
@@ -136,6 +135,7 @@ void TWAIController::vTask_Reception(void *pvParameters)
     {
         twai_message_t *msg = (twai_message_t *)malloc(sizeof(twai_message_t));
         esp_err_t ret = twai_receive(msg, portMAX_DELAY);
+        log_twai_message(msg);
         xSemaphoreTake(twai_controller->twai_mutex, portMAX_DELAY);
         assert(ret == ESP_OK);
         twai_controller->post_event(msg->identifier, msg);
@@ -154,19 +154,27 @@ void TWAIController::outgoing_message_event_handler(void *args, esp_event_base_t
         return;
     }
 
-    xSemaphoreTake(instance->twai_mutex, portMAX_DELAY);
+    if (xSemaphoreTake(instance->twai_mutex, portMAX_DELAY) != pdTRUE)
+    {
+        ESP_LOGE(FUNCTION_NAME, "Failed to take mutex");
+        return;
+    }
+
     twai_message_t *msg = (twai_message_t *)event_data;
 
+    log_twai_message(msg);
+
+    ESP_LOGI(FUNCTION_NAME, "Trying to send message");
+
     auto result = twai_transmit(msg, portMAX_DELAY);
+    xSemaphoreGive(instance->twai_mutex);
 
     if (result != ESP_OK)
     {
         ESP_LOGE(FUNCTION_NAME, "\t==> Failed to send message");
         instance->handleTransmitError(&result);
-        xSemaphoreGive(instance->twai_mutex);
     }
     ESP_LOGI(FUNCTION_NAME, "\t==> Successfully sent message");
-    xSemaphoreGive(instance->twai_mutex);
 }
 
 // void TWAIController::vTask_Transmission(void *pvParameters)

@@ -32,6 +32,7 @@ private:
     uint32_t canId;
     std::shared_ptr<MotorContext> context;
     esp_event_loop_handle_t system_event_loop;
+    esp_event_loop_handle_t motor_event_loop;
 
     bool
     is_response_error(twai_message_t *msg);
@@ -41,7 +42,7 @@ private:
     void check_for_error_and_do_transition(twai_message_t *msg);
     void print_unknown_response_code(twai_message_t *msg);
 
-    void log_twai_message(twai_message_t *msg);
+    void log_message(twai_message_t *msg);
     esp_event_handler_instance_t incoming_message_event_handler_instance;
 
     static void incoming_message_event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);
