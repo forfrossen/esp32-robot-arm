@@ -1,8 +1,11 @@
 #include "ResponseHandler.hpp"
+
+// ESP_EVENT_DEFINE_BASE(MOTOR_EVENTS);
+
 ResponseHandler::ResponseHandler(uint32_t canId, std::shared_ptr<MotorContext> context, std::shared_ptr<EventLoops> event_loops) : canId(canId), context(context), system_event_loop(event_loops->system_event_loop)
 {
     ESP_LOGI(FUNCTION_NAME, "ResponseHandler constructor called");
-    esp_err_t err = esp_event_handler_register_with(system_event_loop, SYSTEM_EVENTS, INCOMING_MESSAGE_EVENT, &incoming_message_event_handler, this);
+    esp_err_t err = esp_event_handler_instance_register_with(system_event_loop, SYSTEM_EVENTS, INCOMING_MESSAGE_EVENT, &incoming_message_event_handler, this, &incoming_message_event_handler_instance);
     if (err != ESP_OK)
     {
         ESP_LOGE(FUNCTION_NAME, "Failed to register event handler: %s", esp_err_to_name(err));
@@ -42,32 +45,32 @@ void ResponseHandler::process_message(twai_message_t *msg)
 
     switch (commandId)
     {
-    case CommandIds::SET_WORKING_CURRENT:
-    case CommandIds::SET_HOLDING_CURRENT:
-    case CommandIds::SET_HOME:
+    case SET_WORKING_CURRENT:
+    case SET_HOLDING_CURRENT:
+    case SET_HOME:
         handle_set_command_response(msg);
 
     // Handle read commands that return uint16_t
-    case CommandIds::READ_MOTOR_SPEED:
+    case READ_MOTOR_SPEED:
         handle_read_uint16_response(msg);
         break;
-    case CommandIds::READ_ENCODER_VALUE_CARRY:
+    case READ_ENCODER_VALUE_CARRY:
         handle_query_motor_position_response(msg);
         break;
-    case CommandIds::SET_WORK_MODE:
+    case SET_WORK_MODE:
         handle_set_work_mode_response(msg);
         break;
-    // case CommandIds::SET_WORKING_CURRENT:
+    // case SET_WORKING_CURRENT:
     //     handle_set_current_response(msg);
     //     break;
-    // case CommandIds::SET_HOME:
+    // case SET_HOME:
     //     handle_set_home_response(msg);
     //     break;
-    case CommandIds::QUERY_MOTOR_STATUS:
+    case QUERY_MOTOR_STATUS:
         handle_query_status_response(msg);
         break;
-    case CommandIds::RUN_MOTOR_RELATIVE_MOTION_BY_AXIS:
-    case CommandIds::RUN_MOTOR_ABSOLUTE_MOTION_BY_AXIS:
+    case RUN_MOTOR_RELATIVE_MOTION_BY_AXIS:
+    case RUN_MOTOR_ABSOLUTE_MOTION_BY_AXIS:
         handle_set_position_response(msg);
         break;
     default:
@@ -235,8 +238,6 @@ void ResponseHandler::handle_query_motor_position_response(twai_message_t *msg)
 void ResponseHandler::handle_query_motor_speed_response(twai_message_t *msg)
 {
     uint16_t speed = (msg->data[2] << 16) | (msg->data[3] << 8) | msg->data[4];
-    uint8_t crc = msg->data[3];
-
     ESP_LOGI(FUNCTION_NAME, "Speed: %u", speed);
 }
 

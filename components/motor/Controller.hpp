@@ -47,6 +47,7 @@ public:
 
 private:
     uint32_t canId;
+    std::shared_ptr<MotorControllerDependencies> dependencies;
     std::shared_ptr<TWAICommandFactory> command_factory;
     QueueHandle_t inQ;
     QueueHandle_t outQ;
@@ -54,6 +55,7 @@ private:
     EventGroupHandle_t motor_event_group;
     esp_event_loop_handle_t system_event_loop;
     esp_event_loop_handle_t motor_event_loop;
+    esp_event_handler_instance_t state_transition_event_handler_instance;
     SemaphoreHandle_t motor_mutex;
     std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
     std::shared_ptr<MotorContext> context;
@@ -61,9 +63,9 @@ private:
 
     int error_counter = 0;
 
-    esp_err_t execute_query_command(std::function<TWAICommandBuilderBase<GenericCommandBuilder> *()> command_factory_method);
+    esp_err_t execute_query_command(GenericCommandBuilder *cmd);
 
-    static void state_transition_event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);
+    static void state_transition_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data);
 
     void post_event(motor_event_id_t event);
     esp_err_t start_basic_tasks();

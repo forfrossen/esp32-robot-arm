@@ -86,44 +86,44 @@ struct MotorProperties
 
 // // Mapping CommandIds to uint16_t properties
 // const std::map<CommandIds, CommandPropertyMapping<uint16_t>> uint16_properties_map = {
-//     {CommandIds::SET_WORKING_CURRENT, &MotorProperties::working_current},
-//     {CommandIds::SET_HOLDING_CURRENT, &MotorProperties::holding_current},
-//     {CommandIds::SET_HOME, &MotorProperties::home_speed},
+//     {SET_WORKING_CURRENT, &MotorProperties::working_current},
+//     {SET_HOLDING_CURRENT, &MotorProperties::holding_current},
+//     {SET_HOME, &MotorProperties::home_speed},
 // };
 
 // // Mapping CommandIds to uint8_t properties
 // const std::map<CommandIds, CommandPropertyMapping<uint8_t>> uint8_properties_map = {
-//     {CommandIds::SET_MOTOR_ROTATION_DIRECTION, &MotorProperties::motor_rotation_direction},
-//     {CommandIds::SET_SUBDIVISIONS, &MotorProperties::subdivisions},
-//     {CommandIds::SET_CAN_ID, &MotorProperties::can_id},
-//     {CommandIds::SET_CAN_BITRATE, &MotorProperties::can_bitrate},
-//     {CommandIds::SET_GROUP_ID, &MotorProperties::group_id},
-//     {CommandIds::SET_HOME, &MotorProperties::home_trig},
-//     {CommandIds::SET_HOME, &MotorProperties::home_dir},
-//     {CommandIds::SET_HOME, &MotorProperties::end_limit},
-//     {CommandIds::SET_MODE0, &MotorProperties::mode0},
+//     {SET_MOTOR_ROTATION_DIRECTION, &MotorProperties::motor_rotation_direction},
+//     {SET_SUBDIVISIONS, &MotorProperties::subdivisions},
+//     {SET_CAN_ID, &MotorProperties::can_id},
+//     {SET_CAN_BITRATE, &MotorProperties::can_bitrate},
+//     {SET_GROUP_ID, &MotorProperties::group_id},
+//     {SET_HOME, &MotorProperties::home_trig},
+//     {SET_HOME, &MotorProperties::home_dir},
+//     {SET_HOME, &MotorProperties::end_limit},
+//     {SET_MODE0, &MotorProperties::mode0},
 // };
 
 // // Mapping CommandIds to bool properties
 // const std::map<CommandIds, CommandPropertyMapping<bool>> bool_properties_map = {
-//     {CommandIds::EMERGENCY_STOP, &MotorProperties::emergency_stop_triggered},
-//     {CommandIds::ENABLE_MOTOR, &MotorProperties::is_enabled},
-//     {CommandIds::SET_KEY_LOCK_ENABLE, &MotorProperties::key_lock_enabled},
-//     {CommandIds::SET_AUTO_TURN_OFF_SCREEN, &MotorProperties::auto_turn_off_screen},
-//     {CommandIds::SET_MOTOR_SHAFT_LOCKED_ROTOR_PROTECTION, &MotorProperties::locked_rotor_protection},
-//     {CommandIds::SET_SUBDIVISION_INTERPOLATION, &MotorProperties::subdivision_interpolation},
-//     {CommandIds::RUN_MOTOR_SPEED_MODE, &MotorProperties::is_moving},
+//     {EMERGENCY_STOP, &MotorProperties::emergency_stop_triggered},
+//     {ENABLE_MOTOR, &MotorProperties::is_enabled},
+//     {SET_KEY_LOCK_ENABLE, &MotorProperties::key_lock_enabled},
+//     {SET_AUTO_TURN_OFF_SCREEN, &MotorProperties::auto_turn_off_screen},
+//     {SET_MOTOR_SHAFT_LOCKED_ROTOR_PROTECTION, &MotorProperties::locked_rotor_protection},
+//     {SET_SUBDIVISION_INTERPOLATION, &MotorProperties::subdivision_interpolation},
+//     {RUN_MOTOR_SPEED_MODE, &MotorProperties::is_moving},
 // };
 
 // // Mapping CommandIds to float properties
 // const std::map<CommandIds, CommandPropertyMapping<float>> float_properties_map = {
-//     {CommandIds::READ_MOTOR_SPEED, &MotorProperties::current_speed},
+//     {READ_MOTOR_SPEED, &MotorProperties::current_speed},
 // };
 
 // // Mapping CommandIds to int32_t properties
 // const std::map<CommandIds, CommandPropertyMapping<int32_t>> int32_properties_map = {
-//     {CommandIds::READ_MOTOR_POSITION, &MotorProperties::current_position},
-//     {CommandIds::READ_MOTOR_POSITION, &MotorProperties::target_position},
+//     {READ_MOTOR_POSITION, &MotorProperties::current_position},
+//     {READ_MOTOR_POSITION, &MotorProperties::target_position},
 // };
 
 #endif // MOTOR_PROPERTIES_HPP

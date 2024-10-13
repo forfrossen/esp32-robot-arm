@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-enum class CommandIds : uint8_t
+enum CommandIds : uint8_t
 {
     READ_ENCODER_VALUE_CARRY = 0x30,
     READ_ENCODED_VALUE_ADDITION = 0x31,

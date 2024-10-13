@@ -27,7 +27,7 @@ struct MotorPropertyChangeEventData
 class MotorContext
 {
 public:
-    enum ReadyState
+    enum class ReadyState
     {
         MOTOR_UNINITIALIZED,
         MOTOR_INITIALIZED,
@@ -49,6 +49,7 @@ public:
     };
 
     MotorContext(uint32_t can_id, std::shared_ptr<EventLoops> event_loops) : can_id(can_id),
+                                                                             context_mutex(xSemaphoreCreateMutex()),
                                                                              system_event_loop(event_loops->system_event_loop),
                                                                              motor_event_loop(event_loops->motor_event_loop) {};
 
@@ -95,10 +96,12 @@ private:
     uint64_t absolute_position;
     MotorProperties properties;
 
+    SemaphoreHandle_t context_mutex;
+
     esp_event_loop_handle_t system_event_loop;
     esp_event_loop_handle_t motor_event_loop;
 
-    void post_motor_event(ReadyState event);
+    void post_new_state_event();
 
     template <typename T>
     esp_err_t post_property_change_event(T MotorProperties::*property, const T &value);

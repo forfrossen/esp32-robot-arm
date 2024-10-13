@@ -16,11 +16,14 @@ private:
     std::shared_ptr<TWAICommandFactorySettings> settings;
     SetTargetPositionCommandBuilder *setTargetPositionCommandBuilder;
     RunMotorInSpeedModeCommandBuilder *runMotorInSpeedModeCommandBuilder;
+    SemaphoreHandle_t factory_mutex;
 
 public:
     // Konstruktor setzt den Identifier
     TWAICommandFactory(std::shared_ptr<TWAICommandFactorySettings> settings) : settings(settings)
     {
+        factory_mutex = xSemaphoreCreateMutex();
+
         ESP_LOGI(FUNCTION_NAME, "TWAICommandFactory constructor called");
         esp_err_t ret = check_settings();
         if (ret != ESP_OK)
@@ -63,7 +66,44 @@ public:
     GenericCommandBuilder *generate_new_generic_builder(CommandIds command_code)
     {
         ESP_LOGI(FUNCTION_NAME, "Creating Generic Command Builder");
-        return new GenericCommandBuilder(settings, command_code);
+        if (xSemaphoreTake(factory_mutex, portMAX_DELAY) == pdTRUE)
+        {
+            // Check if settings is null
+            if (!settings)
+            {
+                ESP_LOGE(FUNCTION_NAME, "Settings pointer is null");
+                return nullptr; // Return early to avoid dereferencing a null pointer
+            }
+
+            // Log the integer value of the command_code safely
+            uint8_t command_code_int = static_cast<uint8_t>(command_code);
+            ESP_LOGI(FUNCTION_NAME, "Creating Generic Command Builder for command code: 0x%02X", command_code_int);
+            // ESP_LOGI(FUNCTION_NAME, "Command: 0x%02X", cmd_code);
+
+            // ESP_LOGI(FUNCTION_NAME, "Command: %s", GET_CMD(command_code_int));
+            // ESP_LOGI(FUNCTION_NAME, "Command: %s", GET_CMD(command_code));
+            // ESP_LOGI(FUNCTION_NAME, "Command: %s", GET_CMD(cmd_code));
+
+            // ESP_LOGI(FUNCTION_NAME, "Command: %s", GET_CMDPTR(&cmd_code));
+            // ESP_LOGI(FUNCTION_NAME, "Command: %s", magic_enum::enum_name(command_code).data());
+            // ESP_LOGI(FUNCTION_NAME, "Command: %s", magic_enum::enum_name(cmd_code).data());
+
+            // ESP_LOGI(FUNCTION_NAME, "Creating Generic Command Builder for command code: %d, \t command name: %s", command_code_int, GET_CMD(command_code));
+            GenericCommandBuilder *builder = new GenericCommandBuilder(settings, command_code);
+            // Check if the builder was created successfully
+            if (!builder)
+            {
+                ESP_LOGE(FUNCTION_NAME, "Failed to create Generic Command Builder");
+                return nullptr; // Return early if the builder creation failed
+            }
+            xSemaphoreGive(factory_mutex);
+            return builder;
+        }
+        else
+        {
+            ESP_LOGE(FUNCTION_NAME, "Failed to take mutex");
+            return nullptr;
+        }
     }
 
     /*
@@ -82,7 +122,7 @@ public:
         GenericCommandBuilder *stop_motor_command()
         {
             ESP_LOGI(FUNCTION_NAME, "Stopping motor");
-            return new GenericCommandBuilder(settings, CommandIds::EMERGENCY_STOP);
+            return new GenericCommandBuilder(settings, EMERGENCY_STOP);
         }
 
         TWAICommandBuilderBase<GenericCommandBuilder> *query_motor_position_command()

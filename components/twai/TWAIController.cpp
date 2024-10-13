@@ -87,7 +87,7 @@ esp_err_t TWAIController::setupQueues()
 
 void TWAIController::post_event(uint32_t id, twai_message_t *msg)
 {
-    esp_err_t ret = esp_event_post_to(get_event_loop_for_id(id), MOTOR_EVENTS, INCOMING_MESSAGE_EVENT, msg, sizeof(twai_message_t), portMAX_DELAY);
+    esp_err_t ret = esp_event_post_to(get_event_loop_for_id(id), MOTOR_EVENTS, INCOMING_MESSAGE_EVENT, (void *)msg, sizeof(twai_message_t), portMAX_DELAY);
     if (ret != ESP_OK)
     {
         ESP_LOGE(FUNCTION_NAME, "Failed to post event to motor event loop");

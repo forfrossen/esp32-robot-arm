@@ -64,7 +64,8 @@ inline const char *getFunctionName(const char *prettyFunction)
 
 // #define GET_CMD(msg) replace_underscores(magic_enum::enum_name(static_cast<CommandIds>((msg).data[0])).data()).c_str()
 #define GET_MSGCMD(msg) replace_underscores(magic_enum::enum_name(static_cast<CommandIds>(*reinterpret_cast<uint8_t *>(msg->data))).data()).c_str()
-#define GET_CMD(cmd) replace_underscores(magic_enum::enum_name(static_cast<CommandIds>(*reinterpret_cast<uint8_t *>(cmd))).data()).c_str()
+#define GET_CMDPTR(cmd) replace_underscores(magic_enum::enum_name(static_cast<CommandIds>(*reinterpret_cast<uint8_t *>(cmd))).data()).c_str()
+#define GET_CMD(cmd) magic_enum::enum_name(static_cast<CommandIds>(cmd)).data()
 
 inline std::string replace_underscores(const std::string &str)
 {
@@ -73,4 +74,38 @@ inline std::string replace_underscores(const std::string &str)
     return result;
 }
 
+#define SEND_COMMAND_BY_ID(mutex, command_factory, command_id, context, ret)        \
+    do                                                                              \
+    {                                                                               \
+        if (xSemaphoreTake(mutex, portMAX_DELAY) == pdTRUE)                         \
+        {                                                                           \
+            auto cmd = command_factory->generate_new_generic_builder(command_id);   \
+            ret = cmd->build_and_send();                                            \
+            xSemaphoreGive(mutex);                                                  \
+        }                                                                           \
+        else                                                                        \
+        {                                                                           \
+            ESP_LOGE(FUNCTION_NAME, "Failed to take mutex");                        \
+            context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR); \
+            ret = ESP_FAIL;                                                         \
+        }                                                                           \
+    } while (0)
+
+#define SEND_COMMAND_BY_ID_WITH_PAYLOAD(mutex, command_factory, cmd, context, ret)  \
+    do                                                                              \
+    {                                                                               \
+        esp_err_t err = ESP_FAIL;                                                   \
+        if (xSemaphoreTake(mutex, portMAX_DELAY) == pdTRUE)                         \
+        {                                                                           \
+            ret = cmd->build_and_send();                                            \
+            xSemaphoreGive(mutex);                                                  \
+        }                                                                           \
+        else                                                                        \
+        {                                                                           \
+            ESP_LOGE(FUNCTION_NAME, "Failed to take mutex");                        \
+            context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR); \
+            ret = ESP_FAIL;                                                         \
+        }                                                                           \
+                                                                                    \
+    } while (0)
 #endif // UTILS_HPP

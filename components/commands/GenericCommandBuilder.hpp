@@ -28,15 +28,13 @@ class GenericCommandBuilder : public TWAICommandBuilderBase<GenericCommandBuilde
 {
 private:
 public:
-    GenericCommandBuilder(std::shared_ptr<TWAICommandFactorySettings> settings, CommandIds command_code) : TWAICommandBuilderBase<GenericCommandBuilder>(settings, command_code)
-    {
-        ESP_LOGI(FUNCTION_NAME, "GenericCommandBuilder constructor called");
-    }
+    GenericCommandBuilder(std::shared_ptr<TWAICommandFactorySettings> settings, CommandIds command_code) : TWAICommandBuilderBase<GenericCommandBuilder>(settings, command_code) {}
 
     ~GenericCommandBuilder()
     {
         ESP_LOGW(FUNCTION_NAME, "GenericCommandBuilder destructor called");
         delete[] data;
+        vSemaphoreDelete(msg_mutex);
     }
 
     template <typename... Args>
@@ -47,9 +45,7 @@ public:
                                std::is_same_v<Args, uint32_t>)),
                       "Arguments must be of type uint8_t, uint16_t, or uint32_t");
 
-        data[0] = command_code;
-
-        size_t index = 1;
+        size_t index = 0;
         ([&]
          {
         if constexpr (std::is_same_v<Args, uint8_t>)
@@ -72,6 +68,7 @@ public:
 
     esp_err_t build_twai_message() override
     {
+        ESP_LOGI(FUNCTION_NAME, "Building TWAI message for command: %s", GET_CMD(command_code));
         return ESP_OK;
     }
 };

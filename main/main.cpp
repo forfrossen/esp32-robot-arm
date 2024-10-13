@@ -23,15 +23,22 @@
 #include <string>
 
 ESP_EVENT_DEFINE_BASE(SYSTEM_EVENTS);
-ESP_EVENT_DEFINE_BASE(MOTOR_EVENTS);
 
 const char compile_date[] = __DATE__ " " __TIME__;
 
 RobotArm *robot_arm;
 static httpd_handle_t server = NULL;
 
+// void log_cmd(CommandIds cmd)
+// {
+//     ESP_LOGI(FUNCTION_NAME, "Command: 0x%02X", cmd);
+//     ESP_LOGI(FUNCTION_NAME, "Command: %s", magic_enum::enum_name(cmd).data());
+//     ESP_LOGI(FUNCTION_NAME, "Command: %s", GET_CMDPTR(&cmd));
+// }
+
 extern "C" void app_main()
 {
+    // log_cmd(READ_ENCODER_VALUE_CARRY);
 
     esp_err_t ret;
     esp_log_level_set("*", ESP_LOG_INFO);

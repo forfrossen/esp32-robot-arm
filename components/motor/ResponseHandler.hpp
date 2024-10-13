@@ -42,6 +42,7 @@ private:
     void print_unknown_response_code(twai_message_t *msg);
 
     void log_twai_message(twai_message_t *msg);
+    esp_event_handler_instance_t incoming_message_event_handler_instance;
 
     static void incoming_message_event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);
 };

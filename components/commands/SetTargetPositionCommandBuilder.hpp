@@ -15,7 +15,7 @@ private:
     bool absolute;
 
 public:
-    SetTargetPositionCommandBuilder(std::shared_ptr<TWAICommandFactorySettings> settings) : TWAICommandBuilderBase<SetTargetPositionCommandBuilder>(settings, CommandIds::RUN_MOTOR_RELATIVE_MOTION_BY_AXIS)
+    SetTargetPositionCommandBuilder(std::shared_ptr<TWAICommandFactorySettings> settings) : TWAICommandBuilderBase<SetTargetPositionCommandBuilder>(settings, RUN_MOTOR_RELATIVE_MOTION_BY_AXIS)
     {
         set_data_length_code(8);
         create_msg_data();
