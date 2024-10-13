@@ -62,17 +62,17 @@ inline const char *getFunctionName(const char *prettyFunction)
 
 #define FUNCTION_NAME getFunctionName(__PRETTY_FUNCTION__)
 
-#define CHECK_THAT(cond, err_code, TAG)                           \
+// else
+// {
+//     ESP_LOGI(TAG, "Condition met: %s", #cond);
+// }
+#define CHECK_THAT(cond, TAG)                                     \
     do                                                            \
     {                                                             \
         if (!(cond))                                              \
         {                                                         \
             ESP_LOGE(TAG, "Failed to meet condition: %s", #cond); \
-            return err_code;                                      \
-        }                                                         \
-        else                                                      \
-        {                                                         \
-            ESP_LOGI(TAG, "Condition met: %s", #cond);            \
+            return ESP_FAIL;                                      \
         }                                                         \
     } while (0)
 
@@ -91,17 +91,11 @@ inline std::string replace_underscores(const std::string &str)
 #define SEND_COMMAND_BY_ID(mutex, command_factory, command_id, context, ret)        \
     do                                                                              \
     {                                                                               \
-        if (xSemaphoreTake(mutex, portMAX_DELAY) == pdTRUE)                         \
+        auto cmd = command_factory->generate_new_generic_command(command_id);       \
+        ret = cmd->execute();                                                       \
+        if (ret != ESP_OK)                                                          \
         {                                                                           \
-            auto cmd = command_factory->generate_new_generic_command(command_id);   \
-            ret = cmd->execute();                                                   \
-            xSemaphoreGive(mutex);                                                  \
-        }                                                                           \
-        else                                                                        \
-        {                                                                           \
-            ESP_LOGE(FUNCTION_NAME, "Failed to take mutex");                        \
             context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR); \
-            ret = ESP_FAIL;                                                         \
         }                                                                           \
     } while (0)
 

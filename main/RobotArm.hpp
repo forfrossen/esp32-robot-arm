@@ -18,7 +18,7 @@ private:
         .queue_size = 10,
         .task_name = "system_event_task",
         .task_priority = 5,
-        .task_stack_size = 2048,
+        .task_stack_size = 1024 * 8,
         .task_core_id = tskNO_AFFINITY};
     esp_event_loop_handle_t system_event_loop;
     EventGroupHandle_t system_event_group;
@@ -38,6 +38,14 @@ public:
         }
 
         ESP_ERROR_CHECK(esp_event_loop_create(&system_loop_args, &system_event_loop));
+
+        esp_err_t ret = esp_event_post_to(
+            system_event_loop,
+            SYSTEM_EVENTS,
+            ARM_INITIALIZING,
+            NULL,
+            0,
+            portMAX_DELAY);
 
         twai_controller = std::make_shared<TWAIController>(system_event_loop);
 
@@ -84,7 +92,7 @@ public:
 
         twai_controller->register_motor_id(id, motor_event_loop);
 
-        std::shared_ptr<CommandFactorySettings> settings = std::make_shared<CommandFactorySettings>(id, command_lifecyle_registry);
+        std::shared_ptr<CommandFactorySettings> settings = std::make_shared<CommandFactorySettings>(id, system_event_loop, command_lifecyle_registry);
         std::shared_ptr<CommandFactory> command_factory = std::make_shared<CommandFactory>(settings);
 
         // ESP_ERROR_CHECK(esp_event_loop_create(&motor_loop_args, &motor_event_loop));

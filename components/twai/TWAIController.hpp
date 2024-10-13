@@ -96,8 +96,10 @@ public:
     std::map<uint32_t, esp_event_loop_handle_t> motor_event_loops;
     esp_event_loop_handle_t get_event_loop_for_id(uint32_t);
     esp_event_loop_handle_t system_event_loop;
+    TaskHandle_t vTask_Reception_handle;
 
-    bool transmit(twai_message_t msg);
+    bool
+    transmit(twai_message_t msg);
     void handleTransmitError(esp_err_t *error);
     void handleAlerts(uint32_t alerts);
 

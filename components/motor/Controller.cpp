@@ -197,7 +197,7 @@ esp_err_t MotorController::start_basic_tasks()
 {
     BaseType_t xRet;
     // esp_err_t ret = query_status();
-    xRet = xTaskCreatePinnedToCore(&MotorController::vTask_query_status, "TASK_queryStatus", 1024 * 4, this, 1, &task_handle_query_status, tskNO_AFFINITY);
+    xRet = xTaskCreatePinnedToCore(&MotorController::vTask_query_status, "TASK_queryStatus", 1024 * 8, this, 1, &task_handle_query_status, tskNO_AFFINITY);
     ESP_RETURN_ON_FALSE(task_handle_query_status != NULL, ESP_FAIL, FUNCTION_NAME, "Failed to create TASK_queryStatus");
     ESP_LOGI(FUNCTION_NAME, "TASK_queryStatus created");
     return ESP_OK;

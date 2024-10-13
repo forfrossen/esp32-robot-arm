@@ -73,9 +73,9 @@ esp_err_t TWAIController::setupQueues()
     // xTaskCreatePinnedToCore(vTask_Transmission, "OutQueueTask", 3000, this, 3, &taskHandleTransmission, 0);
     // assert(taskHandleTransmission != NULL); // Ensure the task was created successfully
 
-    // xTaskCreatePinnedToCore(vTask_Reception, "InQueuesTask", 3000, this, 3, &taskHandleReception, 0);
-    // assert(taskHandleReception != NULL); // Ensure the task was created successfully
-    // ESP_ERROR_CHECK(esp_event_handler_register(SYSTEM_EVENTS, OUTGOING_MESSAGE_EVENT, &outgoing_message_event_handler, this));
+    xTaskCreatePinnedToCore(vTask_Reception, "InQueuesTask", 1024 * 2, this, 3, &vTask_Reception_handle, 0);
+    assert(vTask_Reception_handle != NULL); // Ensure the task was created successfully
+    ESP_ERROR_CHECK(esp_event_handler_register(SYSTEM_EVENTS, OUTGOING_MESSAGE_EVENT, &outgoing_message_event_handler, this));
 
     // xTaskCreatePinnedToCore(vTask_ERROR, "ErrorDetectionTask", 3000, this, 1, &taskHandleError, 1);
     // assert(taskHandleError != NULL); // Ensure the task was created successfully
@@ -143,6 +143,7 @@ void TWAIController::vTask_Reception(void *pvParameters)
         xSemaphoreGive(twai_controller->twai_mutex);
     }
 }
+
 void TWAIController::outgoing_message_event_handler(void *args, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     TWAIController *instance = static_cast<TWAIController *>(args);
@@ -162,6 +163,7 @@ void TWAIController::outgoing_message_event_handler(void *args, esp_event_base_t
     {
         ESP_LOGE(FUNCTION_NAME, "\t==> Failed to send message");
         instance->handleTransmitError(&result);
+        xSemaphoreGive(instance->twai_mutex);
     }
     ESP_LOGI(FUNCTION_NAME, "\t==> Successfully sent message");
     xSemaphoreGive(instance->twai_mutex);

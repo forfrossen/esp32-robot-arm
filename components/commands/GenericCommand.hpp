@@ -39,9 +39,9 @@ public:
     template <typename... Args>
     esp_err_t with(Args... args)
     {
-        CHECK_THAT(data != nullptr, ESP_FAIL, FUNCTION_NAME);
+        CHECK_THAT(data != nullptr, FUNCTION_NAME);
         // Ensure no more data is provided than the array can handle
-        CHECK_THAT(sizeof...(args) <= data_length, ESP_FAIL, FUNCTION_NAME);
+        CHECK_THAT(sizeof...(args) <= data_length, FUNCTION_NAME);
 
         // Ensure that all arguments are of valid types (uint8_t, uint16_t, or uint32_t)
         static_assert((... && (std::is_same_v<Args, uint8_t> ||
@@ -72,7 +72,15 @@ public:
 
     esp_err_t build_twai_message() override
     {
-        ESP_LOGI(FUNCTION_NAME, "Building TWAI message for command: %s", GET_CMD(command_code));
+        ESP_LOGI(FUNCTION_NAME, "Building TWAI message for command");
+        CHECK_THAT(data != nullptr, FUNCTION_NAME);
+        ESP_RETURN_ON_ERROR(get_semaphore(), FUNCTION_NAME, "Failed to take mutex");
+        // ESP_LOGI(FUNCTION_NAME, "Building TWAI message for command: %s", GET_CMD(command_code));
+
+        ESP_LOGI(FUNCTION_NAME, "Setting command code to: 0x%02X", cmd_code);
+        data[0] = static_cast<uint8_t>(command_code);
+
+        xSemaphoreGive(msg_mutex);
         return ESP_OK;
     }
 };

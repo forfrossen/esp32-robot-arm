@@ -63,8 +63,8 @@ struct CommandFactorySettings
     std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
 
     // Constructor
-    CommandFactorySettings(uint32_t id, std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry)
-        : id(id), command_lifecycle_registry(command_lifecycle_registry)
+    CommandFactorySettings(uint32_t id, esp_event_loop_handle_t system_event_loop, std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry)
+        : id(id), system_event_loop(system_event_loop), command_lifecycle_registry(command_lifecycle_registry)
     {
         ESP_LOGI("CommandFactorySettings", "Constructor called");
     }
@@ -96,6 +96,7 @@ typedef enum
 
 typedef enum
 {
+    ARM_INITIALIZING,
     TWAI_READY_EVENT,
     WIFI_READY_EVENT,
     WEBSOCKET_READY_EVENT,
