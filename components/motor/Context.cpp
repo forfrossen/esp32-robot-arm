@@ -1,21 +1,26 @@
 #include "Context.hpp"
 ESP_EVENT_DEFINE_BASE(PROPERTY_CHANGE_EVENTS);
 
-void MotorContext::transition_ready_state(ReadyState new_state)
+esp_err_t MotorContext::get_semaphore()
 {
-    // xSemaphoreTake(motor_mutex, portMAX_DELAY);
-    if (xSemaphoreTake(context_mutex, portMAX_DELAY) == pdTRUE)
-    {
-        ESP_LOGI(FUNCTION_NAME, "Transitioning from %s to %s", magic_enum::enum_name(ready_state).data(), magic_enum::enum_name(new_state).data());
-        ready_state = new_state;
-        post_new_state_event();
+    CHECK_THAT(xSemaphoreTake(context_mutex, portMAX_DELAY) == pdTRUE);
+    return ESP_OK;
+}
 
-        xSemaphoreGive(context_mutex);
-    }
-    else
+esp_err_t MotorContext::transition_ready_state(ReadyState new_state)
+{
+    if (new_state == ready_state)
     {
-        ESP_LOGE(FUNCTION_NAME, "Failed to take mutex");
+        return ESP_OK;
     }
+    CHECK_THAT(get_semaphore() == ESP_OK);
+    ESP_LOGI(FUNCTION_NAME, "Transitioning MotorContext.ready_state: | %s | ==> | %s |",
+             magic_enum::enum_name(ready_state).data(),
+             magic_enum::enum_name(new_state).data());
+    ready_state = new_state;
+    xSemaphoreGive(context_mutex);
+    CHECK_THAT(post_new_state_event() == ESP_OK);
+    return ESP_OK;
 }
 
 template <typename T>
@@ -25,8 +30,9 @@ T MotorContext::get_property(T MotorProperties::*property) const
 }
 
 template <typename T>
-void MotorContext::set_property(T MotorProperties::*property, T value)
+esp_err_t MotorContext::set_property(T MotorProperties::*property, T value)
 {
+    CHECK_THAT(get_semaphore() == ESP_OK);
     if (xSemaphoreTake(context_mutex, portMAX_DELAY) == pdTRUE)
     {
         ESP_LOGI(FUNCTION_NAME, "Set property %s to %d", magic_enum::enum_name(property), value);
@@ -52,7 +58,7 @@ esp_err_t MotorContext::post_property_change_event(T MotorProperties::*property,
     return ESP_OK;
 }
 
-void MotorContext::post_new_state_event()
+esp_err_t MotorContext::post_new_state_event()
 {
     ESP_LOGI(FUNCTION_NAME, "Posting to MOTOR_EVENTS: %d \t %s", static_cast<int>(ready_state), magic_enum::enum_name(ready_state).data());
 
@@ -65,4 +71,5 @@ void MotorContext::post_new_state_event()
         portMAX_DELAY));
 
     ESP_LOGI(FUNCTION_NAME, "Posted to MOTOR_EVENTS");
+    return ESP_OK;
 }

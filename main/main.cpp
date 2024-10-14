@@ -1,4 +1,5 @@
-
+#define MAGIC_ENUM_RANGE_MIN 0x00
+#define MAGIC_ENUM_RANGE_MAX 0xFF
 
 #include "Events.hpp"
 

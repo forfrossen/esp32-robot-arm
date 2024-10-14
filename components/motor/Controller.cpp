@@ -29,6 +29,8 @@ void MotorController::state_transition_event_handler(void *handler_arg, esp_even
 
         switch (new_state)
         {
+        case MotorContext::ReadyState::MOTOR_RECOVERING:
+            ESP_LOGI("MotorEventLoopHandler", "Handling MOTOR_EVENT_RECOVERING.");
         case MotorContext::ReadyState::MOTOR_INITIALIZED:
             ESP_LOGI("MotorEventLoopHandler", "Handling MOTOR_EVENT_INIT.");
             ret = instance->start_basic_tasks();
@@ -42,13 +44,14 @@ void MotorController::state_transition_event_handler(void *handler_arg, esp_even
             ESP_LOGE("MotorEventLoopHandler", "Handling MOTOR_EVENT_ERROR.");
             xEventGroupClearBits(instance->motor_event_group, MOTOR_READY_BIT);
             xEventGroupSetBits(instance->motor_event_group, MOTOR_ERROR_BIT);
-            // instance->stop_timed_tasks();
+            instance->stop_timed_tasks();
             break;
 
-        case MotorContext::ReadyState::MOTOR_RECOVERING:
-            ESP_LOGI("MotorEventLoopHandler", "Handling MOTOR_EVENT_RECOVERING.");
+        case MotorContext::ReadyState::MOTOR_READY:
+            ESP_LOGI("MotorEventLoopHandler", "Handling MOTOR_EVENT_READY.");
             ret = instance->start_timed_tasks();
             xEventGroupClearBits(instance->motor_event_group, MOTOR_ERROR_BIT);
+            xEventGroupSetBits(instance->motor_event_group, MOTOR_READY_BIT);
             if (ret != ESP_OK)
             {
                 instance->context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);
@@ -57,11 +60,6 @@ void MotorController::state_transition_event_handler(void *handler_arg, esp_even
             {
                 instance->context->transition_ready_state(MotorContext::ReadyState::MOTOR_READY);
             }
-            break;
-
-        case MotorContext::ReadyState::MOTOR_READY:
-            ESP_LOGI("MotorEventLoopHandler", "Handling MOTOR_EVENT_READY.");
-            xEventGroupSetBits(instance->motor_event_group, MOTOR_READY_BIT);
             break;
         default:
             break;
@@ -114,7 +112,7 @@ void MotorController::vTask_query_status(void *pvParameters)
 {
     MotorController *instance = static_cast<MotorController *>(pvParameters);
     int local_error_counter = 0;
-    // vTaskDelay(5000 / portTICK_PERIOD_MS);
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
     for (;;)
     {
         ESP_LOGI(FUNCTION_NAME, "New iteration of vTask_query_status");
@@ -207,12 +205,13 @@ esp_err_t MotorController::start_timed_tasks()
 {
     BaseType_t xReturned;
     esp_err_t ret;
-    ret = set_working_current(1600);
-    if (ret != ESP_OK)
-    {
-        ESP_LOGE(FUNCTION_NAME, "Error enqueueing setting working current command");
-        context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);
-    }
+
+    // ret = set_working_current(1600);
+    // if (ret != ESP_OK)
+    // {
+    //     ESP_LOGE(FUNCTION_NAME, "Error enqueueing setting working current command");
+    //     context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);
+    // }
 
     ESP_LOGI(FUNCTION_NAME, "Initializing tasks");
 

@@ -48,7 +48,7 @@ public:
 
     esp_err_t init_new_command(CommandIds command_code)
     {
-        CHECK_THAT(command_lifecycle_registry != nullptr, FUNCTION_NAME);
+        CHECK_THAT(command_lifecycle_registry != nullptr);
         msg = twai_message_t();
         ESP_RETURN_ON_ERROR(set_default_values(), FUNCTION_NAME, "Error setting default values");
         ESP_RETURN_ON_ERROR(set_command_code(command_code), FUNCTION_NAME, "Error setting command code");
@@ -62,21 +62,19 @@ public:
 
     esp_err_t msg_check()
     {
-        CHECK_THAT(msg.has_value(), FUNCTION_NAME);
+        CHECK_THAT(msg.has_value());
         return ESP_OK;
     }
 
     esp_err_t data_check()
     {
-        CHECK_THAT(data != nullptr, FUNCTION_NAME);
+        CHECK_THAT(data != nullptr);
         return ESP_OK;
     }
 
     esp_err_t get_semaphore()
     {
-        CHECK_THAT(
-            xSemaphoreTake(msg_mutex, portMAX_DELAY) == pdTRUE,
-            FUNCTION_NAME);
+        CHECK_THAT(xSemaphoreTake(msg_mutex, portMAX_DELAY) == pdTRUE);
         return ESP_OK;
     }
 
@@ -100,7 +98,7 @@ public:
         ESP_RETURN_ON_ERROR(msg_check(), FUNCTION_NAME, "msg is nullptr");
         cmd_code = static_cast<uint8_t>(command_code);
         ESP_LOGI(FUNCTION_NAME, "Setting command code to: 0x%02X", cmd_code);
-        CHECK_THAT(cmd_code == static_cast<uint8_t>(command_code), FUNCTION_NAME);
+        CHECK_THAT(cmd_code == static_cast<uint8_t>(command_code));
         // ESP_LOGI(FUNCTION_NAME, "Command code: 0x%02X", command_code);
         // memset(&msg, 0, sizeof(msg));
         // ESP_LOGI(FUNCTION_NAME, "Command msg has been zeroed out");
@@ -112,7 +110,7 @@ public:
         ESP_RETURN_ON_ERROR(get_semaphore(), FUNCTION_NAME, "Failed to take mutex");
         auto it = g_command_payload_map.find(command_code);
         xSemaphoreGive(msg_mutex);
-        CHECK_THAT(it != g_command_payload_map.end(), FUNCTION_NAME);
+        CHECK_THAT(it != g_command_payload_map.end());
         payload_info.emplace(it->second);
         return ESP_OK;
     }
@@ -120,7 +118,7 @@ public:
     esp_err_t calculate_payload_size()
     {
         ESP_LOGI(FUNCTION_NAME, "Calculating payload size");
-        CHECK_THAT(payload_info.has_value(), FUNCTION_NAME);
+        CHECK_THAT(payload_info.has_value());
         ESP_RETURN_ON_ERROR(get_semaphore(), FUNCTION_NAME, "Failed to take mutex");
         for (const auto &type : payload_info.value().payload_types)
         {
@@ -146,7 +144,7 @@ public:
         data_length += 2;
         xSemaphoreGive(msg_mutex);
         ESP_LOGI(FUNCTION_NAME, "data_length size: %d", data_length);
-        CHECK_THAT(data_length <= 8, FUNCTION_NAME);
+        CHECK_THAT(data_length <= 8);
         return ESP_OK;
     }
 
@@ -163,7 +161,7 @@ public:
         ESP_LOGI(FUNCTION_NAME, "Setting data length code to: %d", data_length);
         msg.value().data_length_code = data_length;
         xSemaphoreGive(msg_mutex);
-        CHECK_THAT(msg.value().data_length_code == data_length, FUNCTION_NAME);
+        CHECK_THAT(msg.value().data_length_code == data_length);
         return ESP_OK;
     }
 
@@ -193,7 +191,7 @@ public:
         ESP_LOGI(FUNCTION_NAME, "Setting message data");
         ESP_RETURN_ON_ERROR(msg_check(), FUNCTION_NAME, "msg is nullptr");
         ESP_RETURN_ON_ERROR(data_check(), FUNCTION_NAME, "data is nullptr");
-        CHECK_THAT(msg.value().data_length_code <= sizeof(msg.value().data), FUNCTION_NAME);
+        CHECK_THAT(msg.value().data_length_code <= sizeof(msg.value().data));
         ESP_RETURN_ON_ERROR(get_semaphore(), FUNCTION_NAME, "Failed to take mutex");
         memcpy(msg.value().data, data, msg.value().data_length_code);
         xSemaphoreGive(msg_mutex);
@@ -204,7 +202,7 @@ public:
     {
         ESP_RETURN_ON_ERROR(msg_check(), FUNCTION_NAME, "msg is nullptr");
         ESP_LOGI(FUNCTION_NAME, "Setting message data CRC");
-        CHECK_THAT(msg.value().data_length_code != 0, FUNCTION_NAME);
+        CHECK_THAT(msg.value().data_length_code != 0);
         ESP_RETURN_ON_ERROR(get_semaphore(), FUNCTION_NAME, "Failed to take mutex");
         uint8_t crc = 0;
         esp_err_t ret = calculate_crc(crc);
@@ -216,7 +214,7 @@ public:
         }
         msg.value().data[msg.value().data_length_code - 1] = crc;
         xSemaphoreGive(msg_mutex);
-        CHECK_THAT(msg.value().data[msg.value().data_length_code - 1] != 0, FUNCTION_NAME);
+        CHECK_THAT(msg.value().data[msg.value().data_length_code - 1] != 0);
         ESP_LOGI(FUNCTION_NAME, "CRC: 0x%02X", msg.value().data[msg.value().data_length_code - 1]);
         return ESP_OK;
     }
@@ -224,7 +222,7 @@ public:
     esp_err_t calculate_crc(uint8_t &crc)
     {
         ESP_LOGI(FUNCTION_NAME, "Calculating CRC");
-        CHECK_THAT(msg.value().data_length_code != 0, FUNCTION_NAME);
+        CHECK_THAT(msg.value().data_length_code != 0);
         crc = msg.value().identifier;
         for (uint8_t i = 0; i < msg.value().data_length_code - 1; i++)
         {
@@ -241,7 +239,7 @@ public:
         twai_message_t aligned_msg = msg.value();
         xSemaphoreGive(msg_mutex);
         ESP_LOGI(FUNCTION_NAME, "Posting event");
-        CHECK_THAT(system_event_loop != nullptr, FUNCTION_NAME);
+        CHECK_THAT(system_event_loop != nullptr);
 
         esp_err_t ret = esp_event_post_to(
             system_event_loop,

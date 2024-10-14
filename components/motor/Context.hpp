@@ -56,22 +56,22 @@ public:
     ~MotorContext() {}
 
     uint32_t get_carry_value() const { return carry_value; };
-    void set_carry_value(uint32_t value) { carry_value = value; };
+    // esp_err_t set_carry_value(uint32_t value) { carry_value = value; };
 
     uint16_t get_encoder_value() const { return encoder_value; };
-    void set_encoder_value(uint16_t value) { encoder_value = value; };
+    // esp_err_t set_encoder_value(uint16_t value) { encoder_value = value; };
 
     uint64_t get_absolute_position() const { return absolute_position; };
-    void set_absolute_position(uint64_t value) { absolute_position = value; };
+    // esp_err_t set_absolute_position(uint64_t value) { absolute_position = value; };
 
     MovingState get_motor_moving_state() const { return moving_state; };
     void set_motor_moving_state(MovingState state) { moving_state = state; };
 
     std::chrono::system_clock::time_point get_last_seen() const { return last_seen; };
-    void set_last_seen(std::chrono::system_clock::time_point time) { last_seen = time; };
+    // esp_err_t set_last_seen(std::chrono::system_clock::time_point time) { last_seen = time; };
 
     ReadyState get_ready_state() const { return ready_state; };
-    void transition_ready_state(ReadyState new_state);
+    esp_err_t transition_ready_state(ReadyState new_state);
 
     bool is_ready() const { return ready_state == ReadyState::MOTOR_READY; };
     bool is_recovering() const { return ready_state == ReadyState::MOTOR_RECOVERING; };
@@ -80,7 +80,7 @@ public:
 
     // Generic method to set a property in the context
     template <typename T>
-    void set_property(T MotorProperties::*property, T value);
+    esp_err_t set_property(T MotorProperties::*property, T value);
 
     // Optionally, you can add a generic getter method
     template <typename T>
@@ -101,10 +101,11 @@ private:
     esp_event_loop_handle_t system_event_loop;
     esp_event_loop_handle_t motor_event_loop;
 
-    void post_new_state_event();
+    esp_err_t post_new_state_event();
 
     template <typename T>
     esp_err_t post_property_change_event(T MotorProperties::*property, const T &value);
+    esp_err_t get_semaphore();
 };
 
 #endif // MOTORCONTEXT_HPP

@@ -44,7 +44,8 @@ enum CommandIds : uint8_t
     EMERGENCY_STOP = 0xF7,
     RUN_MOTOR_RELATIVE_MOTION_BY_PULSES = 0xFD,
     RUN_MOTOR_ABSOLUTE_MOTION_BY_PULSES = 0xFE,
-    SAVE_CLEAN_IN_SPEED_MODE = 0xFF
+    SAVE_CLEAN_IN_SPEED_MODE = 0xFF,
+    UNKNOWN_COMMAND = 0x00
 };
 
 // enum class CommandIds : uint8_t

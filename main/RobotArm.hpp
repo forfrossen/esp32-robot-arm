@@ -17,8 +17,8 @@ private:
     esp_event_loop_args_t system_loop_args = {
         .queue_size = 10,
         .task_name = "system_event_task",
-        .task_priority = 5,
-        .task_stack_size = 1024 * 8,
+        .task_priority = 1,
+        .task_stack_size = 1024 * 10,
         .task_core_id = tskNO_AFFINITY};
     esp_event_loop_handle_t system_event_loop;
     EventGroupHandle_t system_event_group;

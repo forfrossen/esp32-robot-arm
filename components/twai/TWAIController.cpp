@@ -42,7 +42,7 @@ esp_err_t TWAIController::init()
     }
     ESP_LOGI(FUNCTION_NAME, "Driver started");
 
-    xTaskCreatePinnedToCore(vTask_ERROR, "ErrorDetectionTask", 1024 * 2, this, 1, &taskHandleError, 1);
+    xTaskCreatePinnedToCore(vTask_ERROR, "ErrorDetectionTask", 1024 * 3, this, 1, &taskHandleError, 1);
     assert(taskHandleError != NULL); // Ensure the task was created successfully
 
     xTaskCreatePinnedToCore(vTask_Reception, "InQueuesTask", 1024 * 3, this, 3, &vTask_Reception_handle, 0);
@@ -133,12 +133,19 @@ void TWAIController::vTask_Reception(void *pvParameters)
 
     while (1)
     {
-        twai_message_t *msg = (twai_message_t *)malloc(sizeof(twai_message_t));
-        esp_err_t ret = twai_receive(msg, portMAX_DELAY);
-        log_twai_message(msg);
+        twai_message_t msg;
+        esp_err_t ret = twai_receive(&msg, portMAX_DELAY);
+        CONT_IF_CHECK_FAILS(ret == ESP_OK);
+        if (ret != ESP_OK)
+        {
+            ESP_LOGE(FUNCTION_NAME, "Failed to receive message");
+            continue;
+        }
+        // #log_twai_message(&msg, true);
+        ESP_LOGI(FUNCTION_NAME, "Received message");
         xSemaphoreTake(twai_controller->twai_mutex, portMAX_DELAY);
         assert(ret == ESP_OK);
-        twai_controller->post_event(msg->identifier, msg);
+        twai_controller->post_event(msg.identifier, &msg);
         ESP_LOGI(FUNCTION_NAME, "\t==> Received message enqueued successfully!");
         xSemaphoreGive(twai_controller->twai_mutex);
     }

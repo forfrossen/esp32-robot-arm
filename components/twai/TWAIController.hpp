@@ -28,6 +28,12 @@ private:
     static const char BEL = 7;
     static const uint16_t TIMESTAMP_LIMIT = 0xEA60;
 
+    esp_err_t get_semaphore()
+    {
+        CHECK_THAT(xSemaphoreTake(twai_mutex, portMAX_DELAY) == pdTRUE);
+        return ESP_OK;
+    }
+
 public:
     esp_err_t init();
 
