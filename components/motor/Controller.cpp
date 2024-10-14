@@ -270,16 +270,18 @@ esp_err_t MotorController::set_working_current(uint16_t current_ma)
     esp_err_t ret = ESP_FAIL;
     auto cmd = command_factory->generate_new_generic_command(SET_WORKING_CURRENT);
     cmd->with(current_ma);
-    SEND_COMMAND_BY_ID_WITH_PAYLOAD(motor_mutex, command_factory, cmd, context, ret);
+    SEND_COMMAND_BY_ID_WITH_PAYLOAD(motor_mutex, cmd, context, ret);
     return ret;
 }
 
 esp_err_t MotorController::set_target_position()
 {
+    esp_err_t ret = ESP_FAIL;
+
     xSemaphoreTake(motor_mutex, portMAX_DELAY);
-    int position = (esp_random() % 10) * STEPS_PER_REVOLUTION; // Random value between 0 and 99
-    int speed = esp_random() % 1600;
-    int acceleration = esp_random() % 255;
+    uint32_t position = (esp_random() % 10) * STEPS_PER_REVOLUTION; // Random value between 0 and 99
+    uint8_t speed = esp_random() % 1600;
+    uint8_t acceleration = esp_random() % 255;
     bool absolute = esp_random() % 2;
 
     speed = 1000;
@@ -287,14 +289,12 @@ esp_err_t MotorController::set_target_position()
     absolute = false;
 
     // set_command_state(CommandStateMachine::CommandState::REQUESTED);
-    auto cmd = command_factory->create_set_target_position_command();
-    esp_err_t ret = cmd->set_position(position).set_speed(speed).set_acceleration(acceleration).set_absolute(absolute).execute();
-    if (ret != ESP_OK)
-    {
-        ESP_LOGE(FUNCTION_NAME, "Error enqueing query-status-command");
-        context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);
-    }
-    delete cmd;
+    // auto cmd = command_factory->create_set_target_position_command();
+    // esp_err_t ret = cmd->set_position(position).set_speed(speed).set_acceleration(acceleration).set_absolute(absolute).execute();
+    CommandIds command_id = (absolute) ? RUN_MOTOR_ABSOLUTE_MOTION_BY_AXIS : RUN_MOTOR_RELATIVE_MOTION_BY_AXIS;
+    auto cmd = command_factory->generate_new_generic_command(command_id);
+    cmd->with(speed, acceleration, position);
+    SEND_COMMAND_BY_ID_WITH_PAYLOAD(motor_mutex, cmd, context, ret);
     xSemaphoreGive(motor_mutex);
     return ret;
 }

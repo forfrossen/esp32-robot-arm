@@ -125,24 +125,19 @@ inline std::string replace_underscores(const std::string &str)
         {                                                                           \
             context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR); \
         }                                                                           \
+        delete cmd;                                                                 \
     } while (0)
 
-#define SEND_COMMAND_BY_ID_WITH_PAYLOAD(mutex, command_factory, cmd, context, ret)  \
+#define SEND_COMMAND_BY_ID_WITH_PAYLOAD(mutex, cmd, context, ret)                   \
     do                                                                              \
     {                                                                               \
-        esp_err_t err = ESP_FAIL;                                                   \
-        if (xSemaphoreTake(mutex, portMAX_DELAY) == pdTRUE)                         \
+        ret = cmd->execute();                                                       \
+        xSemaphoreGive(mutex);                                                      \
+        if (ret != ESP_OK)                                                          \
         {                                                                           \
-            ret = cmd->execute();                                                   \
-            xSemaphoreGive(mutex);                                                  \
-        }                                                                           \
-        else                                                                        \
-        {                                                                           \
-            ESP_LOGE(FUNCTION_NAME, "Failed to take mutex");                        \
             context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR); \
-            ret = ESP_FAIL;                                                         \
         }                                                                           \
-                                                                                    \
+        delete cmd;                                                                 \
     } while (0)
 
 // Function to get the enum name from twai_message_t.data[0]

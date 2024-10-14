@@ -147,11 +147,31 @@ struct MotorControllerDependencies
     }
 };
 
+struct uint24_t
+{
+    uint32_t value : 24; // Use only 24 bits for the value
+
+    // Constructors
+    uint24_t() : value(0) {}
+    uint24_t(uint32_t v) : value(v & 0xFFFFFF) {} // Ensure only 24 bits are used
+
+    // Implicit conversion to uint32_t
+    operator uint32_t() const { return value; }
+
+    // Assignment operator
+    uint24_t &operator=(uint32_t v)
+    {
+        value = v & 0xFFFFFF; // Ensure only 24 bits are assigned
+        return *this;
+    }
+};
+
 enum class PayloadType
 {
     VOID,
     UINT8,
     UINT16,
+    UINT24,
     UINT32,
     // Add more types as needed
 };
@@ -228,5 +248,8 @@ const std::map<CommandIds, CommandPayloadInfo> g_command_payload_map = {
     {SET_CAN_ID, CommandPayloadInfo(PayloadType::UINT16)},
     {SET_KEY_LOCK_ENABLE, CommandPayloadInfo(PayloadType::UINT8)},
 
-    {SET_HOME, CommandPayloadInfo(PayloadType::UINT8, PayloadType::UINT8, PayloadType::UINT16, PayloadType::UINT8)}};
+    {SET_HOME, CommandPayloadInfo(PayloadType::UINT8, PayloadType::UINT8, PayloadType::UINT16, PayloadType::UINT8)},
+
+    {RUN_MOTOR_ABSOLUTE_MOTION_BY_AXIS, CommandPayloadInfo(PayloadType::UINT16, PayloadType::UINT8, PayloadType::UINT24)},
+    {RUN_MOTOR_RELATIVE_MOTION_BY_AXIS, CommandPayloadInfo(PayloadType::UINT16, PayloadType::UINT8, PayloadType::UINT24)}};
 #endif // TYPEDEFS_HPP

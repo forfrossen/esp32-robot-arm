@@ -130,6 +130,9 @@ public:
             case PayloadType::UINT16:
                 data_length += sizeof(uint16_t);
                 break;
+            case PayloadType::UINT24:
+                data_length += sizeof(uint16_t) + sizeof(uint8_t);
+                break;
             case PayloadType::UINT32:
                 data_length += sizeof(uint32_t);
                 break;
