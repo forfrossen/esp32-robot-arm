@@ -173,7 +173,10 @@ enum class PayloadType
     UINT16,
     UINT24,
     UINT32,
-    // Add more types as needed
+    UINT48,
+    INT16,
+    INT32,
+    INT48,
 };
 
 struct CommandPayloadInfo
@@ -252,4 +255,47 @@ const std::map<CommandIds, CommandPayloadInfo> g_command_payload_map = {
 
     {RUN_MOTOR_ABSOLUTE_MOTION_BY_AXIS, CommandPayloadInfo(PayloadType::UINT16, PayloadType::UINT8, PayloadType::UINT24)},
     {RUN_MOTOR_RELATIVE_MOTION_BY_AXIS, CommandPayloadInfo(PayloadType::UINT16, PayloadType::UINT8, PayloadType::UINT24)}};
+
+const std::map<CommandIds, std::optional<CommandPayloadInfo>> ResponsePayloadMap = {
+    // Commands with standard 2-byte response (CommandId and Status)
+    {MOTOR_CALIBRATION, CommandPayloadInfo(PayloadType::UINT8)},                           // Status only
+    {EMERGENCY_STOP, CommandPayloadInfo(PayloadType::UINT8)},                              // Status only
+    {QUERY_MOTOR_STATUS, CommandPayloadInfo(PayloadType::UINT8)},                          // Status only
+    {ENABLE_MOTOR, CommandPayloadInfo(PayloadType::UINT8)},                                // Status only
+    {GO_HOME, CommandPayloadInfo(PayloadType::UINT8)},                                     // Status only
+    {SET_CURRENT_AXIS_TO_ZERO, CommandPayloadInfo(PayloadType::UINT8)},                    // Status only
+    {RESTORE_DEFAULT_PARAMETERS, CommandPayloadInfo(PayloadType::UINT8)},                  // Status only
+    {RELEASE_MOTOR_SHAFT_LOCKED_PROTECTION_STATE, CommandPayloadInfo(PayloadType::UINT8)}, // Status only
+    {READ_MOTOR_SHAFT_PROTECTION_STATE, CommandPayloadInfo(PayloadType::UINT8)},           // Status only
+    {READ_EN_PINS_STATUS, CommandPayloadInfo(PayloadType::UINT8)},                         // Status only
+    {READ_IO_PORT_STATUS, CommandPayloadInfo(PayloadType::UINT8)},                         // Status only
+    {READ_GO_BACK_TO_ZERO_STATUS_WHEN_POWER_ON, CommandPayloadInfo(PayloadType::UINT8)},   // Status only
+    {READ_MOTOR_SHAFT_ANGLE_ERROR, CommandPayloadInfo(PayloadType::UINT8)},                // Status only
+    {SET_WORKING_CURRENT, CommandPayloadInfo(PayloadType::UINT8)},                         // Status only
+    {SET_SUBDIVISIONS, CommandPayloadInfo(PayloadType::UINT8)},                            // Status only
+    {SET_EN_PIN_CONFIG, CommandPayloadInfo(PayloadType::UINT8)},                           // Status only
+    {SET_MOTOR_ROTATION_DIRECTION, CommandPayloadInfo(PayloadType::UINT8)},                // Status only
+    {SET_AUTO_TURN_OFF_SCREEN, CommandPayloadInfo(PayloadType::UINT8)},                    // Status only
+    {SET_MOTOR_SHAFT_LOCKED_ROTOR_PROTECTION, CommandPayloadInfo(PayloadType::UINT8)},     // Status only
+    {SET_SUBDIVISION_INTERPOLATION, CommandPayloadInfo(PayloadType::UINT8)},               // Status only
+    {SET_CAN_BITRATE, CommandPayloadInfo(PayloadType::UINT8)},                             // Status only
+    {SET_CAN_ID, CommandPayloadInfo(PayloadType::UINT8)},                                  // Status only
+    {SET_KEY_LOCK_ENABLE, CommandPayloadInfo(PayloadType::UINT8)},                         // Status only
+    {SET_HOME, CommandPayloadInfo(PayloadType::UINT8)},                                    // Status only
+
+    // Commands with more complex responses
+    {READ_ENCODER_VALUE_CARRY, CommandPayloadInfo(PayloadType::INT32, PayloadType::UINT16)}, // Carry (int32) and encoder value (uint16)
+    {READ_ENCODED_VALUE_ADDITION, CommandPayloadInfo(PayloadType::INT48)},                   // Encoder value (int48)
+    {READ_MOTOR_SPEED, CommandPayloadInfo(PayloadType::INT16)},                              // Speed (int16)
+    {READ_NUM_PULSES_RECEIVED, CommandPayloadInfo(PayloadType::INT32)},                      // Number of pulses (int32)
+
+    // Motion commands
+    {RUN_MOTOR_ABSOLUTE_MOTION_BY_AXIS, CommandPayloadInfo(PayloadType::UINT16, PayloadType::UINT8, PayloadType::UINT24)}, // Speed, acceleration, and absolute axis (uint24)
+    {RUN_MOTOR_RELATIVE_MOTION_BY_AXIS, CommandPayloadInfo(PayloadType::UINT16, PayloadType::UINT8, PayloadType::UINT24)}, // Speed, acceleration, and relative axis (uint24)
+
+    // Position control commands
+    {RUN_MOTOR_RELATIVE_MOTION_BY_PULSES, CommandPayloadInfo(PayloadType::UINT16, PayloadType::UINT8, PayloadType::UINT24)}, // Speed, acceleration, relative pulses (uint24)
+    {RUN_MOTOR_ABSOLUTE_MOTION_BY_PULSES, CommandPayloadInfo(PayloadType::UINT16, PayloadType::UINT8, PayloadType::UINT24)}, // Speed, acceleration, absolute pulses (uint24)
+};
+
 #endif // TYPEDEFS_HPP

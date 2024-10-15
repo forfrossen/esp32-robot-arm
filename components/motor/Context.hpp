@@ -33,7 +33,8 @@ public:
         MOTOR_INITIALIZED,
         MOTOR_READY,
         MOTOR_ERROR,
-        MOTOR_RECOVERING
+        MOTOR_RECOVERING,
+        UNKNOWN
     };
 
     enum class MovingState

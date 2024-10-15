@@ -96,6 +96,18 @@ inline const char *getFunctionName(const char *prettyFunction)
         ESP_LOGE(FUNCTION_NAME, "Condition not met: %s", #cond); \
         return false;                                            \
     }
+#define RETURN_VOID_IF(cond)                                 \
+    if ((cond))                                              \
+    {                                                        \
+        ESP_LOGE(FUNCTION_NAME, "Condition met: %s", #cond); \
+        return;                                              \
+    }
+#define RETURN_NPTR_IF(cond)                                 \
+    if ((cond))                                              \
+    {                                                        \
+        ESP_LOGE(FUNCTION_NAME, "Condition met: %s", #cond); \
+        return nullptr;                                      \
+    }
 
 #define CONT_IF_CHECK_FAILS(cond)                               \
     if (!(cond))                                                \
@@ -119,7 +131,7 @@ inline std::string replace_underscores(const std::string &str)
 #define SEND_COMMAND_BY_ID(mutex, command_factory, command_id, context, ret)        \
     do                                                                              \
     {                                                                               \
-        auto cmd = command_factory->generate_new_generic_command(command_id);       \
+        auto cmd = command_factory->create_command(command_id);                     \
         ret = cmd->execute();                                                       \
         if (ret != ESP_OK)                                                          \
         {                                                                           \
