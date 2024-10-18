@@ -15,6 +15,7 @@
 #include "../response_handler/ErrorCheckHandler.hpp"
 #include "../response_handler/LogMessageHandler.hpp"
 #include "../response_handler/ReadyStateTransitionHandler.hpp"
+#include "../response_handler/ResponseDataHandler.hpp"
 #include "../response_handler/ResponseHandlerEntry.hpp"
 
 class ResponseHandler
@@ -35,6 +36,7 @@ private:
     std::shared_ptr<ReadyStateTransitionHandler> state_handler;
     std::shared_ptr<ErrorCheckHandler> error_handler;
     std::shared_ptr<CommandLifecycleHandler> lifecycle_handler;
+    std::shared_ptr<ResponseDataHandler> data_handler;
 
     bool is_response_error(twai_message_t *msg);
 

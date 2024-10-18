@@ -25,7 +25,7 @@ public:
 
     RunMotorInSpeedModeCommand &init_new_command()
     {
-        set_command_code(RUN_MOTOR_SPEED_MODE);
+        set_command_id(RUN_MOTOR_SPEED_MODE);
         // set_data_length_code(4);
         create_msg_data();
         return *this;
@@ -56,7 +56,7 @@ public:
             speed = 3000;
         }
 
-        data[0] = command_code;
+        data[0] = command_id;
         data[1] = (direction ? 0x80 : 0x00) | ((speed >> 8) & 0x0F);
         data[2] = speed & 0xFF;
         data[3] = acceleration;

@@ -6,6 +6,7 @@
 #include "../magic_enum/include/magic_enum/magic_enum.hpp"
 #include "esp_log.h"
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <hal/twai_types.h>
 #include <string>
@@ -96,12 +97,14 @@ inline const char *getFunctionName(const char *prettyFunction)
         ESP_LOGE(FUNCTION_NAME, "Condition not met: %s", #cond); \
         return false;                                            \
     }
+
 #define RETURN_VOID_IF(cond)                                 \
     if ((cond))                                              \
     {                                                        \
         ESP_LOGE(FUNCTION_NAME, "Condition met: %s", #cond); \
         return;                                              \
     }
+
 #define RETURN_NPTR_IF(cond)                                 \
     if ((cond))                                              \
     {                                                        \
@@ -175,32 +178,18 @@ inline const char *get_command_name(const twai_message_t *msg)
 inline void log_twai_message(const twai_message_t *msg, std::optional<bool> is_received = false)
 {
     ESP_LOGI(FUNCTION_NAME, "=================================================================================================");
-
-    CommandIds command_code = static_cast<CommandIds>(msg->data[0]);
-    // auto command_code2 = magic_enum::enum_cast<CommandIds>(msg->data[0]).value_or(CommandIds::UNKNOWN_COMMAND);
-    // ESP_LOGI(FUNCTION_NAME, "Resulting enum: %d", static_cast<int>(command_code2));
-
+    CommandIds command_id = static_cast<CommandIds>(msg->data[0]);
     const char *command_name = get_command_name(msg);
-    // auto command_name2 = magic_enum::enum_name(command_code2);
-
-    // ESP_LOGI(FUNCTION_NAME, "command_code: 0x%02X \t command_name: %s", static_cast<uint8_t>(command_code), command_name);
-    // ESP_LOGI(FUNCTION_NAME, "command_code2: 0x%02X | %d\t %s", static_cast<uint8_t>(command_code2), static_cast<int>(command_code2), command_name2.data());
-    // ESP_LOGI(FUNCTION_NAME, "command_code2: 0x%02X | %d\t %s", command_code2, command_code2, command_name2.data());
-
     ESP_LOGI(FUNCTION_NAME, "MESSAGE %s", is_received.value() == true ? "RECEIVED <<=====" : "TO BE SENT =====>>");
-    // const char *command_name2 = magic_enum::enum_name().data()).c_str();
-    ESP_LOGI(FUNCTION_NAME, "ID: 0x%02lu \t length: %d\t command_code: 0x%02X \t command_name: %s",
-             msg->identifier, msg->data_length_code, command_code, command_name);
-
+    ESP_LOGI(FUNCTION_NAME, "ID: 0x%02lu \t length: %d\t command_id: 0x%02X \t command_name: %s",
+             msg->identifier, msg->data_length_code, command_id, command_name);
     ESP_LOGI(FUNCTION_NAME, "Extended ID: %s", msg->extd ? "True" : "False");
-    // Log the RTR (Remote Transmission Request) flag
     ESP_LOGI(FUNCTION_NAME, "RTR: %s", msg->rtr ? "True" : "False");
     for (int i = 0; i < msg->data_length_code - 1; i++)
     {
         ESP_LOGI(FUNCTION_NAME, "  Data[%d]: \t 0x%02X \t %d ", i, msg->data[i], msg->data[i]);
     }
     ESP_LOGI(FUNCTION_NAME, "  Data CRC: \t 0x%02X \t %d ", msg->data[msg->data_length_code - 1], msg->data[msg->data_length_code - 1]);
-
     ESP_LOGI(FUNCTION_NAME, "=================================================================================================");
 }
 

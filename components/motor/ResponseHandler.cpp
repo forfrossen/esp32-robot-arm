@@ -23,12 +23,14 @@ ResponseHandler::ResponseHandler(uint32_t canId, std::shared_ptr<MotorContext> c
     state_handler = std::make_shared<ReadyStateTransitionHandler>(context);
     error_handler = std::make_shared<ErrorCheckHandler>(context);
     lifecycle_handler = std::make_shared<CommandLifecycleHandler>();
+    data_handler = std::make_shared<ResponseDataHandler>(context);
     // std::shared_ptr<SetCommandResponseHandler> set_command_response_handler = std::make_shared<SetCommandResponseHandler>(context);
 
     // Chain the handlers together
     entry_point->set_next(log_handler);
     log_handler->set_next(error_handler);
-    error_handler->set_next(state_handler);
+    error_handler->set_next(data_handler);
+    data_handler->set_next(state_handler);
     state_handler->set_next(lifecycle_handler);
 };
 

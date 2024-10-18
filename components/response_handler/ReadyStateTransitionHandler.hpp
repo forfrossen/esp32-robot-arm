@@ -17,7 +17,7 @@ public:
     bool handle_response(const twai_message_t &msg) override
     {
         ESP_LOGI(FUNCTION_NAME, "called");
-        esp_err_t ret = do_transition(msg);
+        CHECK_THAT(do_transition(msg) == ESP_OK);
 
         return ResponseHandlerBase::handle_response(msg);
     }
@@ -30,7 +30,6 @@ private:
         if (context->is_recovering() || context->is_init())
         {
             CHECK_THAT(context->transition_ready_state(MotorContext::ReadyState::MOTOR_READY) == ESP_OK);
-            return ESP_OK;
         }
         return ESP_OK;
     }

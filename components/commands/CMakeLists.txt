@@ -3,5 +3,5 @@ idf_component_register(
     "CommandStateMachine.cpp"
 REQUIRES driver
 REQUIRES esp_event
-
+REQUIRES magic_enum
 INCLUDE_DIRS "." "../common")

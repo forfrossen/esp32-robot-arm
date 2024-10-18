@@ -47,15 +47,15 @@ public:
     SetTargetPositionCommand &set_absolute(bool absolute)
     {
         this->absolute = absolute;
-        command_code = absolute ? RUN_MOTOR_ABSOLUTE_MOTION_BY_AXIS : RUN_MOTOR_RELATIVE_MOTION_BY_AXIS;
-        cmd_code = static_cast<uint8_t>(command_code);
-        set_command_code(command_code);
+        command_id = absolute ? RUN_MOTOR_ABSOLUTE_MOTION_BY_AXIS : RUN_MOTOR_RELATIVE_MOTION_BY_AXIS;
+        cmd_code = static_cast<uint8_t>(command_id);
+        set_command_id(command_id);
         return *this;
     }
 
     esp_err_t build_twai_message()
     {
-        data[0] = command_code;            // Befehlscode für Position mode4: absolute motion by axis
+        data[0] = command_id;              // Befehlscode für Position mode4: absolute motion by axis
         data[1] = (speed >> 8) & 0x7F;     // Combine direction bit with the upper 7 bits of speed
         data[2] = speed & 0xFF;            // Lower 8 bits of speed
         data[3] = acceleration;            // Beschleunigung

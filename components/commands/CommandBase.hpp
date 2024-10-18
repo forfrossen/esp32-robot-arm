@@ -19,7 +19,7 @@ class CommandBase
 {
 protected:
     uint32_t id;
-    CommandIds command_code;
+    CommandIds command_id;
     uint8_t cmd_code;
     uint8_t data_length = 0;
     std::optional<twai_message_t> msg;
@@ -30,12 +30,12 @@ protected:
     std::optional<CommandPayloadInfo> payload_info;
 
 public:
-    CommandBase(std::shared_ptr<CommandFactorySettings> settings, CommandIds command_code) : id(settings->id), command_code(command_code), system_event_loop(settings->system_event_loop), command_lifecycle_registry(settings->command_lifecycle_registry), msg_mutex(xSemaphoreCreateMutex())
+    CommandBase(std::shared_ptr<CommandFactorySettings> settings, CommandIds command_id) : id(settings->id), command_id(command_id), system_event_loop(settings->system_event_loop), command_lifecycle_registry(settings->command_lifecycle_registry), msg_mutex(xSemaphoreCreateMutex())
     {
-        uint8_t command_code_int = static_cast<uint8_t>(command_code);
+        uint8_t command_id_int = static_cast<uint8_t>(command_id);
 
-        ESP_LOGI(FUNCTION_NAME, "CommandBase constructor called for command_code: 0x%02X", command_code_int);
-        esp_err_t ret = init_new_command(command_code);
+        ESP_LOGI(FUNCTION_NAME, "CommandBase constructor called for command_id: 0x%02X", command_id_int);
+        esp_err_t ret = init_new_command(command_id);
         if (ret != ESP_OK)
         {
             ESP_LOGE(FUNCTION_NAME, "Error initializing new command");
@@ -46,12 +46,12 @@ public:
         }
     }
 
-    esp_err_t init_new_command(CommandIds command_code)
+    esp_err_t init_new_command(CommandIds command_id)
     {
         CHECK_THAT(command_lifecycle_registry != nullptr);
         msg = twai_message_t();
         ESP_RETURN_ON_ERROR(set_default_values(), FUNCTION_NAME, "Error setting default values");
-        ESP_RETURN_ON_ERROR(set_command_code(command_code), FUNCTION_NAME, "Error setting command code");
+        ESP_RETURN_ON_ERROR(set_command_id(command_id), FUNCTION_NAME, "Error setting command code");
         ESP_RETURN_ON_ERROR(set_payload_info(), FUNCTION_NAME, "Error setting payload info");
         ESP_RETURN_ON_ERROR(calculate_payload_size(), FUNCTION_NAME, "Error calculating payload size");
         ESP_RETURN_ON_ERROR(set_data_length_code(), FUNCTION_NAME, "Error setting data length code");
@@ -93,13 +93,13 @@ public:
         return ESP_OK;
     }
 
-    esp_err_t set_command_code(CommandIds command_code)
+    esp_err_t set_command_id(CommandIds command_id)
     {
         ESP_RETURN_ON_ERROR(msg_check(), FUNCTION_NAME, "msg is nullptr");
-        cmd_code = static_cast<uint8_t>(command_code);
+        cmd_code = static_cast<uint8_t>(command_id);
         ESP_LOGI(FUNCTION_NAME, "Setting command code to: 0x%02X", cmd_code);
-        CHECK_THAT(cmd_code == static_cast<uint8_t>(command_code));
-        // ESP_LOGI(FUNCTION_NAME, "Command code: 0x%02X", command_code);
+        CHECK_THAT(cmd_code == static_cast<uint8_t>(command_id));
+        // ESP_LOGI(FUNCTION_NAME, "Command code: 0x%02X", command_id);
         // memset(&msg, 0, sizeof(msg));
         // ESP_LOGI(FUNCTION_NAME, "Command msg has been zeroed out");
         return ESP_OK;
@@ -108,7 +108,7 @@ public:
     esp_err_t set_payload_info()
     {
         ESP_RETURN_ON_ERROR(get_semaphore(), FUNCTION_NAME, "Failed to take mutex");
-        auto it = g_command_payload_map.find(command_code);
+        auto it = g_command_payload_map.find(command_id);
         xSemaphoreGive(msg_mutex);
         CHECK_THAT(it != g_command_payload_map.end());
         payload_info.emplace(it->second);

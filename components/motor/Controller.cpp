@@ -1,6 +1,15 @@
 #include "Controller.hpp"
 #include "Events.hpp"
 ESP_EVENT_DEFINE_BASE(MOTOR_EVENTS);
+int24_t calculate_steps_for_angle(int24_t angleDegrees)
+{
+
+    const double fullRotation = 360.0;
+    double steps = (STEPS_PER_REVOLUTION / fullRotation) * angleDegrees;
+    int24_t stepCount = static_cast<int24_t>(std::round(steps));
+
+    return stepCount;
+}
 
 void MotorController::state_transition_event_handler(void *handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
@@ -161,13 +170,14 @@ esp_err_t MotorController::start_timed_tasks()
 
     ESP_LOGI(FUNCTION_NAME, "Initializing tasks");
 
-    if (task_handle_query_position == nullptr)
-    {
-        xReturned = xTaskCreatePinnedToCore(&MotorController::vTask_query_position, "TASK_queryPosition", 1024 * 3, this, 3, &task_handle_query_position, tskNO_AFFINITY);
-        CHECK_THAT(task_handle_query_position != NULL);
-        CHECK_THAT(xReturned != NULL);
-        ESP_LOGI(FUNCTION_NAME, "TASK_queryPosition created");
-    }
+    // if (task_handle_query_position == nullptr)
+    // {
+    //     xReturned = xTaskCreatePinnedToCore(&MotorController::vTask_query_position, "TASK_queryPosition", 1024 * 3, this, 3, &task_handle_query_position, tskNO_AFFINITY);
+    //     CHECK_THAT(task_handle_query_position != NULL);
+    //     CHECK_THAT(xReturned != NULL);
+    //     ESP_LOGI(FUNCTION_NAME, "TASK_queryPosition created");
+    // }
+
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     if (task_handle_send_position == nullptr)
     {
@@ -178,12 +188,6 @@ esp_err_t MotorController::start_timed_tasks()
         ESP_LOGI(FUNCTION_NAME, "TASK_SendRandomTargetPositionCommands created");
     }
     return ESP_OK;
-}
-
-void MotorController::stop_basic_tasks()
-{
-    vTaskDelete(task_handle_handle_inQ);
-    vTaskDelete(task_handle_query_status);
 }
 
 void MotorController::stop_timed_tasks()
@@ -216,8 +220,7 @@ esp_err_t MotorController::query_status()
 esp_err_t MotorController::set_working_current(uint16_t current_ma)
 {
     esp_err_t ret = ESP_FAIL;
-    auto cmd = command_factory->create_command(SET_WORKING_CURRENT);
-    cmd->with(current_ma);
+    auto cmd = command_factory->create_command(SET_WORKING_CURRENT, uint16_t{current_ma});
     SEND_COMMAND_BY_ID_WITH_PAYLOAD(motor_mutex, cmd, context, ret);
     return ret;
 }
@@ -227,19 +230,46 @@ esp_err_t MotorController::set_target_position()
     esp_err_t ret = ESP_FAIL;
 
     xSemaphoreTake(motor_mutex, portMAX_DELAY);
-    uint32_t position = (esp_random() % 10) * STEPS_PER_REVOLUTION; // Random value between 0 and 99
-    uint8_t speed = esp_random() % 1600;
+
+    // uint32_t rand_pos_value = (esp_random() % 10) * STEPS_PER_REVOLUTION;
+    uint32_t rand_pos_value = (esp_random() % 360);
+    ESP_LOGI(FUNCTION_NAME, "Random value: %u", static_cast<unsigned int>(rand_pos_value));
+    uint32_t position = static_cast<uint32_t>(rand_pos_value);
+    ESP_LOGI(FUNCTION_NAME, "Random position: %u", static_cast<unsigned int>(position));
+    uint32_t angle_steps = calculate_steps_for_angle(position);
+    uint32_t angle_steps_with_ratio = angle_steps * ACTUATOR_GEAR_RATIO;
+
+    ESP_LOGI(FUNCTION_NAME, "Random angle_steps: %u", static_cast<unsigned int>(angle_steps));
+    ESP_LOGI(FUNCTION_NAME, "Random angle_steps_with_ratio: %u", static_cast<unsigned int>(angle_steps_with_ratio));
+
+    uint16_t speed = esp_random() % 1600;
     uint8_t acceleration = esp_random() % 255;
     bool absolute = esp_random() % 2;
+    absolute = true;
     CommandIds command_id = (absolute) ? RUN_MOTOR_ABSOLUTE_MOTION_BY_AXIS : RUN_MOTOR_RELATIVE_MOTION_BY_AXIS;
+    int negative_random = esp_random() % 2;
+    if (negative_random && absolute != true)
+    {
+        position = -position;
+    }
 
-    speed = 1000;
-    acceleration = 10;
-    absolute = false;
+    speed = 3000;
+    acceleration = 1;
+    // position = STEPS_PER_REVOLUTION;
 
-    auto cmd = command_factory->create_command(command_id);
-    cmd->with(speed, acceleration, position);
+    ESP_LOGI(FUNCTION_NAME, "Sending %s command to move motor at with speed: %d with acceleration of %d to about: %ld°", magic_enum::enum_name(command_id).data(), speed, acceleration, static_cast<uint24_t>(position));
+    auto cmd = command_factory->create_command(command_id, speed, acceleration, static_cast<uint24_t>(angle_steps_with_ratio));
     SEND_COMMAND_BY_ID_WITH_PAYLOAD(motor_mutex, cmd, context, ret);
+
+    // auto cmd = command_factory->create_set_target_position_command(absolute);
+    // cmd->set_absolute(absolute).set_acceleration(acceleration).set_position(position).set_speed(speed);
+
+    // ret = cmd->execute();
+    // if (ret != ESP_OK)
+    // {
+    //     context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);
+    // }
+
     xSemaphoreGive(motor_mutex);
     return ret;
-}
+};
