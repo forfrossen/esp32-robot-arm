@@ -1,7 +1,10 @@
 #ifndef MKS_ENUMS_HPP
 #define MKS_ENUMS_HPP
 
+#include <chrono>
+#include <cstddef>
 #include <cstdint>
+#include <variant>
 
 enum CommandIds : uint8_t
 {
@@ -45,7 +48,8 @@ enum CommandIds : uint8_t
     RUN_MOTOR_RELATIVE_MOTION_BY_PULSES = 0xFD,
     RUN_MOTOR_ABSOLUTE_MOTION_BY_PULSES = 0xFE,
     SAVE_CLEAN_IN_SPEED_MODE = 0xFF,
-    UNKNOWN_COMMAND = 0x00
+    UNKNOWN_COMMAND = 0x00,
+    LAST_SEEN = 0xDD
 };
 
 // enum class CommandIds : uint8_t
@@ -100,45 +104,52 @@ enum class Direction : uint8_t
 enum class Enable : uint8_t
 {
     Disable = 0,
-    Enable = 1
+    Enable = 1,
+    UNKNOWN = 99
 };
 
 enum class EnableStatus : uint8_t
 {
     Disabled = 0,
-    Enabled = 1
+    Enabled = 1,
+    UNKNOWN = 99
 };
 
 enum class SuccessStatus : uint8_t
 {
     Fail = 0,
-    Success = 1
+    Success = 1,
+    UNKNOWN = 99
 };
 
 enum class GoBackToZeroStatus : uint8_t
 {
     GoingToZero = 0,
     GoBackToZeroSuccess = 1,
-    GoBackToZeroFail = 2
+    GoBackToZeroFail = 2,
+    UNKNOWN = 99
 };
 
 enum class StatusCommand8 : uint8_t
 {
     ReleaseFails = 0,
-    ReleaseSuccess = 1
+    ReleaseSuccess = 1,
+    UNKNOWN = 99
 };
 
 enum class StatusCommand9 : uint8_t
 {
     NoProtected = 0,
-    Protected = 1
+    Protected = 1,
+    UNKNOWN = 99
 };
 
 enum class CalibrationResult : uint8_t
 {
     Calibrating = 0,
     CalibratedSuccess = 1,
-    CalibratingFail = 2
+    CalibratingFail = 2,
+    UNKNOWN = 99
 };
 
 enum class WorkMode : uint8_t
@@ -148,7 +159,8 @@ enum class WorkMode : uint8_t
     CrvFoc = 2,
     SrOpen = 3,
     SrClose = 4,
-    SrvFoc = 5
+    SrvFoc = 5,
+    UNKNOWN = 99
 };
 
 enum class HoldingStrength : uint8_t
@@ -161,14 +173,16 @@ enum class HoldingStrength : uint8_t
     SIXTY_PERCENT = 5,
     SEVENTY_PERCENT = 6,
     EIGHTY_PERCENT = 7,
-    NIGHTY_PERCENT = 8
+    NIGHTY_PERCENT = 8,
+    UNKNOWN = 99
 };
 
 enum class EnPinEnable : uint8_t
 {
     ActiveLow = 0,
     ActiveHigh = 1,
-    ActiveAlways = 2
+    ActiveAlways = 2,
+    UNKNOWN = 99
 };
 
 enum class CanBitrate : uint8_t
@@ -176,13 +190,15 @@ enum class CanBitrate : uint8_t
     Rate125K = 0,
     Rate250K = 1,
     Rate500K = 2,
-    Rate1M = 3
+    Rate1M = 3,
+    UNKNOWN = 99
 };
 
 enum class EndStopLevel : uint8_t
 {
     Low = 0,
-    High = 1
+    High = 1,
+    UNKNOWN = 99
 };
 
 enum class GoHomeResult : uint8_t
@@ -196,13 +212,15 @@ enum class Mode0 : uint8_t
 {
     Disable = 0,
     DirMode = 1,
-    NearMode = 2
+    NearMode = 2,
+    UNKNOWN = 99
 };
 
 enum class SaveCleanState : uint8_t
 {
     Save = 0xC8,
-    Clean = 0xCA
+    Clean = 0xCA,
+    UNKNOWN = 99
 };
 
 enum class RunMotorResult : uint8_t
@@ -210,7 +228,8 @@ enum class RunMotorResult : uint8_t
     RunFail = 0,
     RunStarting = 1,
     RunComplete = 2,
-    RunEndLimitStoped = 3
+    RunEndLimitStoped = 3,
+    UNKNOWN = 99
 };
 
 enum class MotorStatus : uint8_t
@@ -221,13 +240,91 @@ enum class MotorStatus : uint8_t
     MotorSpeedDown = 3,
     MotorFullSpeed = 4,
     MotorHoming = 5,
-    MotorIsCalibrating = 6
+    MotorIsCalibrating = 6,
+    UNKNOWN = 99
 };
 
 enum class MotorShaftProtectionStatus : uint8_t
 {
     Protected = 1,
-    NotProtected = 0
+    NotProtected = 0,
+    UNKNOWN = 99
 };
+
+using uint4_t = uint8_t;
+using uint12_t = uint16_t;
+using uint24_t = uint32_t;
+using int24_t = int32_t;
+
+enum class PayloadType
+{
+    VOID,
+    UINT4,
+    UINT8,
+    UINT16,
+    UINT24,
+    UINT32,
+    UINT48,
+    INT16,
+    INT24,
+    INT32,
+    INT48,
+    CHRONO,
+};
+
+inline size_t get_payload_type_size(PayloadType type)
+{
+    switch (type)
+    {
+    case PayloadType::VOID:
+        return 0;
+    case PayloadType::UINT4:
+    case PayloadType::UINT8:
+        return 1;
+    case PayloadType::UINT16:
+        return 2;
+    case PayloadType::UINT24:
+        return 3;
+    case PayloadType::UINT32:
+        return 4;
+    case PayloadType::UINT48:
+        return 6;
+    case PayloadType::INT16:
+        return 2;
+    case PayloadType::INT24:
+        return 3;
+    case PayloadType::INT32:
+        return 4;
+    case PayloadType::INT48:
+        return 6;
+    case PayloadType::CHRONO:
+        return 8;
+    default:
+        return 0;
+    }
+}
+
+using MotorPropertyVariant = std::variant<
+    uint8_t,
+    uint16_t,
+    uint32_t,
+    uint64_t,
+    int16_t,
+    int32_t,
+    int64_t,
+    float,
+    Direction,
+    EnPinEnable,
+    Enable,
+    EnableStatus,
+    MotorStatus,
+    RunMotorResult,
+    MotorShaftProtectionStatus,
+    Mode0,
+    SaveCleanState,
+    CalibrationResult,
+    EndStopLevel,
+    CanBitrate,
+    std::chrono::system_clock::time_point>;
 
 #endif // MKS_ENUMS_HPP

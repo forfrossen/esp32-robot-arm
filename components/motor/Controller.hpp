@@ -1,12 +1,15 @@
 #ifndef MOTORCONTROLLER_H
 #define MOTORCONTROLLER_H
 
+#include "MksEnums.hpp"
+#include "TypeDefs.hpp"
+
 #include "CommandFactory.hpp"
+#include "CommandPayloadTypeDefs.hpp"
 #include "CommandStateMachine.hpp"
 #include "Context.hpp"
 #include "ResponseHandler.hpp"
 #include "TWAIController.hpp"
-#include "TypeDefs.hpp"
 #include "esp_check.h"
 #include "esp_err.h"
 #include "esp_event.h"

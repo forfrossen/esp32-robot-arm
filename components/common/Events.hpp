@@ -1,5 +1,5 @@
-// #ifndef EVENTS_HPP
-// #define EVENTS_HPP
+#ifndef EVENTS_HPP
+#define EVENTS_HPP
 
 extern "C"
 {
@@ -11,4 +11,4 @@ extern "C"
     ESP_EVENT_DECLARE_BASE(PROPERTY_CHANGE_EVENTS);
 }
 
-// #endif // EVENTS_HPP
+#endif // EVENTS_HPP

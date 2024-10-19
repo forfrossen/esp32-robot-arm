@@ -1,24 +1,19 @@
 #ifndef GENERIC_COMMAND_BUILDER_H
 #define GENERIC_COMMAND_BUILDER_H
 
-// #include "../bitsery/include/bitsery/adapter/buffer.h"
-// #include "../bitsery/include/bitsery/adapter/stream.h"
-// #include "../bitsery/include/bitsery/bitsery.h"
-// #include "../bitsery/include/bitsery/ext/inheritance.h"
-// #include "../bitsery/include/bitsery/traits/array.h"
-// #include "../bitsery/include/bitsery/traits/string.h"
-// #include "TupleSerializer.hpp"
+#include "Events.hpp"
+
+#include "CommandPayloadTypeDefs.hpp"
+#include "MksEnums.hpp"
+#include "TypeDefs.hpp"
 
 #include "../common/utils.hpp"
+
 #include "CommandBase.hpp"
-#include "Events.hpp"
-#include "TypeDefs.hpp"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "freertos/queue.h"
 #include "utils.hpp"
-#include <algorithm> // For std::clamp
-#include <cstdio>    // For printf
 #include <driver/twai.h>
 #include <variant>
 #include <vector>
@@ -107,7 +102,7 @@ public:
 
         const CommandPayloadInfo &payload_info = it->second;
         constexpr size_t num_args = sizeof...(Args);
-        size_t num_payload_types = count_valid_payloads(payload_info.payload_types);
+        size_t num_payload_types = count_valid_payloads(payload_info.type_info);
         ESP_LOGI(FUNCTION_NAME, "Number of arguments: %d", num_args);
 
         CHECK_THAT(num_args == num_payload_types);
@@ -135,7 +130,7 @@ public:
     {
 
         // Expand the parameter pack to call pack_value for each argument
-        ((pack_value(index, std::get<I>(args_tuple), payload_info.getType(I))), ...);
+        ((pack_value(index, std::get<I>(args_tuple), payload_info.get_type(I))), ...);
     }
 
     template <typename T>

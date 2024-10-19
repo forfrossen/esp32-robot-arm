@@ -1,9 +1,10 @@
+#ifndef ERROR_CHECK_HANDLER_HPP
+#define ERROR_CHECK_HANDLER_HPP
+
 #include "ResponseHandlerBase.hpp"
 #include "esp_log.h"
 #include "utils.hpp"
 
-#ifndef ERROR_CHECK_HANDLER_HPP
-#define ERROR_CHECK_HANDLER_HPP
 
 class ErrorCheckHandler : public ResponseHandlerBase
 {

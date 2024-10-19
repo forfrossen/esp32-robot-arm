@@ -3,6 +3,7 @@
 
 #include "../magic_enum/include/magic_enum/magic_enum.hpp"
 #include "Events.hpp"
+#include "MksEnums.hpp"
 #include "Properties.hpp"
 #include "TypeDefs.hpp"
 #include "esp_err.h"
@@ -15,6 +16,7 @@
 #include "utils.hpp"
 #include <chrono>
 #include <cstdint>
+#include <variant>
 
 template <typename T>
 struct MotorPropertyChangeEventData
@@ -56,15 +58,6 @@ public:
 
     ~MotorContext() {}
 
-    uint32_t get_carry_value() const { return carry_value; };
-    // esp_err_t set_carry_value(uint32_t value) { carry_value = value; };
-
-    uint16_t get_encoder_value() const { return encoder_value; };
-    // esp_err_t set_encoder_value(uint16_t value) { encoder_value = value; };
-
-    uint64_t get_absolute_position() const { return absolute_position; };
-    // esp_err_t set_absolute_position(uint64_t value) { absolute_position = value; };
-
     MovingState get_motor_moving_state() const { return moving_state; };
     void set_motor_moving_state(MovingState state) { moving_state = state; };
 
@@ -79,9 +72,9 @@ public:
     bool is_init() const { return ready_state == ReadyState::MOTOR_INITIALIZED; };
     bool is_error() const { return ready_state == ReadyState::MOTOR_ERROR; };
 
-    // Generic method to set a property in the context
-    template <typename T>
-    esp_err_t set_property(T MotorProperties::*property, T value);
+    esp_err_t set_meta_property(MotorPropertyVariant MotorProperties::*property, MotorPropertyVariant value);
+    esp_err_t set_property(MotorPropertyVariant MotorProperties::*property, MotorPropertyVariant value);
+    esp_err_t set_property_from_variant(MotorPropertyVariant &property, const MotorPropertyVariant &value);
 
     // Optionally, you can add a generic getter method
     template <typename T>
@@ -92,9 +85,7 @@ private:
     ReadyState ready_state = ReadyState::MOTOR_UNINITIALIZED;
     MovingState moving_state = MovingState::UNKNOWN;
     std::chrono::system_clock::time_point last_seen;
-    uint32_t carry_value;
-    uint16_t encoder_value;
-    uint64_t absolute_position;
+
     MotorProperties properties;
 
     SemaphoreHandle_t context_mutex;
@@ -106,6 +97,7 @@ private:
 
     template <typename T>
     esp_err_t post_property_change_event(T MotorProperties::*property, const T &value);
+
     esp_err_t get_semaphore();
 };
 

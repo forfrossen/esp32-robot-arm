@@ -1,9 +1,11 @@
 #ifndef MOTORRESPONSEHANDLER_H
 #define MOTORRESPONSEHANDLER_H
 
+#include "CommandPayloadTypeDefs.hpp"
 #include "Context.hpp"
 #include "Controller.hpp"
 #include "MksEnums.hpp"
+#include "ResponseTypeDefs.hpp"
 #include "TypeDefs.hpp"
 #include "esp_log.h"
 #include "utils.hpp"

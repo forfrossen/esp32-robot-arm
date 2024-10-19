@@ -1,10 +1,10 @@
 
+#ifndef READY_STATE_TRANSITION_HANDLER_HPP
+#define READY_STATE_TRANSITION_HANDLER_HPP
+
 #include "ResponseHandlerBase.hpp"
 #include "esp_log.h"
 #include "utils.hpp"
-
-#ifndef READY_STATE_TRANSITION_HANDLER_HPP
-#define READY_STATE_TRANSITION_HANDLER_HPP
 
 class ReadyStateTransitionHandler : public ResponseHandlerBase
 {

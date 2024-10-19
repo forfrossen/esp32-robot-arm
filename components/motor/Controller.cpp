@@ -1,6 +1,8 @@
 #include "Controller.hpp"
 #include "Events.hpp"
+
 ESP_EVENT_DEFINE_BASE(MOTOR_EVENTS);
+
 int24_t calculate_steps_for_angle(int24_t angleDegrees)
 {
 
@@ -183,8 +185,8 @@ esp_err_t MotorController::start_timed_tasks()
     {
 
         xReturned = xTaskCreatePinnedToCore(&MotorController::vtask_send_positon, "TASK_SendRandomTargetPositionCommands", 1024 * 3, this, 4, &task_handle_send_position, tskNO_AFFINITY);
-        CHECK_THAT(task_handle_send_position != NULL);
-        CHECK_THAT(xReturned != NULL);
+        CHECK_THAT(task_handle_send_position != nullptr);
+        CHECK_THAT(xReturned == pdPASS);
         ESP_LOGI(FUNCTION_NAME, "TASK_SendRandomTargetPositionCommands created");
     }
     return ESP_OK;

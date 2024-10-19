@@ -2,81 +2,201 @@
 #define MOTOR_PROPERTIES_HPP
 
 #include "../magic_enum/include/magic_enum/magic_enum.hpp"
+
+#include "MksEnums.hpp"
+
+#include <any>
+#include <chrono>
 #include <cstdint>
+#include <cstdlib>
+#include <cxxabi.h>
+#include <functional>
 #include <iostream>
 #include <map>
+#include <typeinfo>
+
+template <typename T>
+struct Property
+{
+private:
+    T value;
+
+public:
+    Property() = default;
+    Property(T initial_value) : value(initial_value) {}
+
+    // Get the value using std::visit
+    T get() const { return value; }
+
+    // Set the value
+    void set(T new_value) { value = new_value; }
+
+    // Operator overloading for convenience
+    operator T() const { return value; }
+
+    Property &operator=(T new_value)
+    {
+        value = new_value;
+        return *this;
+    }
+};
+
+// MotorProperty class inheriting from Property
+template <typename T>
+struct MotorProperty : public Property<T>
+{
+private:
+    PayloadType type;
+
+public:
+    MotorProperty() = default;
+    MotorProperty(T initial_value, PayloadType payload_type)
+        : Property<T>(initial_value), type(payload_type) {}
+
+    PayloadType get_type() const { return type; }
+
+    void set_type(PayloadType new_type) { type = new_type; }
+};
 
 struct MotorProperties
 {
-    // Working current in mA (0-3000 mA)
-    uint16_t working_current = 0;
+    MotorProperty<uint16_t> working_current = MotorProperty<uint16_t>(0, PayloadType::UINT16);
+    MotorProperty<uint16_t> holding_current = MotorProperty<uint16_t>(0, PayloadType::UINT16);
+    MotorProperty<Direction> motor_rotation_direction = MotorProperty<Direction>(Direction::CW, PayloadType::UINT8);
+    MotorProperty<uint8_t> subdivisions = MotorProperty<uint8_t>(0, PayloadType::UINT8);
+    MotorProperty<EnPinEnable> en_pin_config = MotorProperty<EnPinEnable>(EnPinEnable::ActiveLow, PayloadType::UINT8);
+    MotorProperty<Enable> key_lock_enabled = MotorProperty<Enable>(Enable::Disable, PayloadType::UINT8);
+    MotorProperty<Enable> auto_turn_off_screen = MotorProperty<Enable>(Enable::Disable, PayloadType::UINT8);
+    MotorProperty<Enable> locked_rotor_protection = MotorProperty<Enable>(Enable::Disable, PayloadType::UINT8);
+    MotorProperty<Enable> subdivision_interpolation = MotorProperty<Enable>(Enable::Disable, PayloadType::UINT8);
+    MotorProperty<uint8_t> can_id = MotorProperty<uint8_t>(1, PayloadType::UINT8);
+    MotorProperty<CanBitrate> can_bitrate = MotorProperty<CanBitrate>(CanBitrate::Rate125K, PayloadType::UINT8);
+    MotorProperty<uint8_t> group_id = MotorProperty<uint8_t>(0, PayloadType::UINT8);
+    MotorProperty<EndStopLevel> home_trig = MotorProperty<EndStopLevel>(EndStopLevel::Low, PayloadType::UINT8);
+    MotorProperty<Direction> home_dir = MotorProperty<Direction>(Direction::CW, PayloadType::UINT8);
+    MotorProperty<uint16_t> home_speed = MotorProperty<uint16_t>(0, PayloadType::UINT16);
+    MotorProperty<EndStopLevel> end_limit = MotorProperty<EndStopLevel>(EndStopLevel::Low, PayloadType::UINT8);
+    MotorProperty<Enable> emergency_stop_triggered = MotorProperty<Enable>(Enable::Disable, PayloadType::UINT8);
+    MotorProperty<EnableStatus> is_enabled = MotorProperty<EnableStatus>(EnableStatus::Disabled, PayloadType::UINT8);
+    MotorProperty<int32_t> current_position = MotorProperty<int32_t>(0, PayloadType::INT32);
+    MotorProperty<int32_t> target_position = MotorProperty<int32_t>(0, PayloadType::INT32);
+    MotorProperty<float> current_speed = MotorProperty<float>(0.0f, PayloadType::UINT32);
+    MotorProperty<EnableStatus> is_moving = MotorProperty<EnableStatus>(EnableStatus::Disabled, PayloadType::UINT8);
+    MotorProperty<Mode0> mode0_status = MotorProperty<Mode0>(Mode0::Disable, PayloadType::UINT8);
+    MotorProperty<CalibrationResult> calibration_status = MotorProperty<CalibrationResult>(CalibrationResult::Calibrating, PayloadType::UINT8);
+    MotorProperty<MotorStatus> motor_status = MotorProperty<MotorStatus>(MotorStatus::UNKNOWN, PayloadType::UINT8);
+    MotorProperty<RunMotorResult> run_motor_result = MotorProperty<RunMotorResult>(RunMotorResult::UNKNOWN, PayloadType::UINT8);
+    MotorProperty<MotorShaftProtectionStatus> motor_shaft_protection_status = MotorProperty<MotorShaftProtectionStatus>(MotorShaftProtectionStatus::UNKNOWN, PayloadType::UINT8);
+    MotorProperty<SaveCleanState> save_clean_state = MotorProperty<SaveCleanState>(SaveCleanState::UNKNOWN, PayloadType::UINT8);
 
-    // Holding current in mA
-    uint16_t holding_current = 0;
-
-    // Motor rotation direction (0 = CW, 1 = CCW)
-    uint8_t motor_rotation_direction = 0;
-
-    // Subdivisions (usually a value like 16, 32, 64)
-    uint8_t subdivisions = 0;
-
-    // Enable pin configuration (0 = disabled, 1 = enabled)
-    uint8_t en_pin_config = 0;
-
-    // Key lock enable (0 = disabled, 1 = enabled)
-    bool key_lock_enabled = false;
-
-    // Auto turn off screen (0 = disabled, 1 = enabled)
-    bool auto_turn_off_screen = false;
-
-    // Locked rotor protection (0 = disabled, 1 = enabled)
-    bool locked_rotor_protection = false;
-
-    // Subdivision interpolation (0 = disabled, 1 = enabled)
-    bool subdivision_interpolation = false;
-
-    // CAN bus ID (default 0x01, 1-127)
-    uint8_t can_id = 1;
-
-    // CAN bus bitrate (e.g., 125, 250, 500 kbps)
-    uint8_t can_bitrate = 0;
-
-    // Group ID for the motor (used in CAN communication)
-    uint8_t group_id = 0;
-
-    // Home trigger level (0 = low, 1 = high)
-    uint8_t home_trig = 0;
-
-    // Home direction (0 = CW, 1 = CCW)
-    uint8_t home_dir = 0;
-
-    // Home speed (0-3000 RPM)
-    uint16_t home_speed = 0;
-
-    // End limit switch (0 = disabled, 1 = enabled)
-    uint8_t end_limit = 0;
-
-    // Emergency stop triggered (0 = not triggered, 1 = triggered)
-    bool emergency_stop_triggered = false;
-
-    // Motor enabled (0 = disabled, 1 = enabled)
-    bool is_enabled = false;
-
-    // Motor's current position (read from encoder)
-    int32_t current_position = 0;
-
-    // Target position for motor movement
-    int32_t target_position = 0;
-
-    // Motor's current speed in RPM
-    float current_speed = 0.0f;
-
-    // Whether the motor is currently moving (true = moving, false = stationary)
-    bool is_moving = false;
-
-    // Mode0 configuration (depending on the motor's specific mode, could be a uint8_t)
-    uint8_t mode0 = 0;
+    Property<std::chrono::system_clock::time_point> last_seen = Property(std::chrono::system_clock::time_point{});
+    Property<std::any> dummy = Property(std::any{});
 };
+
+// MotorProperty working_current = MotorProperty(uint16_t(0), PayloadType::UINT16);
+// MotorProperty holding_current = MotorProperty(uint16_t(0), PayloadType::UINT16);
+// MotorProperty motor_rotation_direction = MotorProperty(Direction::CW, PayloadType::UINT8);
+// MotorProperty subdivisions = MotorProperty(uint8_t(0), PayloadType::UINT8);
+// MotorProperty en_pin_config = MotorProperty(EnPinEnable::ActiveLow, PayloadType::UINT8);
+// MotorProperty key_lock_enabled = MotorProperty(Enable::Disable, PayloadType::UINT8);
+// MotorProperty auto_turn_off_screen = MotorProperty(Enable::Disable, PayloadType::UINT8);
+// MotorProperty locked_rotor_protection = MotorProperty(Enable::Disable, PayloadType::UINT8);
+// MotorProperty subdivision_interpolation = MotorProperty(Enable::Disable, PayloadType::UINT8);
+// MotorProperty can_id = MotorProperty(uint8_t(1), PayloadType::UINT8);
+// MotorProperty can_bitrate = MotorProperty(CanBitrate::Rate125K, PayloadType::UINT8);
+// MotorProperty group_id = MotorProperty(uint8_t(0), PayloadType::UINT8);
+// MotorProperty home_trig = MotorProperty(EndStopLevel::Low, PayloadType::UINT8);
+// MotorProperty home_dir = MotorProperty(Direction::CW, PayloadType::UINT8);
+// MotorProperty home_speed = MotorProperty(uint16_t(0), PayloadType::UINT16);
+// MotorProperty end_limit = MotorProperty(EndStopLevel::Low, PayloadType::UINT8);
+// MotorProperty emergency_stop_triggered = MotorProperty(Enable::Disable, PayloadType::UINT8);
+// MotorProperty is_enabled = MotorProperty(EnableStatus::Disabled, PayloadType::UINT8);
+// MotorProperty current_position = MotorProperty(int32_t(0), PayloadType::INT32);
+// MotorProperty target_position = MotorProperty(int32_t(0), PayloadType::INT32);
+// MotorProperty current_speed = MotorProperty(float(0.0f), PayloadType::UINT32);
+// MotorProperty is_moving = MotorProperty(EnableStatus::Disabled, PayloadType::UINT8);
+// MotorProperty mode0_status = MotorProperty(Mode0::Disable, PayloadType::UINT8);
+// MotorProperty calibration_status = MotorProperty(CalibrationResult::Calibrating, PayloadType::UINT8);
+// MotorProperty motor_status = MotorProperty(MotorStatus::UNKNOWN, PayloadType::UINT8);
+// MotorProperty run_motor_result = MotorProperty(RunMotorResult::UNKNOWN, PayloadType::UINT8);
+// MotorProperty motor_shaft_protection_status = MotorProperty(MotorShaftProtectionStatus::UNKNOWN, PayloadType::UINT8);
+// MotorProperty save_clean_state = MotorProperty(SaveCleanState::UNKNOWN, PayloadType::UINT8);
+// Property last_seen = Property(std::chrono::system_clock::time_point{});
+// Property dummy = MotorProperty(uint8_t(0), PayloadType::UINT8);
+// // Working current in mA (0-3000 mA)
+// uint16_t working_current = 0;
+
+// // Holding current in mA
+// uint16_t holding_current = 0;
+
+// // Motor rotation direction (0 = CW, 1 = CCW)
+// uint8_t motor_rotation_direction = 0;
+
+// // Subdivisions (usually a value like 16, 32, 64)
+// uint8_t subdivisions = 0;
+
+// // Enable pin configuration (0 = disabled, 1 = enabled)
+// uint8_t en_pin_config = 0;
+
+// // Key lock enable (0 = disabled, 1 = enabled)
+// bool key_lock_enabled = false;
+
+// // Auto turn off screen (0 = disabled, 1 = enabled)
+// bool auto_turn_off_screen = false;
+
+// // Locked rotor protection (0 = disabled, 1 = enabled)
+// bool locked_rotor_protection = false;
+
+// // Subdivision interpolation (0 = disabled, 1 = enabled)
+// bool subdivision_interpolation = false;
+
+// // CAN bus ID (default 0x01, 1-127)
+// uint8_t can_id = 1;
+
+// // CAN bus bitrate (e.g., 125, 250, 500 kbps)
+// uint8_t can_bitrate = 0;
+
+// // Group ID for the motor (used in CAN communication)
+// uint8_t group_id = 0;
+
+// // Home trigger level (0 = low, 1 = high)
+// uint8_t home_trig = 0;
+
+// // Home direction (0 = CW, 1 = CCW)
+// uint8_t home_dir = 0;
+
+// // Home speed (0-3000 RPM)
+// uint16_t home_speed = 0;
+
+// // End limit switch (0 = disabled, 1 = enabled)
+// uint8_t end_limit = 0;
+
+// // Emergency stop triggered (0 = not triggered, 1 = triggered)
+// bool emergency_stop_triggered = false;
+
+// // Motor enabled (0 = disabled, 1 = enabled)
+// bool is_enabled = false;
+
+// // Motor's current position (read from encoder)
+// int32_t current_position = 0;
+
+// // Target position for motor movement
+// int32_t target_position = 0;
+
+// // Motor's current speed in RPM
+// float current_speed = 0.0f;
+
+// // Whether the motor is currently moving (true = moving, false = stationary)
+// bool is_moving = false;
+
+// // Mode0 configuration (depending on the motor's specific mode, could be a uint8_t)
+// uint8_t mode0 = 0;
+
+// std::chrono::system_clock::time_point last_seen;
+
+// bool calibration_status = false;
+
+// std::any dummy;
 
 // template <typename T>
 // struct CommandPropertyMapping

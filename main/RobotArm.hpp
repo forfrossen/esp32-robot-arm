@@ -1,6 +1,5 @@
 #ifndef ROBOTARM_HPP
 #define ROBOTARM_HPP
-#include "Events.hpp"
 
 #include "CommandFactory.hpp"
 #include "CommandLifecycleRegistry.hpp"
@@ -11,6 +10,7 @@
 #include "freertos/FreeRTOS.h"
 #include <memory>
 
+#include "Events.hpp"
 class RobotArm
 {
 private:

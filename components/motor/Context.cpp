@@ -1,4 +1,5 @@
 #include "Context.hpp"
+
 ESP_EVENT_DEFINE_BASE(PROPERTY_CHANGE_EVENTS);
 
 esp_err_t MotorContext::get_semaphore()
@@ -23,40 +24,102 @@ esp_err_t MotorContext::transition_ready_state(ReadyState new_state)
     return ESP_OK;
 }
 
-template <typename T>
-T MotorContext::get_property(T MotorProperties::*property) const
+esp_err_t MotorContext::set_property(MotorPropertyVariant MotorProperties::*property, MotorPropertyVariant value)
 {
-    return properties[property];
+    // Use std::visit to handle different value types
+    return std::visit([this, property](auto &&val) -> esp_err_t
+                      {
+        using T = std::decay_t<decltype(val)>;
+
+        // Access the correct MotorProperty<T> by dereferencing the property pointer
+        auto& motor_property = this->properties.*property;
+
+        // Use std::any_cast with the correct pointer type
+        if (auto* motor_prop = std::any_cast<MotorProperty<T>*>(&motor_property))
+        {
+            motor_prop->set(val);  // Set the value for this property
+            return ESP_OK;
+        }
+
+        ESP_LOGE("MotorContext", "Failed to set property. Invalid type or property.");
+        return ESP_FAIL; }, value);
 }
 
-template <typename T>
-esp_err_t MotorContext::set_property(T MotorProperties::*property, T value)
+esp_err_t MotorContext::set_property_from_variant(MotorPropertyVariant &property, const MotorPropertyVariant &value)
 {
-    CHECK_THAT(get_semaphore() == ESP_OK);
-    if (xSemaphoreTake(context_mutex, portMAX_DELAY) == pdTRUE)
-    {
-        ESP_LOGI(FUNCTION_NAME, "Set property %s to %d", magic_enum::enum_name(property), value);
-        properties[property] = value;
-        post_property_change_event(property, value);
-        xSemaphoreGive(context_mutex);
-    }
-    else
-    {
-        ESP_LOGE(FUNCTION_NAME, "Failed to take mutex");
-    }
+    // Use std::visit to handle different types in the variant
+    return std::visit([&](auto &&val) -> esp_err_t
+                      {
+        using T = std::decay_t<decltype(val)>;
+
+        // Cast to the correct pointer type
+        if (auto* motor_prop = std::any_cast<MotorProperty<T>*>(&property))
+        {
+            motor_prop->set(val);  // Set the value for this property
+            return ESP_OK;
+        }
+
+        ESP_LOGE("MotorContext", "Failed to set property. Invalid type or property.");
+        return ESP_FAIL; }, value);
 }
 
-template <typename T>
-esp_err_t MotorContext::post_property_change_event(T MotorProperties::*property, const T &value)
-{
-    ESP_LOGI(FUNCTION_NAME, "Posting to PROPERTY_CHANGE_EVENTS");
+// // Explicit template instantiations for primitive types
+// template esp_err_t MotorContext::set_property<uint8_t>(MotorProperty<uint8_t> MotorProperties::*, uint8_t);
+// template esp_err_t MotorContext::set_property<uint16_t>(MotorProperty<uint16_t> MotorProperties::*, uint16_t);
+// template esp_err_t MotorContext::set_property<uint32_t>(MotorProperty<uint32_t> MotorProperties::*, uint32_t);
+// template esp_err_t MotorContext::set_property<uint64_t>(MotorProperty<uint64_t> MotorProperties::*, uint64_t);
+// template esp_err_t MotorContext::set_property<int16_t>(MotorProperty<int16_t> MotorProperties::*, int16_t);
+// template esp_err_t MotorContext::set_property<int32_t>(MotorProperty<int32_t> MotorProperties::*, int32_t);
+// template esp_err_t MotorContext::set_property<int64_t>(MotorProperty<int64_t> MotorProperties::*, int64_t);
 
-    std::unique_ptr<MotorPropertyChangeEventData<T>> data = std::make_unique(property, value);
+// // Explicit template instantiations for enum class types
+// template esp_err_t MotorContext::set_property<Direction>(MotorProperty<Direction> MotorProperties::*, Direction);
+// template esp_err_t MotorContext::set_property<EnPinEnable>(MotorProperty<EnPinEnable> MotorProperties::*, EnPinEnable);
+// template esp_err_t MotorContext::set_property<Enable>(MotorProperty<Enable> MotorProperties::*, Enable);
+// template esp_err_t MotorContext::set_property<EnableStatus>(MotorProperty<EnableStatus> MotorProperties::*, EnableStatus);
+// template esp_err_t MotorContext::set_property<MotorStatus>(MotorProperty<MotorStatus> MotorProperties::*, MotorStatus);
+// template esp_err_t MotorContext::set_property<RunMotorResult>(MotorProperty<RunMotorResult> MotorProperties::*, RunMotorResult);
+// template esp_err_t MotorContext::set_property<MotorShaftProtectionStatus>(MotorProperty<MotorShaftProtectionStatus> MotorProperties::*, MotorShaftProtectionStatus);
+// template esp_err_t MotorContext::set_property<Mode0>(MotorProperty<Mode0> MotorProperties::*, Mode0);
+// template esp_err_t MotorContext::set_property<SaveCleanState>(MotorProperty<SaveCleanState> MotorProperties::*, SaveCleanState);
+// template esp_err_t MotorContext::set_property<CalibrationResult>(MotorProperty<CalibrationResult> MotorProperties::*, CalibrationResult);
+// template esp_err_t MotorContext::set_property<EndStopLevel>(MotorProperty<EndStopLevel> MotorProperties::*, EndStopLevel);
+// template esp_err_t MotorContext::set_property<CanBitrate>(MotorProperty<CanBitrate> MotorProperties::*, CanBitrate);
 
-    esp_event_post_to(system_event_loop, SYSTEM_EVENTS, PROPERTY_CHANGE_EVENT, (void *)data.get(), sizeof(data), portMAX_DELAY);
+// esp_err_t MotorContext::set_meta_property(MotorPropertyVariant MotorProperties::*property, MotorPropertyVariant value)
+// {
+//     CHECK_THAT(get_semaphore() == ESP_OK);
 
-    return ESP_OK;
-}
+//     if (xSemaphoreTake(context_mutex, portMAX_DELAY) == pdTRUE)
+//     {
+//         // Log the property and value with a type-generic approach
+//         ESP_LOGI(FUNCTION_NAME, "Setting property to value");
+
+//         (properties.*property).set(value);
+
+//         // post_property_change_event(property, value);
+
+//         xSemaphoreGive(context_mutex);
+//     }
+//     else
+//     {
+//         ESP_LOGE(FUNCTION_NAME, "Failed to take mutex");
+//         return ESP_FAIL;
+//     }
+
+//     return ESP_OK;
+// }
+
+// esp_err_t MotorContext::post_property_change_event(MotorPropertyVariant MotorProperties::*property, const MotorPropertyVariant &value)
+// {
+//     ESP_LOGI(FUNCTION_NAME, "Posting to PROPERTY_CHANGE_EVENTS");
+
+//     // std::unique_ptr<MotorPropertyChangeEventData<T>> data = std::make_unique(property, value);
+
+//     esp_event_post_to(system_event_loop, SYSTEM_EVENTS, PROPERTY_CHANGE_EVENT, (void *)data.get(), sizeof(data), portMAX_DELAY);
+
+//     return ESP_OK;
+// }
 
 esp_err_t MotorContext::post_new_state_event()
 {

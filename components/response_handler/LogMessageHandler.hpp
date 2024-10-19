@@ -1,9 +1,9 @@
+#ifndef LOG_MESSAGE_HANDLER_HPP
+#define LOG_MESSAGE_HANDLER_HPP
+
 #include "ResponseHandlerBase.hpp"
 #include "esp_log.h"
 #include "utils.hpp"
-
-#ifndef LOG_MESSAGE_HANDLER_HPP
-#define LOG_MESSAGE_HANDLER_HPP
 
 class LogMessageHandler : public ResponseHandlerBase
 {

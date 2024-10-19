@@ -120,7 +120,7 @@ public:
         ESP_LOGI(FUNCTION_NAME, "Calculating payload size");
         CHECK_THAT(payload_info.has_value());
         ESP_RETURN_ON_ERROR(get_semaphore(), FUNCTION_NAME, "Failed to take mutex");
-        for (const auto &type : payload_info.value().payload_types)
+        for (const auto &type : payload_info.value().type_info)
         {
             switch (type)
             {

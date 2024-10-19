@@ -1,27 +1,27 @@
 #define MAGIC_ENUM_RANGE_MIN 0x00
 #define MAGIC_ENUM_RANGE_MAX 0xFF
 
-#include "Events.hpp"
-
-#include "Wifi.hpp"
-
-#include "RobotArm.hpp"
-#include "WebSocketServer.hpp"
-
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "freertos/FreeRTOS.h"
 #include "sdkconfig.h"
-#include "utils.hpp"
+
 #include <inttypes.h>
 #include <iostream>
 #include <memory>
-#include <regex>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <string>
+
+#include "Events.hpp"
+
+#include "RobotArm.hpp"
+#include "WebSocketServer.hpp"
+#include "Wifi.hpp"
+#include "esp_http_server.h"
+#include "nvs_flash.h"
+#include "utils.hpp"
 
 ESP_EVENT_DEFINE_BASE(SYSTEM_EVENTS);
 

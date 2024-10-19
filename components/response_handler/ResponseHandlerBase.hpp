@@ -1,9 +1,10 @@
+
+#ifndef RESPONSE_HANDLER_BASE_HPP
+#define RESPONSE_HANDLER_BASE_HPP
+
 #include "Context.hpp"
 #include "driver/twai.h" // Include the header file for twai_message_t
 #include <memory>
-
-#ifndef RESPONSE_HANDLER_HPP
-#define RESPONSE_HANDLER_HPP
 
 class ResponseHandlerBase
 {
@@ -31,4 +32,4 @@ public:
     }
 };
 
-#endif // RESPONSE_HANDLER_HPP
+#endif // RESPONSE_HANDLER_BASE_HPP

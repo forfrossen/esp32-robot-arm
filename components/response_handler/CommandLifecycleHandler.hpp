@@ -1,10 +1,9 @@
+#ifndef COMMAND_LIFECYCLE_HANDLER_HPP
+#define COMMAND_LIFECYCLE_HANDLER_HPP
 
 #include "ResponseHandlerBase.hpp"
 #include "esp_log.h"
 #include "utils.hpp"
-
-#ifndef COMMAND_LIFECYCLE_HANDLER_HPP
-#define COMMAND_LIFECYCLE_HANDLER_HPP
 
 class CommandLifecycleHandler : public ResponseHandlerBase
 {
