@@ -131,28 +131,30 @@ inline std::string replace_underscores(const std::string &str)
     return result;
 }
 
-#define SEND_COMMAND_BY_ID(mutex, command_factory, command_id, context, ret)        \
-    do                                                                              \
-    {                                                                               \
-        auto cmd = command_factory->create_command(command_id);                     \
-        ret = cmd->execute();                                                       \
-        if (ret != ESP_OK)                                                          \
-        {                                                                           \
-            context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR); \
-        }                                                                           \
-        delete cmd;                                                                 \
+#define SEND_COMMAND_BY_ID(mutex, command_factory, command_id, context, ret)                    \
+    do                                                                                          \
+    {                                                                                           \
+        auto cmd = command_factory->create_command(command_id);                                 \
+        ret = cmd->execute();                                                                   \
+        if (ret != ESP_OK)                                                                      \
+        {                                                                                       \
+            ESP_LOGE("SEND_COMMAND_BY_ID", "Error executing command: %s", GET_CMD(command_id)); \
+            context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);             \
+        }                                                                                       \
+        delete cmd;                                                                             \
     } while (0)
 
-#define SEND_COMMAND_BY_ID_WITH_PAYLOAD(mutex, cmd, context, ret)                   \
-    do                                                                              \
-    {                                                                               \
-        ret = cmd->execute();                                                       \
-        xSemaphoreGive(mutex);                                                      \
-        if (ret != ESP_OK)                                                          \
-        {                                                                           \
-            context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR); \
-        }                                                                           \
-        delete cmd;                                                                 \
+#define SEND_COMMAND_BY_ID_WITH_PAYLOAD(mutex, cmd, context, ret)                     \
+    do                                                                                \
+    {                                                                                 \
+        ret = cmd->execute();                                                         \
+        xSemaphoreGive(mutex);                                                        \
+        if (ret != ESP_OK)                                                            \
+        {                                                                             \
+            ESP_LOGE("SEND_COMMAND_BY_ID_WITH_PAYLOAD", "Error executing command: "); \
+            context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);   \
+        }                                                                             \
+        delete cmd;                                                                   \
     } while (0)
 
 // Function to get the enum name from twai_message_t.data[0]

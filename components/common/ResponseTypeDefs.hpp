@@ -42,7 +42,7 @@ const std::map<CommandIds, ResponseInformation> g_response_payload_map = {
     {READ_GO_BACK_TO_ZERO_STATUS_WHEN_POWER_ON, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"home_trig"})},
     {SET_WORKING_CURRENT, ResponseInformation(CommandPayloadInfo(PayloadType::UINT16), {"working_current"})},
     {SET_SUBDIVISIONS, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"subdivisions"})},
-    {SET_EN_PIN_CONFIG, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"en_pin_config"})},
+    {SET_EN_PIN_CONFIG, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"set_en_pin_config_status"})},
     {SET_MOTOR_ROTATION_DIRECTION, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"motor_rotation_direction"})},
     {SET_AUTO_TURN_OFF_SCREEN, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"auto_turn_off_screen"})},
     {SET_MOTOR_SHAFT_LOCKED_ROTOR_PROTECTION, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"locked_rotor_protection"})},
@@ -52,10 +52,10 @@ const std::map<CommandIds, ResponseInformation> g_response_payload_map = {
     {SET_KEY_LOCK_ENABLE, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"key_lock_enabled"})},
     {SET_HOME, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"home_dir"})},
     {RUN_MOTOR_SPEED_MODE, ResponseInformation(CommandPayloadInfo(PayloadType::UINT32), {"current_speed"})},
-    {RUN_MOTOR_ABSOLUTE_MOTION_BY_AXIS, ResponseInformation(CommandPayloadInfo(PayloadType::INT32), {"target_position"})},
-    {RUN_MOTOR_RELATIVE_MOTION_BY_AXIS, ResponseInformation(CommandPayloadInfo(PayloadType::INT32), {"target_position"})},
-    {RUN_MOTOR_RELATIVE_MOTION_BY_PULSES, ResponseInformation(CommandPayloadInfo(PayloadType::INT32), {"target_position"})},
-    {RUN_MOTOR_ABSOLUTE_MOTION_BY_PULSES, ResponseInformation(CommandPayloadInfo(PayloadType::INT32), {"target_position"})},
+    {RUN_MOTOR_ABSOLUTE_MOTION_BY_AXIS, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"run_motor_result"})},
+    {RUN_MOTOR_RELATIVE_MOTION_BY_AXIS, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"run_motor_result"})},
+    {RUN_MOTOR_RELATIVE_MOTION_BY_PULSES, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"run_motor_result"})},
+    {RUN_MOTOR_ABSOLUTE_MOTION_BY_PULSES, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"run_motor_result"})},
     {READ_ENCODED_VALUE_ADDITION, ResponseInformation(CommandPayloadInfo(PayloadType::INT32), {"current_position"})},
     {READ_MOTOR_SPEED, ResponseInformation(CommandPayloadInfo(PayloadType::UINT32), {"current_speed"})},
     {READ_NUM_PULSES_RECEIVED, ResponseInformation(CommandPayloadInfo(PayloadType::INT32), {"target_position"})},
@@ -63,6 +63,8 @@ const std::map<CommandIds, ResponseInformation> g_response_payload_map = {
     {LAST_SEEN, ResponseInformation(CommandPayloadInfo(PayloadType::VOID), {"last_seen"})}
 
 };
+
+#endif // RESPONSE_TYPEDEFS_HPP
 // {LAST_SEEN, ResponseInformation(CommandPayloadInfo(PayloadType::CHRONO), ResponseProperties{std::any(&MotorProperties::last_seen})} // Last seen time
 // {QUERY_MOTOR_STATUS, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), ResponseProperties{std::any(&MotorProperties::motor_status)})},
 // {MOTOR_CALIBRATION, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), ResponseProperties{std::any(&MotorProperties::calibration_status)})},
@@ -139,5 +141,3 @@ const std::map<CommandIds, ResponseInformation> g_response_payload_map = {
 
 //     {LAST_SEEN, ResponseInformation(CommandPayloadInfo(PayloadType::CHRONO), std::array<std::any, 7>{&MotorProperties::last_seen})}, // Last seen time
 // };
-
-#endif // RESPONSE_TYPEDEFS_HPP

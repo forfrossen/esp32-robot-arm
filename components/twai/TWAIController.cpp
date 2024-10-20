@@ -86,6 +86,7 @@ esp_err_t TWAIController::setupQueues()
 
 void TWAIController::post_event(uint32_t id, twai_message_t *msg)
 {
+    ESP_LOGI(FUNCTION_NAME, "Posting twai_message to motor event loop");
     esp_err_t ret = esp_event_post_to(get_event_loop_for_id(id), MOTOR_EVENTS, INCOMING_MESSAGE_EVENT, (void *)msg, sizeof(twai_message_t), portMAX_DELAY);
     if (ret != ESP_OK)
     {
@@ -154,7 +155,7 @@ void TWAIController::vTask_Reception(void *pvParameters)
 void TWAIController::outgoing_message_event_handler(void *args, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     TWAIController *instance = static_cast<TWAIController *>(args);
-
+    ESP_LOGI(FUNCTION_NAME, "new outgoing message event");
     if (event_base != SYSTEM_EVENTS || event_id != OUTGOING_MESSAGE_EVENT)
     {
         ESP_LOGE(FUNCTION_NAME, "Invalid event");

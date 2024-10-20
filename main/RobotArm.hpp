@@ -14,12 +14,6 @@
 class RobotArm
 {
 private:
-    esp_event_loop_args_t system_loop_args = {
-        .queue_size = 10,
-        .task_name = "system_event_task",
-        .task_priority = 1,
-        .task_stack_size = 1024 * 10,
-        .task_core_id = tskNO_AFFINITY};
     esp_event_loop_handle_t system_event_loop;
     EventGroupHandle_t system_event_group;
     std::map<uint8_t, MotorController *> servos;
@@ -27,7 +21,7 @@ private:
     std::shared_ptr<CommandLifecycleRegistry> command_lifecyle_registry = std::make_shared<CommandLifecycleRegistry>();
 
 public:
-    RobotArm()
+    RobotArm(esp_event_loop_handle_t system_event_loop) : system_event_loop(system_event_loop)
     {
         ESP_LOGI(FUNCTION_NAME, "RobotArm constructor called");
         system_event_group = xEventGroupCreate();
@@ -37,8 +31,6 @@ public:
             ESP_LOGE(FUNCTION_NAME, "Error creating event group");
         }
 
-        ESP_ERROR_CHECK(esp_event_loop_create(&system_loop_args, &system_event_loop));
-
         esp_err_t ret = esp_event_post_to(
             system_event_loop,
             SYSTEM_EVENTS,
@@ -47,11 +39,16 @@ public:
             0,
             portMAX_DELAY);
 
+        if (ret != ESP_OK)
+        {
+            ESP_LOGE(FUNCTION_NAME, "Failed to post ARM_INITIALIZING event");
+        }
+
         twai_controller = std::make_shared<TWAIController>(system_event_loop);
 
         for (int i = 1; i < 4; i++)
         {
-            if (i == 1)
+            if (i == 2)
             {
                 const std::shared_ptr<MotorControllerDependencies> motor_controller_dependencies = motor_controller_dependencies_init(i);
                 if (motor_controller_dependencies == nullptr)

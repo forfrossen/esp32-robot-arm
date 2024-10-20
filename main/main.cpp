@@ -27,6 +27,14 @@ ESP_EVENT_DEFINE_BASE(SYSTEM_EVENTS);
 
 const char compile_date[] = __DATE__ " " __TIME__;
 
+esp_event_loop_args_t system_loop_args = {
+    .queue_size = 10,
+    .task_name = "system_event_task",
+    .task_priority = 1,
+    .task_stack_size = 1024 * 10,
+    .task_core_id = tskNO_AFFINITY};
+esp_event_loop_handle_t system_event_loop;
+
 RobotArm *robot_arm;
 static httpd_handle_t server = NULL;
 
@@ -69,7 +77,9 @@ extern "C" void app_main()
 
     ESP_ERROR_CHECK(esp_netif_init());
 
-    robot_arm = new RobotArm();
+    ESP_ERROR_CHECK(esp_event_loop_create(&system_loop_args, &system_event_loop));
+
+    robot_arm = new RobotArm(system_event_loop);
 
     ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
@@ -85,6 +95,12 @@ extern "C" void app_main()
 
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &connect_handler, &server));
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &disconnect_handler, &server));
+    ESP_ERROR_CHECK(esp_event_handler_register_with(
+        system_event_loop,
+        SYSTEM_EVENTS,
+        PROPERTY_CHANGE_EVENT,
+        property_change_event_handler,
+        &server));
 
     server = start_webserver();
 }

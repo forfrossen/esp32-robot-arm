@@ -47,19 +47,6 @@ private:
     esp_err_t handle_received_no_error();
     esp_err_t check_for_error_and_do_transition(twai_message_t *msg);
 
-    esp_err_t handle_generic_response(twai_message_t *msg);
-    esp_err_t handle_read_uint16_response(twai_message_t *msg);
-    esp_err_t handle_set_command_response(twai_message_t *msg);
-    esp_err_t handle_query_status_response(twai_message_t *msg);
-    esp_err_t handle_query_motor_position_response(twai_message_t *msg);
-    esp_err_t handle_query_motor_speed_response(twai_message_t *msg);
-    esp_err_t handle_set_position_response(twai_message_t *msg);
-    esp_err_t handle_set_home_response(twai_message_t *msg);
-    esp_err_t handle_set_work_mode_response(twai_message_t *msg);
-    esp_err_t handle_set_current_response(twai_message_t *msg);
-
-    esp_err_t print_unknown_response_code(twai_message_t *msg);
-
     static void incoming_message_event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);
 };
 

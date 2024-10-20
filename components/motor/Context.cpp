@@ -87,13 +87,56 @@ esp_err_t MotorContext::post_new_state_event()
 //     return ESP_OK;
 // }
 
-// esp_err_t MotorContext::post_property_change_event(MotorPropertyVariant MotorProperties::*property, const MotorPropertyVariant &value)
-// {
-//     ESP_LOGI(FUNCTION_NAME, "Posting to PROPERTY_CHANGE_EVENTS");
+esp_err_t MotorContext::post_property_change_event(const std::string &property_name, const void *value_ptr, PayloadType type)
+{
+    // Prepare the event data
+    PropertyChangeEventData event_data{};
+    event_data.property_name = property_name;
+    event_data.type = type;
 
-//     // std::unique_ptr<MotorPropertyChangeEventData<T>> data = std::make_unique(property, value);
+    // Copy the value based on the type
+    switch (type)
+    {
+    case PayloadType::UINT4:
+    case PayloadType::UINT8:
+        event_data.value.uint8_value = *reinterpret_cast<const uint8_t *>(value_ptr);
+        break;
+    case PayloadType::UINT16:
+        event_data.value.uint16_value = *reinterpret_cast<const uint16_t *>(value_ptr);
+        break;
+    case PayloadType::INT16:
+        event_data.value.int16_value = *reinterpret_cast<const int16_t *>(value_ptr);
+        break;
+    case PayloadType::INT24:
+    case PayloadType::INT32:
+        event_data.value.int32_value = *reinterpret_cast<const int32_t *>(value_ptr);
+        break;
+    case PayloadType::UINT24:
+    case PayloadType::UINT32:
+        event_data.value.uint32_value = *reinterpret_cast<const uint32_t *>(value_ptr);
+        break;
+    case PayloadType::UINT48:
+        event_data.value.uint48_value = *reinterpret_cast<const uint64_t *>(value_ptr);
+        break;
+    case PayloadType::CHRONO:
+        event_data.value.chrono_value = *reinterpret_cast<const std::chrono::system_clock::time_point *>(value_ptr);
+        break;
 
-//     esp_event_post_to(system_event_loop, SYSTEM_EVENTS, PROPERTY_CHANGE_EVENT, (void *)data.get(), sizeof(data), portMAX_DELAY);
+    case PayloadType::VOID:
+    default:
+        ESP_LOGE("post_property_change_event", "Unsupported PayloadType for property: %s", property_name.c_str());
+        return ESP_FAIL;
+    }
 
-//     return ESP_OK;
-// }
+    ESP_LOGI(FUNCTION_NAME, "Posting to PROPERTY_CHANGE_EVENTS");
+
+    CHECK_THAT(esp_event_post_to(
+                   system_event_loop,
+                   SYSTEM_EVENTS,
+                   PROPERTY_CHANGE_EVENT,
+                   &event_data,
+                   sizeof(event_data),
+                   portMAX_DELAY) == ESP_OK);
+
+    return ESP_OK;
+}

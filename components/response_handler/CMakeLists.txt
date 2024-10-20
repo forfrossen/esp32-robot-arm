@@ -1,6 +1,6 @@
 idf_component_register(
   SRCS 
-    ""
+    "DataExtractor.cpp"
 
 REQUIRES driver
 REQUIRES esp_event

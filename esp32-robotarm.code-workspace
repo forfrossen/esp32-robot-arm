@@ -80,7 +80,9 @@
       "esp_err.h": "c",
       "forward_list": "cpp",
       "unordered_set": "cpp",
-      "any": "cpp"
+      "any": "cpp",
+      "cfloat": "cpp",
+      "climits": "cpp"
     },
     "editor.detectIndentation": false,
     "editor.tabSize": 4,

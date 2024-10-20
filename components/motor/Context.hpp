@@ -18,14 +18,6 @@
 #include <cstdint>
 #include <variant>
 
-template <typename T>
-struct MotorPropertyChangeEventData
-{
-    T MotorProperties::*property;
-    T value;
-    MotorPropertyChangeEventData(T MotorProperties::*property, T value) : property(property), value(value) {}
-};
-
 class MotorContext
 {
 public:
@@ -95,46 +87,9 @@ private:
 
     esp_err_t post_new_state_event();
 
-    template <typename T>
-    esp_err_t post_property_change_event(T MotorProperties::*property, const T &value);
+    esp_err_t post_property_change_event(const std::string &property_name, const void *value_ptr, PayloadType type);
 
     esp_err_t get_semaphore();
 };
 
 #endif // MOTORCONTEXT_HPP
-
-/* // Macro to create a setter
-#define CREATE_SETTER(type, name) \
-    void set_##name(type value) { properties.name = value; }
-
-// Macro to create a getter
-#define CREATE_GETTER(type, name) \
-    type get_##name() const { return properties.name; }
-
-// Macro to create both setter and getter
-#define CREATE_PROPERTY(type, name) \
-    CREATE_GETTER(type, name)       \
-    CREATE_SETTER(type, name)
-
-    // Automatically generate getters and setters using the macro
-    CREATE_PROPERTY(uint16_t, working_current)
-    CREATE_PROPERTY(uint16_t, holding_current)
-    CREATE_PROPERTY(uint8_t, motor_rotation_direction)
-    CREATE_PROPERTY(uint8_t, subdivisions)
-    CREATE_PROPERTY(uint8_t, en_pin_config)
-    CREATE_PROPERTY(bool, key_lock_enabled)
-    CREATE_PROPERTY(bool, auto_turn_off_screen)
-    CREATE_PROPERTY(bool, locked_rotor_protection)
-    CREATE_PROPERTY(uint8_t, can_id)
-    CREATE_PROPERTY(uint8_t, can_bitrate)
-    CREATE_PROPERTY(uint8_t, group_id)
-    CREATE_PROPERTY(uint8_t, home_trig)
-    CREATE_PROPERTY(uint8_t, home_dir)
-    CREATE_PROPERTY(uint16_t, home_speed)
-    CREATE_PROPERTY(uint8_t, end_limit)
-    CREATE_PROPERTY(bool, emergency_stop_triggered)
-    CREATE_PROPERTY(bool, is_enabled)
-    CREATE_PROPERTY(int32_t, current_position)
-    CREATE_PROPERTY(int32_t, target_position)
-    CREATE_PROPERTY(float, current_speed)
-    CREATE_PROPERTY(bool, is_moving) */

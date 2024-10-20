@@ -64,7 +64,7 @@ static esp_err_t echo_handler(httpd_req_t *req)
     {
         ESP_LOGI(FUNCTION_NAME, "Handshake done, the new connection was opened");
         // Get WebSocket session ID
-        int ws_fd = httpd_req_to_sockfd(req);
+        httpd_req_to_sockfd(req);
 
         // Send a welcome message
         const char *message = "Welcome to ESP32 WebSocket Server!";
@@ -192,7 +192,7 @@ static void connect_handler(void *arg, esp_event_base_t event_base,
 static void property_change_event_handler(void *args, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
 
-    esp_err_t ret;
+    // esp_err_t ret;
 
     ESP_LOGI(FUNCTION_NAME, "GOT PROPERTY CHANGE EVENT, EVENT_BASE: %s, EVENT_ID: %lu", event_base, event_id);
 

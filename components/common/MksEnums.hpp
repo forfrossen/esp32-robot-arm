@@ -218,6 +218,7 @@ enum class PayloadType
     VOID,
     UINT4,
     UINT8,
+    UINT12,
     UINT16,
     UINT24,
     UINT32,
@@ -226,7 +227,7 @@ enum class PayloadType
     INT24,
     INT32,
     INT48,
-    CHRONO,
+    CHRONO
 };
 
 inline size_t get_payload_type_size(PayloadType type)
@@ -236,26 +237,27 @@ inline size_t get_payload_type_size(PayloadType type)
     case PayloadType::VOID:
         return 0;
     case PayloadType::UINT4:
+        return 4;
     case PayloadType::UINT8:
-        return 1;
-    case PayloadType::UINT16:
-        return 2;
-    case PayloadType::UINT24:
-        return 3;
-    case PayloadType::UINT32:
-        return 4;
-    case PayloadType::UINT48:
-        return 6;
-    case PayloadType::INT16:
-        return 2;
-    case PayloadType::INT24:
-        return 3;
-    case PayloadType::INT32:
-        return 4;
-    case PayloadType::INT48:
-        return 6;
-    case PayloadType::CHRONO:
         return 8;
+    case PayloadType::UINT16:
+        return 16;
+    case PayloadType::UINT24:
+        return 24;
+    case PayloadType::UINT32:
+        return 32;
+    case PayloadType::UINT48:
+        return 48;
+    case PayloadType::INT16:
+        return 16;
+    case PayloadType::INT24:
+        return 24;
+    case PayloadType::INT32:
+        return 32;
+    case PayloadType::INT48:
+        return 48;
+    case PayloadType::CHRONO:
+        return 64;
     default:
         return 0;
     }

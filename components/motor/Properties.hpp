@@ -15,30 +15,55 @@
 #include <map>
 #include <typeinfo>
 
+struct PropertyChangeEventData
+{
+    std::string property_name;
+    PayloadType type;
+    union
+    {
+        uint8_t uint8_value;
+        uint16_t uint16_value;
+        int16_t int16_value;
+        int32_t int32_value;
+        uint32_t uint32_value;
+        uint64_t uint48_value;
+        std::chrono::system_clock::time_point chrono_value;
+    } value;
+};
+
 struct PropertyMetadata
 {
     std::string name;
     PayloadType type;
-    size_t offset; // Offset within MotorProperties
-    size_t size;   // Size of the property type
-    bool is_enum;  // Indicates if the property is an enum
+    size_t offset;
+    size_t size;
+    bool is_enum;
+    bool (*setter)(void *, uint64_t);
 };
 
 struct MotorProperties
 {
     MotorStatus motor_status;
-    CalibrationResult calibration_status;
-    float current_speed;
     int32_t current_position;
     int32_t target_position;
+
+    // Command Response Properties
+    RunMotorResult run_motor_result;
+    CalibrationResult calibration_status;
+    float current_speed;
+
+    // CAN Related Properties
     uint8_t can_id;
     uint8_t can_bitrate;
     uint8_t group_id;
+
+    // Settings of the Motor
     uint16_t working_current;
     uint16_t holding_current;
     Direction motor_rotation_direction;
     uint8_t subdivisions;
     EnPinEnable en_pin_config;
+    SuccessStatus set_en_pin_config_status;
     bool key_lock_enabled;
     bool auto_turn_off_screen;
     bool locked_rotor_protection;
@@ -51,13 +76,41 @@ struct MotorProperties
     bool is_enabled;
     Mode0 mode0_status;
     MotorShaftProtectionStatus motor_shaft_protection_status;
+
     SaveCleanState save_clean_state;
+
     std::chrono::system_clock::time_point last_seen;
     std::any dummy;
 };
 
 extern std::map<std::string, PropertyMetadata> property_metadata_map;
 
+extern bool set_uint8_property(void *prop_ptr, uint64_t raw_value);
+// For uint16_t properties
+extern bool set_uint16_property(void *prop_ptr, uint64_t raw_value);
+// For uint32_t properties
+extern bool set_uint32_property(void *prop_ptr, uint64_t raw_value);
+// For int16_t properties (with sign extension)
+extern bool set_int16_property(void *prop_ptr, uint64_t raw_value);
+// For int32_t properties (with sign extension)
+extern bool set_int32_property(void *prop_ptr, uint64_t raw_value);
+// For uint24_t properties
+extern bool set_uint24_property(void *prop_ptr, uint64_t raw_value);
+// For int48_t properties (with sign extension)
+extern bool set_int48_property(void *prop_ptr, uint64_t raw_value);
+// For enum properties (assuming underlying type is uint8_t)
+template <typename EnumType>
+bool set_enum_uint8_property(void *prop_ptr, uint64_t raw_value)
+{
+    auto *prop_typed_ptr = reinterpret_cast<EnumType *>(prop_ptr);
+    EnumType new_value = static_cast<EnumType>(static_cast<uint8_t>(raw_value & 0xFF));
+    if (*prop_typed_ptr != new_value)
+    {
+        *prop_typed_ptr = new_value;
+        return true;
+    }
+    return false;
+}
 #endif // MOTOR_PROPERTIES_HPP
 
 // struct MotorProperties

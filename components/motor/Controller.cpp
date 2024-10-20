@@ -36,14 +36,19 @@ void MotorController::state_transition_event_handler(void *handler_arg, esp_even
     case MotorContext::ReadyState::MOTOR_INITIALIZED:
         ESP_LOGI("MotorEventLoopHandler", "Handling MOTOR_EVENT_INIT.");
         ret = instance->start_basic_tasks();
-        ret != ESP_OK && instance->context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);
+        if (ret != ESP_OK)
+        {
+            ESP_LOGE("MotorEventLoopHandler", "Error starting basic tasks. Error: %s", esp_err_to_name(ret));
+            instance->context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);
+        }
         break;
 
     case MotorContext::ReadyState::MOTOR_ERROR:
         ESP_LOGE("MotorEventLoopHandler", "Handling MOTOR_EVENT_ERROR.");
         xEventGroupClearBits(instance->motor_event_group, MOTOR_READY_BIT);
         xEventGroupSetBits(instance->motor_event_group, MOTOR_ERROR_BIT);
-        instance->stop_timed_tasks();
+        instance->context->transition_ready_state(MotorContext::ReadyState::MOTOR_RECOVERING);
+        // instance->stop_timed_tasks();
         break;
 
     case MotorContext::ReadyState::MOTOR_READY:
@@ -87,6 +92,11 @@ void MotorController::vTask_query_status(void *pvParameters)
         {
             ESP_LOGE(FUNCTION_NAME, "Error enqueing query-status-command. Error counter: %d", local_error_counter);
             local_error_counter < 5 && local_error_counter++;
+        }
+        else
+        {
+            local_error_counter = 0;
+            ESP_LOGI(FUNCTION_NAME, "Query status command enqueued successfully");
         }
 
         vTaskDelay((4000 * (local_error_counter + 1)) / portTICK_PERIOD_MS);
@@ -168,8 +178,6 @@ esp_err_t MotorController::start_basic_tasks()
 esp_err_t MotorController::start_timed_tasks()
 {
     BaseType_t xReturned;
-    esp_err_t ret;
-
     ESP_LOGI(FUNCTION_NAME, "Initializing tasks");
 
     // if (task_handle_query_position == nullptr)
@@ -183,7 +191,6 @@ esp_err_t MotorController::start_timed_tasks()
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     if (task_handle_send_position == nullptr)
     {
-
         xReturned = xTaskCreatePinnedToCore(&MotorController::vtask_send_positon, "TASK_SendRandomTargetPositionCommands", 1024 * 3, this, 4, &task_handle_send_position, tskNO_AFFINITY);
         CHECK_THAT(task_handle_send_position != nullptr);
         CHECK_THAT(xReturned == pdPASS);
