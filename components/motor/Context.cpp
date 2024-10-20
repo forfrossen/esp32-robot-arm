@@ -24,43 +24,20 @@ esp_err_t MotorContext::transition_ready_state(ReadyState new_state)
     return ESP_OK;
 }
 
-esp_err_t MotorContext::set_property(MotorPropertyVariant MotorProperties::*property, MotorPropertyVariant value)
+esp_err_t MotorContext::post_new_state_event()
 {
-    // Use std::visit to handle different value types
-    return std::visit([this, property](auto &&val) -> esp_err_t
-                      {
-        using T = std::decay_t<decltype(val)>;
+    ESP_LOGI(FUNCTION_NAME, "Posting to MOTOR_EVENTS: %d \t %s", static_cast<int>(ready_state), magic_enum::enum_name(ready_state).data());
 
-        // Access the correct MotorProperty<T> by dereferencing the property pointer
-        auto& motor_property = this->properties.*property;
+    ESP_ERROR_CHECK(esp_event_post_to(
+        motor_event_loop,
+        MOTOR_EVENTS,
+        STATE_TRANSITION_EVENT,
+        (void *)&ready_state,
+        sizeof(ReadyState),
+        portMAX_DELAY));
 
-        // Use std::any_cast with the correct pointer type
-        if (auto* motor_prop = std::any_cast<MotorProperty<T>*>(&motor_property))
-        {
-            motor_prop->set(val);  // Set the value for this property
-            return ESP_OK;
-        }
-
-        ESP_LOGE("MotorContext", "Failed to set property. Invalid type or property.");
-        return ESP_FAIL; }, value);
-}
-
-esp_err_t MotorContext::set_property_from_variant(MotorPropertyVariant &property, const MotorPropertyVariant &value)
-{
-    // Use std::visit to handle different types in the variant
-    return std::visit([&](auto &&val) -> esp_err_t
-                      {
-        using T = std::decay_t<decltype(val)>;
-
-        // Cast to the correct pointer type
-        if (auto* motor_prop = std::any_cast<MotorProperty<T>*>(&property))
-        {
-            motor_prop->set(val);  // Set the value for this property
-            return ESP_OK;
-        }
-
-        ESP_LOGE("MotorContext", "Failed to set property. Invalid type or property.");
-        return ESP_FAIL; }, value);
+    ESP_LOGI(FUNCTION_NAME, "Posted to MOTOR_EVENTS");
+    return ESP_OK;
 }
 
 // // Explicit template instantiations for primitive types
@@ -120,19 +97,3 @@ esp_err_t MotorContext::set_property_from_variant(MotorPropertyVariant &property
 
 //     return ESP_OK;
 // }
-
-esp_err_t MotorContext::post_new_state_event()
-{
-    ESP_LOGI(FUNCTION_NAME, "Posting to MOTOR_EVENTS: %d \t %s", static_cast<int>(ready_state), magic_enum::enum_name(ready_state).data());
-
-    ESP_ERROR_CHECK(esp_event_post_to(
-        motor_event_loop,
-        MOTOR_EVENTS,
-        STATE_TRANSITION_EVENT,
-        (void *)&ready_state,
-        sizeof(ReadyState),
-        portMAX_DELAY));
-
-    ESP_LOGI(FUNCTION_NAME, "Posted to MOTOR_EVENTS");
-    return ESP_OK;
-}

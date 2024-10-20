@@ -3,6 +3,7 @@ idf_component_register(
    "Controller.cpp"
    "Context.cpp"
    "ResponseHandler.cpp"   
+   "Properties.cpp"
 REQUIRES driver
 REQUIRES esp_event
 REQUIRES esp_wifi
