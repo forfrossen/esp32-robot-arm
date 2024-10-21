@@ -10,6 +10,7 @@
 #include "../common/utils.hpp"
 
 #include "CommandBase.hpp"
+#include "CommandLifecycleRegistry.hpp"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "freertos/queue.h"
@@ -88,7 +89,11 @@ public:
 
     esp_err_t register_command()
     {
-        // command_lifecycle_registry->register_command(id, command_id);
+        ESP_RETURN_ON_ERROR(
+            command_lifecycle_registry->register_command(id, command_id, msg),
+            FUNCTION_NAME,
+            "Failed to register command for motor");
+
         return ESP_OK;
     }
 

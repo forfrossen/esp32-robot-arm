@@ -37,6 +37,7 @@ struct PropertyMetadata
     PayloadType type;
     size_t offset;
     size_t size;
+
     bool is_enum;
     bool (*setter)(void *, uint64_t);
 };
@@ -78,39 +79,28 @@ struct MotorProperties
     MotorShaftProtectionStatus motor_shaft_protection_status;
 
     SaveCleanState save_clean_state;
-
-    std::chrono::system_clock::time_point last_seen;
     std::any dummy;
 };
 
+extern bool set_uint8_property(void *prop_ptr, uint64_t raw_value);
+
+extern bool set_uint16_property(void *prop_ptr, uint64_t raw_value);
+
+extern bool set_uint32_property(void *prop_ptr, uint64_t raw_value);
+
+extern bool set_int16_property(void *prop_ptr, uint64_t raw_value);
+
+extern bool set_int32_property(void *prop_ptr, uint64_t raw_value);
+
+extern bool set_uint24_property(void *prop_ptr, uint64_t raw_value);
+
+extern bool set_int48_property(void *prop_ptr, uint64_t raw_value);
+
+template <typename EnumType>
+extern bool set_enum_uint8_property(void *prop_ptr, uint64_t raw_value);
+
 extern std::map<std::string, PropertyMetadata> property_metadata_map;
 
-extern bool set_uint8_property(void *prop_ptr, uint64_t raw_value);
-// For uint16_t properties
-extern bool set_uint16_property(void *prop_ptr, uint64_t raw_value);
-// For uint32_t properties
-extern bool set_uint32_property(void *prop_ptr, uint64_t raw_value);
-// For int16_t properties (with sign extension)
-extern bool set_int16_property(void *prop_ptr, uint64_t raw_value);
-// For int32_t properties (with sign extension)
-extern bool set_int32_property(void *prop_ptr, uint64_t raw_value);
-// For uint24_t properties
-extern bool set_uint24_property(void *prop_ptr, uint64_t raw_value);
-// For int48_t properties (with sign extension)
-extern bool set_int48_property(void *prop_ptr, uint64_t raw_value);
-// For enum properties (assuming underlying type is uint8_t)
-template <typename EnumType>
-bool set_enum_uint8_property(void *prop_ptr, uint64_t raw_value)
-{
-    auto *prop_typed_ptr = reinterpret_cast<EnumType *>(prop_ptr);
-    EnumType new_value = static_cast<EnumType>(static_cast<uint8_t>(raw_value & 0xFF));
-    if (*prop_typed_ptr != new_value)
-    {
-        *prop_typed_ptr = new_value;
-        return true;
-    }
-    return false;
-}
 #endif // MOTOR_PROPERTIES_HPP
 
 // struct MotorProperties

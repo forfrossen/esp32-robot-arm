@@ -31,6 +31,28 @@
         return false;                                                        \
     }
 
+// Define the property setter functions using the macro
+DEFINE_SET_PROPERTY_FUNCTION(uint8_t, set_uint8_property, 0xFF)
+DEFINE_SET_PROPERTY_FUNCTION(uint16_t, set_uint16_property, 0xFFFF)
+DEFINE_SET_PROPERTY_FUNCTION(uint32_t, set_uint32_property, 0xFFFFFFFF)
+DEFINE_SET_PROPERTY_FUNCTION(uint32_t, set_uint24_property, 0xFFFFFF)
+DEFINE_SET_SIGNED_PROPERTY_FUNCTION(int16_t, set_int16_property, 0xFFFF, 0x8000)
+DEFINE_SET_SIGNED_PROPERTY_FUNCTION(int32_t, set_int32_property, 0xFFFFFFFF, 0x80000000)
+DEFINE_SET_SIGNED_PROPERTY_FUNCTION(int64_t, set_int48_property, 0xFFFFFFFFFFFF, 0x800000000000)
+
+template <typename EnumType>
+bool set_enum_uint8_property(void *prop_ptr, uint64_t raw_value)
+{
+    auto *prop_typed_ptr = reinterpret_cast<EnumType *>(prop_ptr);
+    EnumType new_value = static_cast<EnumType>(static_cast<uint8_t>(raw_value & 0xFF));
+    if (*prop_typed_ptr != new_value)
+    {
+        *prop_typed_ptr = new_value;
+        return true;
+    }
+    return false;
+}
+
 std::map<std::string, PropertyMetadata> property_metadata_map = {
     {"motor_status", {"motor_status", PayloadType::UINT8, offsetof(MotorProperties, motor_status), sizeof(MotorStatus), true, &set_enum_uint8_property<MotorStatus>}},
     {"run_motor_result", {"run_motor_result", PayloadType::UINT8, offsetof(MotorProperties, run_motor_result), sizeof(RunMotorResult), true, &set_enum_uint8_property<RunMotorResult>}},
@@ -62,17 +84,8 @@ std::map<std::string, PropertyMetadata> property_metadata_map = {
     {"mode0_status", {"mode0_status", PayloadType::UINT8, offsetof(MotorProperties, mode0_status), sizeof(uint8_t), false, &set_uint8_property}},
     {"motor_shaft_protection_status", {"motor_shaft_protection_status", PayloadType::UINT8, offsetof(MotorProperties, motor_shaft_protection_status), sizeof(uint8_t), false, &set_uint8_property}},
     {"save_clean_state", {"save_clean_state", PayloadType::UINT8, offsetof(MotorProperties, save_clean_state), sizeof(uint8_t), false, &set_uint8_property}},
-    {"last_seen", {"last_seen", PayloadType::VOID, offsetof(MotorProperties, last_seen), sizeof(std::chrono::system_clock::time_point), false, &set_uint8_property}},
+    // {"last_seen", {"last_seen", PayloadType::VOID, offsetof(MotorProperties, last_seen), sizeof(std::chrono::system_clock::time_point), false, &set_uint8_property}},
     {"dummy", {"dummy", PayloadType::VOID, offsetof(MotorProperties, dummy), sizeof(std::any), false, &set_uint8_property}}};
-
-// Define the property setter functions using the macro
-DEFINE_SET_PROPERTY_FUNCTION(uint8_t, set_uint8_property, 0xFF)
-DEFINE_SET_PROPERTY_FUNCTION(uint16_t, set_uint16_property, 0xFFFF)
-DEFINE_SET_PROPERTY_FUNCTION(uint32_t, set_uint32_property, 0xFFFFFFFF)
-DEFINE_SET_PROPERTY_FUNCTION(uint32_t, set_uint24_property, 0xFFFFFF)
-DEFINE_SET_SIGNED_PROPERTY_FUNCTION(int16_t, set_int16_property, 0xFFFF, 0x8000)
-DEFINE_SET_SIGNED_PROPERTY_FUNCTION(int32_t, set_int32_property, 0xFFFFFFFF, 0x80000000)
-DEFINE_SET_SIGNED_PROPERTY_FUNCTION(int64_t, set_int48_property, 0xFFFFFFFFFFFF, 0x800000000000)
 
 // bool set_uint8_property(void *prop_ptr, uint64_t raw_value)
 // {

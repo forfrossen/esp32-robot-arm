@@ -86,6 +86,7 @@ private:
             uint8_t *base_ptr = reinterpret_cast<uint8_t *>(&properties);
             void *prop_ptr = base_ptr + metadata.offset;
             bool value_changed = metadata.setter(prop_ptr, raw_value);
+            // metadata.last_seen = std::chrono::system_clock::now();
 
             if (value_changed)
             {

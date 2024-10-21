@@ -20,10 +20,10 @@ ResponseHandler::ResponseHandler(uint32_t canId, std::shared_ptr<MotorContext> c
 
     entry_point = std::make_shared<ResponseHandlerEntry>();
     log_handler = std::make_shared<LogMessageHandler>();
-    state_handler = std::make_shared<ReadyStateTransitionHandler>(context);
     error_handler = std::make_shared<ErrorCheckHandler>(context);
-    lifecycle_handler = std::make_shared<CommandLifecycleHandler>();
     data_handler = std::make_shared<ResponseDataHandler>(context);
+    state_handler = std::make_shared<ReadyStateTransitionHandler>(context);
+    lifecycle_handler = std::make_shared<CommandLifecycleHandler>();
     // std::shared_ptr<SetCommandResponseHandler> set_command_response_handler = std::make_shared<SetCommandResponseHandler>(context);
 
     // Chain the handlers together
@@ -45,9 +45,7 @@ void ResponseHandler::incoming_message_event_handler(void *args, esp_event_base_
     RETURN_IF_NOT(event_id == INCOMING_MESSAGE_EVENT);
 
     twai_message_t *msg = (twai_message_t *)event_data;
-    // log_twai_message(*msg);
 
-    // instance->process_message(msg);
     instance->entry_point->handle_response(*msg);
 }
 
