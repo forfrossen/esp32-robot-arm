@@ -64,7 +64,7 @@ public:
     bool is_init() const { return ready_state == ReadyState::MOTOR_INITIALIZED; };
     bool is_error() const { return ready_state == ReadyState::MOTOR_ERROR; };
 
-    esp_err_t set_property_value(const PropertyMetadata &metadata, const uint8_t *data);
+    esp_err_t set_property_value(const ResponsePropertyMetadata &metadata, const uint8_t *data);
 
     MotorProperties &get_properties() { return properties; };
 

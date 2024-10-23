@@ -16,7 +16,7 @@ class CommandFactory
 {
 private:
     std::shared_ptr<CommandFactorySettings> settings;
-    std::shared_ptr<SetTargetPositionCommand> set_target_position_command;
+    // std::shared_ptr<SetTargetPositionCommand> set_target_position_command;
 
 public:
     // Konstruktor setzt den Identifier
@@ -46,13 +46,13 @@ public:
         return command;
     }
 
-    std::shared_ptr<SetTargetPositionCommand> create_set_target_position_command(bool absolute)
-    {
-        ESP_LOGI(FUNCTION_NAME, "Creating Set Target Position Command");
-        auto cmd = std::make_shared<SetTargetPositionCommand>(settings);
-        cmd->set_absolute(absolute);
-        return cmd;
-    }
+    // std::shared_ptr<SetTargetPositionCommand> create_set_target_position_command(bool absolute)
+    // {
+    //     ESP_LOGI(FUNCTION_NAME, "Creating Set Target Position Command");
+    //     auto cmd = std::make_shared<SetTargetPositionCommand>(settings);
+    //     cmd->set_absolute(absolute);
+    //     return cmd;
+    // }
 };
 
 #endif // TWAI_COMMAND_FACTORY_H

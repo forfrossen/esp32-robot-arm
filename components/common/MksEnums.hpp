@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <variant>
+#include <vector>
 
 enum CommandIds : uint8_t
 {
@@ -285,5 +286,12 @@ using MotorPropertyVariant = std::variant<
     EndStopLevel,
     CanBitrate,
     std::chrono::system_clock::time_point>;
+
+const std::vector<CommandIds> g_no_status_in_data1 = {
+    CommandIds::READ_ENCODER_VALUE_CARRY,
+    CommandIds::READ_ENCODED_VALUE_ADDITION,
+    CommandIds::READ_MOTOR_SPEED,
+    CommandIds::READ_NUM_PULSES_RECEIVED,
+    CommandIds::READ_MOTOR_SHAFT_ANGLE_ERROR};
 
 #endif // MKS_ENUMS_HPP

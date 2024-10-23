@@ -53,7 +53,7 @@ bool set_enum_uint8_property(void *prop_ptr, uint64_t raw_value)
     return false;
 }
 
-std::map<std::string, PropertyMetadata> property_metadata_map = {
+std::map<std::string, ResponsePropertyMetadata> response_property_metadata_map = {
     {"motor_status", {"motor_status", PayloadType::UINT8, offsetof(MotorProperties, motor_status), sizeof(MotorStatus), true, &set_enum_uint8_property<MotorStatus>}},
     {"run_motor_result", {"run_motor_result", PayloadType::UINT8, offsetof(MotorProperties, run_motor_result), sizeof(RunMotorResult), true, &set_enum_uint8_property<RunMotorResult>}},
     {"calibration_status", {"calibration_status", PayloadType::UINT8, offsetof(MotorProperties, calibration_status), sizeof(CalibrationResult), true, &set_enum_uint8_property<CalibrationResult>}},

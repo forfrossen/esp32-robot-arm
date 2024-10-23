@@ -2,7 +2,16 @@
 
 // ESP_EVENT_DEFINE_BASE(MOTOR_EVENTS);
 
-ResponseHandler::ResponseHandler(uint32_t canId, std::shared_ptr<MotorContext> context, std::shared_ptr<EventLoops> event_loops) : canId(canId), context(context), system_event_loop(event_loops->system_event_loop), motor_event_loop(event_loops->motor_event_loop)
+ResponseHandler::ResponseHandler(
+    uint32_t canId,
+    std::shared_ptr<MotorContext> context,
+    std::shared_ptr<EventLoops> event_loops,
+    std::shared_ptr<CommandLifecycleRegistry> registry)
+    : canId(canId),
+      context(context),
+      system_event_loop(event_loops->system_event_loop),
+      motor_event_loop(event_loops->motor_event_loop),
+      command_lifecycle_registry(registry)
 {
     ESP_LOGI(FUNCTION_NAME, "ResponseHandler constructor called");
     esp_err_t err = esp_event_handler_instance_register_with(
@@ -20,7 +29,7 @@ ResponseHandler::ResponseHandler(uint32_t canId, std::shared_ptr<MotorContext> c
 
     entry_point = std::make_shared<ResponseHandlerEntry>();
     log_handler = std::make_shared<LogMessageHandler>();
-    error_handler = std::make_shared<ErrorCheckHandler>(context);
+    error_handler = std::make_shared<ErrorCheckHandler>(context, command_lifecycle_registry);
     data_handler = std::make_shared<ResponseDataHandler>(context);
     state_handler = std::make_shared<ReadyStateTransitionHandler>(context);
     lifecycle_handler = std::make_shared<CommandLifecycleHandler>();

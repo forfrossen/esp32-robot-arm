@@ -31,7 +31,7 @@ struct PropertyChangeEventData
     } value;
 };
 
-struct PropertyMetadata
+struct ResponsePropertyMetadata
 {
     std::string name;
     PayloadType type;
@@ -99,7 +99,7 @@ extern bool set_int48_property(void *prop_ptr, uint64_t raw_value);
 template <typename EnumType>
 extern bool set_enum_uint8_property(void *prop_ptr, uint64_t raw_value);
 
-extern std::map<std::string, PropertyMetadata> property_metadata_map;
+extern std::map<std::string, ResponsePropertyMetadata> response_property_metadata_map;
 
 #endif // MOTOR_PROPERTIES_HPP
 

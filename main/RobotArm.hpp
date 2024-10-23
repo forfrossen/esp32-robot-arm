@@ -76,7 +76,9 @@ public:
 
     const std::shared_ptr<MotorControllerDependencies> motor_controller_dependencies_init(uint32_t id)
     {
+        esp_err_t ret = ESP_OK;
         std::string task_name_str = "motor_event_task_" + std::to_string(id);
+        esp_event_loop_handle_t motor_event_loop;
         esp_event_loop_args_t motor_loop_args = {
             .queue_size = 5,
             .task_name = task_name_str.c_str(),
@@ -84,10 +86,19 @@ public:
             .task_stack_size = 1024 * 3,
             .task_core_id = tskNO_AFFINITY};
 
-        esp_event_loop_handle_t motor_event_loop;
-        ESP_ERROR_CHECK(esp_event_loop_create(&motor_loop_args, &motor_event_loop));
-
-        twai_controller->register_motor_id(id, motor_event_loop);
+        ret = esp_event_loop_create(&motor_loop_args, &motor_event_loop);
+        GOTO_ON_ERROR(err, "Failed to create motor event loop for motorId: %lu", id);
+        ret = twai_controller->register_motor_id(id, motor_event_loop);
+        GOTO_ON_ERROR(err, "Failed to register motorId %lu at twai_controller", id);
+        ret = command_lifecyle_registry->register_new_motor(id);
+        GOTO_ON_ERROR(err, "Failed register motorId %lu at command_lifecyle_registry", id);
+    err:
+        if (ret != ESP_OK)
+        {
+            ESP_LOGE(FUNCTION_NAME, "Error initializing motor controller dependencies for motor %lu", id);
+            ESP_ERROR_CHECK(esp_event_loop_delete(motor_event_loop));
+            return nullptr;
+        }
 
         std::shared_ptr<CommandFactorySettings> settings = std::make_shared<CommandFactorySettings>(id, system_event_loop, command_lifecyle_registry);
         std::shared_ptr<CommandFactory> command_factory = std::make_shared<CommandFactory>(settings);
@@ -105,7 +116,7 @@ public:
         std::shared_ptr<event_groups_t> event_groups = std::make_shared<EventGroups>(system_event_group, motor_event_group);
 
         std::shared_ptr<MotorContext> motor_context = std::make_shared<MotorContext>(id, event_loops);
-        std::shared_ptr<ResponseHandler> motor_response_handler = std::make_shared<ResponseHandler>(id, motor_context, event_loops);
+        std::shared_ptr<ResponseHandler> motor_response_handler = std::make_shared<ResponseHandler>(id, motor_context, event_loops, command_lifecyle_registry);
 
         SemaphoreHandle_t motor_mutex = xSemaphoreCreateMutex();
         if (motor_mutex == NULL)

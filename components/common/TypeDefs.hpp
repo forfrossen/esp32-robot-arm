@@ -92,6 +92,8 @@ enum class CommandLifecycleState
     UNKNOWN
 };
 
+using NextStateTransitions = std::variant<CommandLifecycleState>;
+
 typedef enum
 {
     STATE_TRANSITION_EVENT,

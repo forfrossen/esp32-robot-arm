@@ -18,26 +18,25 @@ public:
 
     esp_err_t next_state()
     {
-        auto next_state = transitions.find(state);
-        CHECK_THAT(next_state != transitions.end());
-        state = next_state->second;
+        auto it = transitions.find(state);
+        CHECK_THAT(it != transitions.end());
+        const NextStateTransitions &next_state_transitions = it->second;
+        if (std::holds_alternative<CommandLifecycleState>(next_state_transitions))
+        {
+            state = std::get<CommandLifecycleState>(next_state_transitions);
+        }
+        else
+        {
+            ESP_LOGE(FUNCTION_NAME, "Invalid state transition to %s", stateToString(std::get<CommandLifecycleState>(next_state_transitions)));
+            return ESP_FAIL;
+        }
         return ESP_OK;
     }
 
-    esp_err_t transition_to_error(CommandLifecycleState new_state)
+    esp_err_t transition_to_error()
     {
-        CHECK_THAT(state != new_state);
-        auto next_state = transitions.find(state);
-        CHECK_THAT(next_state != transitions.end());
-
-        if (new_state == CommandLifecycleState::UNKNOWN || new_state == CommandLifecycleState::ERROR || new_state == CommandLifecycleState::TIMEOUT)
-        {
-            ESP_LOGE(FUNCTION_NAME, "Invalid state transition from: %s to: %s", stateToString(state), stateToString(new_state));
-            state = new_state;
-        }
-
-        ESP_LOGI(FUNCTION_NAME, "Transitioning from: %s to: %s", stateToString(state), stateToString(new_state));
-        state = new_state;
+        state = CommandLifecycleState::ERROR;
+        ESP_LOGE(FUNCTION_NAME, "Transitioned to ERROR state");
         return ESP_OK;
     }
 
@@ -68,12 +67,12 @@ private:
 
     CommandLifecycleState state = CommandLifecycleState::CREATED;
 
-    std::map<CommandLifecycleState, CommandLifecycleState> transitions = {
-        {CommandLifecycleState::CREATED, CommandLifecycleState::SENT},
-        {CommandLifecycleState::SENT, CommandLifecycleState::EXECUTING},
-        {CommandLifecycleState::EXECUTING, CommandLifecycleState::PROCESSED},
-        {CommandLifecycleState::TIMEOUT, CommandLifecycleState::EXECUTING},
-        {CommandLifecycleState::UNKNOWN, CommandLifecycleState::CREATED}};
+    std::map<CommandLifecycleState, NextStateTransitions> transitions = {
+        {CommandLifecycleState::CREATED, {CommandLifecycleState::SENT}},
+        {CommandLifecycleState::SENT, {CommandLifecycleState::EXECUTING}},
+        {CommandLifecycleState::EXECUTING, {CommandLifecycleState::PROCESSED}},
+        {CommandLifecycleState::TIMEOUT, {CommandLifecycleState::EXECUTING}},
+        {CommandLifecycleState::UNKNOWN, {CommandLifecycleState::CREATED}}};
 };
 
 #endif // COMMAND_LIFECYCLE_FSM_H

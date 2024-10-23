@@ -210,19 +210,19 @@ void MotorController::stop_timed_tasks()
 //     ESP_ERROR_CHECK(esp_event_post_to(motor_event_loop, MOTOR_EVENTS, MOTOR_TRANSITION_EVENT, (void *)&event, sizeof(event), portMAX_DELAY));
 // }
 
-esp_err_t MotorController::query_position()
-{
-    esp_err_t ret = ESP_FAIL;
-    ESP_LOGI(FUNCTION_NAME, "Querying motor position");
-    SEND_COMMAND_BY_ID(motor_mutex, command_factory, READ_ENCODER_VALUE_CARRY, context, ret);
-    return ret;
-}
-
 esp_err_t MotorController::query_status()
 {
     esp_err_t ret = ESP_FAIL;
     ESP_LOGI(FUNCTION_NAME, "Querying motor status");
-    SEND_COMMAND_BY_ID(motor_mutex, command_factory, QUERY_MOTOR_STATUS, context, ret);
+    SEND_COMMAND_BY_ID(command_factory, QUERY_MOTOR_STATUS, context, ret);
+    return ret;
+}
+
+esp_err_t MotorController::query_position()
+{
+    esp_err_t ret = ESP_FAIL;
+    ESP_LOGI(FUNCTION_NAME, "Querying motor position");
+    SEND_COMMAND_BY_ID(command_factory, READ_ENCODER_VALUE_CARRY, context, ret);
     return ret;
 }
 
@@ -230,7 +230,7 @@ esp_err_t MotorController::set_working_current(uint16_t current_ma)
 {
     esp_err_t ret = ESP_FAIL;
     auto cmd = command_factory->create_command(SET_WORKING_CURRENT, uint16_t{current_ma});
-    SEND_COMMAND_BY_ID_WITH_PAYLOAD(motor_mutex, cmd, context, ret);
+    SEND_COMMAND_BY_ID_WITH_PAYLOAD(cmd, context, ret);
     return ret;
 }
 
@@ -268,7 +268,7 @@ esp_err_t MotorController::set_target_position()
 
     ESP_LOGI(FUNCTION_NAME, "Sending %s command to move motor at with speed: %d with acceleration of %d to about: %ld°", magic_enum::enum_name(command_id).data(), speed, acceleration, static_cast<uint24_t>(position));
     auto cmd = command_factory->create_command(command_id, speed, acceleration, static_cast<uint24_t>(angle_steps_with_ratio));
-    SEND_COMMAND_BY_ID_WITH_PAYLOAD(motor_mutex, cmd, context, ret);
+    SEND_COMMAND_BY_ID_WITH_PAYLOAD(cmd, context, ret);
 
     // auto cmd = command_factory->create_set_target_position_command(absolute);
     // cmd->set_absolute(absolute).set_acceleration(acceleration).set_position(position).set_speed(speed);

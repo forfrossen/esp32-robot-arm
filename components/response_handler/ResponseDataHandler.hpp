@@ -69,16 +69,16 @@ private:
                 property_names[i].c_str(), bit_offset, bit_length, get_payload_type_size(payload_type), msg.data_length_code * 8);
 
             const std::string &property_name = property_names[i];
-            auto prop_meta_it = property_metadata_map.find(property_name);
+            auto prop_meta_it = response_property_metadata_map.find(property_name);
 
             ESP_RETURN_ON_FALSE(
-                prop_meta_it != property_metadata_map.end(),
+                prop_meta_it != response_property_metadata_map.end(),
                 ESP_FAIL,
                 FUNCTION_NAME,
                 "Property metadata not found %s",
                 property_name.c_str());
 
-            const PropertyMetadata &metadata = prop_meta_it->second;
+            const ResponsePropertyMetadata &metadata = prop_meta_it->second;
 
             uint64_t raw_value = extract_data(payload_type, msg.data, bit_offset);
             ESP_LOGI(FUNCTION_NAME, "Extracted value: %llu for property: %s", raw_value, property_name.c_str());

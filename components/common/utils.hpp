@@ -69,6 +69,17 @@ inline const char *getFunctionName(const char *prettyFunction)
 // {
 //     ESP_LOGI(TAG, "Condition met: %s", #cond);
 // }
+
+#define GOTO_ON_ERROR(goto_tag, format, ...)                                                   \
+    do                                                                                         \
+    {                                                                                          \
+        if (unlikely(ret != ESP_OK))                                                           \
+        {                                                                                      \
+            ESP_LOGE(FUNCTION_NAME, "%s(%d): " format, __FUNCTION__, __LINE__, ##__VA_ARGS__); \
+            goto goto_tag;                                                                     \
+        }                                                                                      \
+    } while (0)
+
 #define CHECK_THAT(cond)                                                    \
     do                                                                      \
     {                                                                       \
@@ -78,6 +89,20 @@ inline const char *getFunctionName(const char *prettyFunction)
             return ESP_FAIL;                                                \
         }                                                                   \
     } while (0)
+
+#define CHECK_THAT_AND_LOG(x, y, z) \
+    if (!(x))                       \
+    {                               \
+        ESP_LOGE(FUNCTION_NAME, y); \
+        z;                          \
+    }
+
+#define ERROR_CHECK_THAT_AND_LOG(x, y, z) \
+    if (!(x))                             \
+    {                                     \
+        ESP_LOGE(FUNCTION_NAME, y);       \
+        z;                                \
+    }
 
 #define RETURN_IF_NOT(cond)                                     \
     if (!(cond))                                                \
@@ -112,6 +137,13 @@ inline const char *getFunctionName(const char *prettyFunction)
         return nullptr;                                      \
     }
 
+#define RETURN_NULLPTR_ON_ESPERROR(ret)                             \
+    if (ret != ESP_OK)                                              \
+    {                                                               \
+        ESP_LOGE(FUNCTION_NAME, "Error: %s", esp_err_to_name(ret)); \
+        return nullptr;                                             \
+    }
+
 #define CONT_IF_CHECK_FAILS(cond)                               \
     if (!(cond))                                                \
     {                                                           \
@@ -131,10 +163,11 @@ inline std::string replace_underscores(const std::string &str)
     return result;
 }
 
-#define SEND_COMMAND_BY_ID(mutex, command_factory, command_id, context, ret)                    \
+#define SEND_COMMAND_BY_ID(command_factory, command_id, context, ret)                           \
     do                                                                                          \
     {                                                                                           \
         auto cmd = command_factory->create_command(command_id);                                 \
+        CHECK_THAT(cmd != nullptr);                                                             \
         ret = cmd->execute();                                                                   \
         if (ret != ESP_OK)                                                                      \
         {                                                                                       \
@@ -144,11 +177,12 @@ inline std::string replace_underscores(const std::string &str)
         delete cmd;                                                                             \
     } while (0)
 
-#define SEND_COMMAND_BY_ID_WITH_PAYLOAD(mutex, cmd, context, ret)                     \
+#define SEND_COMMAND_BY_ID_WITH_PAYLOAD(cmd, context, ret)                            \
     do                                                                                \
     {                                                                                 \
+        CHECK_THAT(cmd != nullptr);                                                   \
         ret = cmd->execute();                                                         \
-        xSemaphoreGive(mutex);                                                        \
+        CHECK_THAT(ret == ESP_OK);                                                    \
         if (ret != ESP_OK)                                                            \
         {                                                                             \
             ESP_LOGE("SEND_COMMAND_BY_ID_WITH_PAYLOAD", "Error executing command: "); \
@@ -194,5 +228,7 @@ inline void log_twai_message(const twai_message_t *msg, std::optional<bool> is_r
     ESP_LOGI(FUNCTION_NAME, "  Data CRC: \t 0x%02X \t %d ", msg->data[msg->data_length_code - 1], msg->data[msg->data_length_code - 1]);
     ESP_LOGI(FUNCTION_NAME, "=================================================================================================");
 }
+
+#define IS_STATUS_IN_DATA1(command_id) (std::find(g_no_status_in_data1.begin(), g_no_status_in_data1.end(), command_id) == g_no_status_in_data1.end())
 
 #endif // UTILS_HPP

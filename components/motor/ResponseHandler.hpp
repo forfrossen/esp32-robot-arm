@@ -23,7 +23,7 @@
 class ResponseHandler
 {
 public:
-    ResponseHandler(uint32_t canId, std::shared_ptr<MotorContext> context, std::shared_ptr<EventLoops> event_loops);
+    ResponseHandler(uint32_t canId, std::shared_ptr<MotorContext> context, std::shared_ptr<EventLoops> event_loops, std::shared_ptr<CommandLifecycleRegistry> registry);
     ~ResponseHandler();
 
 private:
@@ -32,6 +32,7 @@ private:
     esp_event_loop_handle_t system_event_loop;
     esp_event_loop_handle_t motor_event_loop;
     esp_event_handler_instance_t incoming_message_event_handler_instance;
+    std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
 
     std::shared_ptr<ResponseHandlerEntry> entry_point;
     std::shared_ptr<LogMessageHandler> log_handler;

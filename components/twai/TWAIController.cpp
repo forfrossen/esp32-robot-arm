@@ -174,7 +174,7 @@ void TWAIController::outgoing_message_event_handler(void *args, esp_event_base_t
 
     ESP_LOGI(FUNCTION_NAME, "Trying to send message");
 
-    auto result = twai_transmit(msg, portMAX_DELAY);
+    esp_err_t result = twai_transmit(msg, portMAX_DELAY);
     xSemaphoreGive(instance->twai_mutex);
 
     if (result != ESP_OK)
