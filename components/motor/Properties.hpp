@@ -47,6 +47,8 @@ struct MotorProperties
     MotorStatus motor_status;
     int32_t current_position;
     int32_t target_position;
+    int32_t full_turns_count;
+    uint16_t current_turn_position;
 
     // Command Response Properties
     RunMotorResult run_motor_result;

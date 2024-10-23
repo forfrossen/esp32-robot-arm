@@ -30,7 +30,7 @@ const std::map<CommandIds, ResponseInformation> g_response_payload_map = {
     {QUERY_MOTOR_STATUS, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"motor_status"})},
     {MOTOR_CALIBRATION, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"calibration_status"})},
     {EMERGENCY_STOP, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"emergency_stop_triggered"})},
-    {READ_ENCODER_VALUE_CARRY, ResponseInformation(CommandPayloadInfo(PayloadType::INT32, PayloadType::UINT16), {"current_position", "encoder_value"})},
+    {READ_ENCODER_VALUE_CARRY, ResponseInformation(CommandPayloadInfo(PayloadType::INT32, PayloadType::UINT16), {"full_turns_count", "current_turn_position"})},
     {ENABLE_MOTOR, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"is_enabled"})},
     {GO_HOME, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"home_dir"})},
     {SET_CURRENT_AXIS_TO_ZERO, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"current_position"})},

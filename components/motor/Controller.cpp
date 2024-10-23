@@ -159,18 +159,47 @@ MotorController::~MotorController()
 
 esp_err_t MotorController::start_basic_tasks()
 {
+    eTaskState task_state;
     vTaskDelay(3000 / portTICK_PERIOD_MS);
-    BaseType_t xRet = xTaskCreatePinnedToCore(
-        &MotorController::vTask_query_status,
-        "TASK_queryStatus",
-        1024 * 4,
-        this,
-        1,
-        &task_handle_query_status,
-        tskNO_AFFINITY);
+
+    if (task_handle_query_status == nullptr)
+    {
+        ESP_LOGI(FUNCTION_NAME, "Task handle query status is invalid or deleted. Creating new task.");
+        BaseType_t xRet = xTaskCreatePinnedToCore(
+            &MotorController::vTask_query_status,
+            "TASK_queryStatus",
+            1024 * 4,
+            this,
+            1,
+            &task_handle_query_status,
+            tskNO_AFFINITY);
+        CHECK_THAT(task_handle_query_status != NULL);
+        task_state = eTaskGetState(task_handle_query_status);
+        ESP_LOGI(FUNCTION_NAME, "Task handle query status is in state: %d", task_state);
+        return ESP_OK;
+    }
 
     CHECK_THAT(task_handle_query_status != NULL);
-    ESP_LOGI(FUNCTION_NAME, "TASK_queryStatus created");
+    task_state = eTaskGetState(task_handle_query_status);
+    if (task_state == eDeleted || task_state == eInvalid)
+    {
+        ESP_LOGI(FUNCTION_NAME, "Task handle query status is invalid or deleted. Creating new task.");
+        BaseType_t xRet = xTaskCreatePinnedToCore(
+            &MotorController::vTask_query_status,
+            "TASK_queryStatus",
+            1024 * 4,
+            this,
+            1,
+            &task_handle_query_status,
+            tskNO_AFFINITY);
+        CHECK_THAT(task_handle_query_status != NULL);
+        task_state = eTaskGetState(task_handle_query_status);
+        ESP_LOGI(FUNCTION_NAME, "Task handle query status is in state: %d", task_state);
+    }
+    else
+    {
+        ESP_LOGI(FUNCTION_NAME, "Task handle query status is in state: %d", task_state);
+    }
 
     return ESP_OK;
 }
@@ -178,24 +207,55 @@ esp_err_t MotorController::start_basic_tasks()
 esp_err_t MotorController::start_timed_tasks()
 {
     BaseType_t xReturned;
+    eTaskState task_state;
     ESP_LOGI(FUNCTION_NAME, "Initializing tasks");
 
-    // if (task_handle_query_position == nullptr)
-    // {
-    //     xReturned = xTaskCreatePinnedToCore(&MotorController::vTask_query_position, "TASK_queryPosition", 1024 * 3, this, 3, &task_handle_query_position, tskNO_AFFINITY);
-    //     CHECK_THAT(task_handle_query_position != NULL);
-    //     CHECK_THAT(xReturned != NULL);
-    //     ESP_LOGI(FUNCTION_NAME, "TASK_queryPosition created");
-    // }
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    if (task_handle_query_position == nullptr)
+    {
+        ESP_LOGI(FUNCTION_NAME, "Task handle query position is invalid or deleted. Creating new task.");
+        xReturned = xTaskCreatePinnedToCore(&MotorController::vTask_query_position, "TASK_queryPosition", 1024 * 3, this, 3, &task_handle_query_position, tskNO_AFFINITY);
+        CHECK_THAT(task_handle_query_position != nullptr);
+        task_state = eTaskGetState(task_handle_query_position);
+        ESP_LOGI(FUNCTION_NAME, "Task handle query position is in state: %d", task_state);
+    }
+    else
+    {
+        task_state = eTaskGetState(task_handle_query_position);
+        if (task_state == eDeleted || task_state == eInvalid)
+        {
+            ESP_LOGI(FUNCTION_NAME, "Task handle query position is invalid or deleted. Creating new task.");
+            xReturned = xTaskCreatePinnedToCore(&MotorController::vTask_query_position, "TASK_queryPosition", 1024 * 3, this, 3, &task_handle_query_position, tskNO_AFFINITY);
+            CHECK_THAT(task_handle_query_position != nullptr);
+            task_state = eTaskGetState(task_handle_query_position);
+        }
+    }
+    ESP_LOGI(FUNCTION_NAME, "Task handle query position is in state: %d", task_state);
 
     vTaskDelay(2000 / portTICK_PERIOD_MS);
     if (task_handle_send_position == nullptr)
     {
-        xReturned = xTaskCreatePinnedToCore(&MotorController::vtask_send_positon, "TASK_SendRandomTargetPositionCommands", 1024 * 3, this, 4, &task_handle_send_position, tskNO_AFFINITY);
+
+        ESP_LOGI(FUNCTION_NAME, "Task handle send position is invalid or deleted. Creating new task.");
+        xReturned = xTaskCreatePinnedToCore(&MotorController::vtask_send_positon, "TASK_queryPosition", 1024 * 3, this, 3, &task_handle_send_position, tskNO_AFFINITY);
         CHECK_THAT(task_handle_send_position != nullptr);
-        CHECK_THAT(xReturned == pdPASS);
-        ESP_LOGI(FUNCTION_NAME, "TASK_SendRandomTargetPositionCommands created");
+        task_state = eTaskGetState(task_handle_send_position);
+        ESP_LOGI(FUNCTION_NAME, "Task handle query position is in state: %d", task_state);
     }
+    else
+    {
+        task_state = eTaskGetState(task_handle_send_position);
+        if (task_state == eDeleted || task_state == eInvalid)
+        {
+
+            ESP_LOGI(FUNCTION_NAME, "Task handle send position is invalid or deleted. Creating new task.");
+            xReturned = xTaskCreatePinnedToCore(&MotorController::vtask_send_positon, "TASK_queryPosition", 1024 * 3, this, 3, &task_handle_send_position, tskNO_AFFINITY);
+            CHECK_THAT(task_handle_send_position != nullptr);
+            task_state = eTaskGetState(task_handle_send_position);
+        }
+    }
+    ESP_LOGI(FUNCTION_NAME, "Task handle query position is in state: %d", task_state);
+
     return ESP_OK;
 }
 

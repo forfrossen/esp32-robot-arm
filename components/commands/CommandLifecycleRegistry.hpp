@@ -123,12 +123,12 @@ public:
         ret = find_command(motor_registry, command_id, existing_command);
         if (ret == ESP_OK)
         {
-            ESP_LOGE(FUNCTION_NAME, "Command with ID: 0x%02X already exists for motor 0x0%lu ", command_id, motor_id);
+            ESP_LOGW(FUNCTION_NAME, "Command with ID: 0x%02X already exists for motor 0x0%lu ", command_id, motor_id);
             // // Delete existing command and replace it with the new one
-            // motor_registry->erase(command_id);
+            motor_registry->erase(command_id);
 
             // RETURN FALSE IF COMMAND ALREADY EXISTS
-            return ESP_FAIL;
+            // return ESP_FAIL;
         }
         ESP_LOGI(FUNCTION_NAME, "Command with ID: 0x%02X does not exist for motor 0x0%lu. Registering it.", command_id, motor_id);
 

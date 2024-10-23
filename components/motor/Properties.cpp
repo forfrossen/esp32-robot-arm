@@ -84,6 +84,9 @@ std::map<std::string, ResponsePropertyMetadata> response_property_metadata_map =
     {"mode0_status", {"mode0_status", PayloadType::UINT8, offsetof(MotorProperties, mode0_status), sizeof(uint8_t), false, &set_uint8_property}},
     {"motor_shaft_protection_status", {"motor_shaft_protection_status", PayloadType::UINT8, offsetof(MotorProperties, motor_shaft_protection_status), sizeof(uint8_t), false, &set_uint8_property}},
     {"save_clean_state", {"save_clean_state", PayloadType::UINT8, offsetof(MotorProperties, save_clean_state), sizeof(uint8_t), false, &set_uint8_property}},
+    {"current_turn_position", {"current_turn_position", PayloadType::UINT16, offsetof(MotorProperties, current_turn_position), sizeof(uint16_t), false, &set_uint16_property}},
+    {"full_turns_count", {"full_turns_count", PayloadType::INT32, offsetof(MotorProperties, full_turns_count), sizeof(int32_t), false, &set_int32_property}},
+
     // {"last_seen", {"last_seen", PayloadType::VOID, offsetof(MotorProperties, last_seen), sizeof(std::chrono::system_clock::time_point), false, &set_uint8_property}},
     {"dummy", {"dummy", PayloadType::VOID, offsetof(MotorProperties, dummy), sizeof(std::any), false, &set_uint8_property}}};
 
