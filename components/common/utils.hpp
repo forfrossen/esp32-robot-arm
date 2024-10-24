@@ -5,11 +5,14 @@
 
 #include "../magic_enum/include/magic_enum/magic_enum.hpp"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <hal/twai_types.h>
 #include <string>
+
+#define TAG "UTILS"
 
 inline const char *findFunctionNameStart(const char *prettyFunction)
 {
@@ -64,6 +67,13 @@ inline const char *getFunctionName(const char *prettyFunction)
 }
 
 #define FUNCTION_NAME getFunctionName(__PRETTY_FUNCTION__)
+
+// Logging macros with function name
+#define LOGE(format, ...) ESP_LOGE(TAG, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
+#define LOGW(format, ...) ESP_LOGW(TAG, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
+#define LOGI(format, ...) ESP_LOGI(TAG, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
+#define LOGD(format, ...) ESP_LOGD(TAG, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
+#define LOGV(format, ...) ESP_LOGV(TAG, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
 
 // else
 // {
@@ -227,6 +237,28 @@ inline void log_twai_message(const twai_message_t *msg, std::optional<bool> is_r
     }
     ESP_LOGI(FUNCTION_NAME, "  Data CRC: \t 0x%02X \t %d ", msg->data[msg->data_length_code - 1], msg->data[msg->data_length_code - 1]);
     ESP_LOGI(FUNCTION_NAME, "=================================================================================================");
+}
+
+inline esp_err_t get_task_state_without_panic(TaskHandle_t task_handle, eTaskState &task_state)
+{
+    const char *task_name = pcTaskGetName(task_handle);
+    if (task_handle == nullptr)
+    {
+        ESP_LOGW(FUNCTION_NAME, "Task handle for %s is null!", task_name);
+        task_state = eDeleted;
+    }
+    else
+    {
+        task_state = eTaskGetState(task_handle);
+        if (task_state == eDeleted || task_state == eInvalid)
+        {
+            ESP_LOGW(FUNCTION_NAME, "Task handle for %s is invalid or deleted!", task_name);
+        }
+    }
+
+    ESP_LOGI(FUNCTION_NAME, "Task handle for %s is in state: %d", task_name, task_state);
+
+    return ESP_OK;
 }
 
 #define IS_STATUS_IN_DATA1(command_id) (std::find(g_no_status_in_data1.begin(), g_no_status_in_data1.end(), command_id) == g_no_status_in_data1.end())

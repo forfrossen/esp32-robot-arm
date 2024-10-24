@@ -86,10 +86,13 @@ private:
     esp_event_loop_handle_t motor_event_loop;
 
     esp_err_t post_new_state_event();
-
     esp_err_t post_property_change_event(const std::string &property_name, const void *value_ptr, PayloadType type);
-
     esp_err_t get_semaphore();
 };
 
+template <typename T>
+T MotorContext::get_property(T MotorProperties::*property) const
+{
+    return properties.*property;
+}
 #endif // MOTORCONTEXT_HPP

@@ -15,7 +15,7 @@ esp_err_t MotorContext::transition_ready_state(ReadyState new_state)
         return ESP_OK;
     }
     CHECK_THAT(get_semaphore() == ESP_OK);
-    ESP_LOGI(FUNCTION_NAME, "Transitioning MotorContext.ready_state: | %s | ==> | %s |",
+    ESP_LOGI(TAG, "Transitioning MotorContext.ready_state: | %s | ==> | %s |",
              magic_enum::enum_name(ready_state).data(),
              magic_enum::enum_name(new_state).data());
     ready_state = new_state;
@@ -26,7 +26,7 @@ esp_err_t MotorContext::transition_ready_state(ReadyState new_state)
 
 esp_err_t MotorContext::post_new_state_event()
 {
-    ESP_LOGI(FUNCTION_NAME, "Posting to MOTOR_EVENTS: %d \t %s", static_cast<int>(ready_state), magic_enum::enum_name(ready_state).data());
+    ESP_LOGI(TAG, "Posting to MOTOR_EVENTS: %d \t %s", static_cast<int>(ready_state), magic_enum::enum_name(ready_state).data());
 
     ESP_ERROR_CHECK(esp_event_post_to(
         motor_event_loop,
@@ -36,7 +36,7 @@ esp_err_t MotorContext::post_new_state_event()
         sizeof(ReadyState),
         portMAX_DELAY));
 
-    ESP_LOGI(FUNCTION_NAME, "Posted to MOTOR_EVENTS");
+    ESP_LOGI(TAG, "Posted to MOTOR_EVENTS");
     return ESP_OK;
 }
 
@@ -70,7 +70,7 @@ esp_err_t MotorContext::post_new_state_event()
 //     if (xSemaphoreTake(context_mutex, portMAX_DELAY) == pdTRUE)
 //     {
 //         // Log the property and value with a type-generic approach
-//         ESP_LOGI(FUNCTION_NAME, "Setting property to value");
+//         ESP_LOGI(TAG, "Setting property to value");
 
 //         (properties.*property).set(value);
 
@@ -80,7 +80,7 @@ esp_err_t MotorContext::post_new_state_event()
 //     }
 //     else
 //     {
-//         ESP_LOGE(FUNCTION_NAME, "Failed to take mutex");
+//         ESP_LOGE(TAG, "Failed to take mutex");
 //         return ESP_FAIL;
 //     }
 
@@ -128,7 +128,7 @@ esp_err_t MotorContext::post_property_change_event(const std::string &property_n
         return ESP_FAIL;
     }
 
-    ESP_LOGI(FUNCTION_NAME, "Posting to PROPERTY_CHANGE_EVENTS");
+    ESP_LOGI(TAG, "Posting to PROPERTY_CHANGE_EVENTS");
 
     CHECK_THAT(esp_event_post_to(
                    system_event_loop,

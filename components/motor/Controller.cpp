@@ -13,111 +13,6 @@ int24_t calculate_steps_for_angle(int24_t angleDegrees)
     return stepCount;
 }
 
-void MotorController::state_transition_event_handler(void *handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
-{
-    MotorController *instance = static_cast<MotorController *>(handler_arg);
-    RETURN_VOID_IF(instance == nullptr);
-
-    esp_err_t ret;
-    ESP_LOGI(FUNCTION_NAME, "GOT MOTOR EVENT FOR MOTOR %lu, EVENT_BASE: %s, EVENT_ID: %lu", instance->canId, event_base, event_id);
-    RETURN_VOID_IF(event_base != MOTOR_EVENTS);
-    RETURN_VOID_IF(event_id != STATE_TRANSITION_EVENT);
-
-    MotorContext::ReadyState *new_state = (MotorContext::ReadyState *)event_data;
-    const char *state_name = magic_enum::enum_name(*new_state).data();
-    state_name == nullptr && (state_name = "UNKNOWN");
-
-    ESP_LOGI(FUNCTION_NAME, "TRANSITION_STATE: %s", state_name);
-
-    switch (*new_state)
-    {
-    case MotorContext::ReadyState::MOTOR_RECOVERING:
-        ESP_LOGI("MotorEventLoopHandler", "Handling MOTOR_EVENT_RECOVERING.");
-    case MotorContext::ReadyState::MOTOR_INITIALIZED:
-        ESP_LOGI("MotorEventLoopHandler", "Handling MOTOR_EVENT_INIT.");
-        ret = instance->start_basic_tasks();
-        if (ret != ESP_OK)
-        {
-            ESP_LOGE("MotorEventLoopHandler", "Error starting basic tasks. Error: %s", esp_err_to_name(ret));
-            instance->context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);
-        }
-        break;
-
-    case MotorContext::ReadyState::MOTOR_ERROR:
-        ESP_LOGE("MotorEventLoopHandler", "Handling MOTOR_EVENT_ERROR.");
-        xEventGroupClearBits(instance->motor_event_group, MOTOR_READY_BIT);
-        xEventGroupSetBits(instance->motor_event_group, MOTOR_ERROR_BIT);
-        instance->context->transition_ready_state(MotorContext::ReadyState::MOTOR_RECOVERING);
-        // instance->stop_timed_tasks();
-        break;
-
-    case MotorContext::ReadyState::MOTOR_READY:
-        ESP_LOGI("MotorEventLoopHandler", "Handling MOTOR_EVENT_READY.");
-        xEventGroupClearBits(instance->motor_event_group, MOTOR_ERROR_BIT);
-        xEventGroupSetBits(instance->motor_event_group, MOTOR_READY_BIT);
-        ret = instance->start_timed_tasks();
-        ret == ESP_OK ? instance->context->transition_ready_state(MotorContext::ReadyState::MOTOR_READY)
-                      : instance->context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);
-        break;
-    default:
-        break;
-    }
-}
-
-void MotorController::vTask_query_position(void *pvParameters)
-{
-    MotorController *instance = static_cast<MotorController *>(pvParameters);
-    for (;;)
-    {
-        ESP_LOGI(FUNCTION_NAME, "New iteration of taskQueryMotorPosition");
-        if (xEventGroupWaitBits(instance->motor_event_group, MOTOR_READY_BIT, pdFALSE, pdFALSE, portMAX_DELAY) & MOTOR_READY_BIT)
-        {
-            ESP_LOGI(FUNCTION_NAME, "New iteration of taskQueryMotorPosition");
-            instance->query_position();
-        }
-
-        vTaskDelay(4000 / portTICK_PERIOD_MS);
-    }
-}
-
-void MotorController::vTask_query_status(void *pvParameters)
-{
-    MotorController *instance = static_cast<MotorController *>(pvParameters);
-    int local_error_counter = 0;
-    for (;;)
-    {
-        ESP_LOGI(FUNCTION_NAME, "New iteration of vTask_query_status");
-        esp_err_t ret = instance->query_status();
-        if (ret != ESP_OK)
-        {
-            ESP_LOGE(FUNCTION_NAME, "Error enqueing query-status-command. Error counter: %d", local_error_counter);
-            local_error_counter < 5 && local_error_counter++;
-        }
-        else
-        {
-            local_error_counter = 0;
-            ESP_LOGI(FUNCTION_NAME, "Query status command enqueued successfully");
-        }
-
-        vTaskDelay((4000 * (local_error_counter + 1)) / portTICK_PERIOD_MS);
-    }
-}
-
-void MotorController::vtask_send_positon(void *pvParameters)
-{
-    MotorController *instance = static_cast<MotorController *>(pvParameters);
-    for (;;)
-    {
-        if (xEventGroupWaitBits(instance->motor_event_group, MOTOR_READY_BIT, pdFALSE, pdFALSE, portMAX_DELAY) & MOTOR_READY_BIT)
-        {
-            ESP_LOGI(FUNCTION_NAME, "New iteration of taskSendRandomTargetPositionCommands");
-            instance->set_target_position();
-        }
-
-        vTaskDelay(6000 / portTICK_PERIOD_MS);
-    }
-}
-
 MotorController::MotorController(
     std::shared_ptr<MotorControllerDependencies> dependencies) : canId(dependencies->id),
                                                                  dependencies(dependencies),
@@ -131,75 +26,102 @@ MotorController::MotorController(
                                                                  context(dependencies->motor_context),
                                                                  response_handler(dependencies->motor_response_handler)
 {
-    ESP_LOGI(FUNCTION_NAME, "New MotorController-Object created with CAN ID: %lu", canId);
+    ESP_LOGI(TAG, "New MotorController-Object created with CAN ID: %lu", canId);
 
     esp_err_t ret = esp_event_handler_instance_register_with(
         motor_event_loop,
         MOTOR_EVENTS,
         motor_event_id_t::STATE_TRANSITION_EVENT,
-        &state_transition_event_handler,
+        &on_state_transition,
         this,
         &state_transition_event_handler_instance);
 
     if (ret != ESP_OK)
     {
-        ESP_LOGE(FUNCTION_NAME, "Failed to register event handler: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG, "Failed to register event handler: %s", esp_err_to_name(ret));
     }
 
-    ESP_LOGI(FUNCTION_NAME, "Motor ID: %lu -> state_transition_event_handler registered for MOTOR_EVENTS", canId);
+    ESP_LOGI(TAG, "Motor ID: %lu -> on_state_transition registered for MOTOR_EVENTS", canId);
     context->transition_ready_state(MotorContext::ReadyState::MOTOR_INITIALIZED);
 }
 
 MotorController::~MotorController()
 {
-    vTaskDelete(task_handle_query_status);
-    vTaskDelete(task_handle_send_position);
+    vTaskDelete(th_query_status);
+    vTaskDelete(th_send_position);
     esp_event_loop_delete(motor_event_loop);
+}
+
+esp_err_t MotorController::handle_initialize()
+{
+    ESP_LOGI(TAG, "Handle initialize transition event for motor controller with Id: %lu", canId);
+    esp_err_t ret = ESP_OK;
+    ret = start_basic_tasks();
+    ret == ESP_OK ? context->transition_ready_state(MotorContext::ReadyState::MOTOR_READY)
+                  : context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Error starting basic tasks. Error: %s", esp_err_to_name(ret));
+    return ret;
+}
+
+esp_err_t MotorController::handle_recover()
+{
+    ESP_LOGI(TAG, "Handle recovery event for motor controller with Id: %lu", canId);
+    esp_err_t ret = ESP_OK;
+    ret = start_basic_tasks();
+    ret == ESP_OK ? context->transition_ready_state(MotorContext::ReadyState::MOTOR_READY)
+                  : context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Error starting basic tasks. Error: %s", esp_err_to_name(ret));
+    return ret;
+}
+
+esp_err_t MotorController::handle_error()
+{
+    ESP_LOGI(TAG, "Handle error event transition for motor with Id: %lu", canId);
+    xEventGroupClearBits(motor_event_group, MOTOR_READY_BIT);
+    xEventGroupSetBits(motor_event_group, MOTOR_ERROR_BIT);
+    context->transition_ready_state(MotorContext::ReadyState::MOTOR_RECOVERING);
+    stop_timed_tasks();
+    ESP_LOGI(TAG, "Error state for motor %lu", canId);
+    return ESP_OK;
+}
+
+esp_err_t MotorController::handle_ready()
+{
+    ESP_LOGI(TAG, "Handle ready event transition for motor with Id:  %lu", canId);
+    esp_err_t ret = ESP_OK;
+    xEventGroupClearBits(motor_event_group, MOTOR_ERROR_BIT);
+    xEventGroupSetBits(motor_event_group, MOTOR_READY_BIT);
+    ret = start_timed_tasks();
+    if (ret != ESP_OK)
+    {
+        context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);
+    }
+
+    ESP_LOGI(TAG, "Ready state for motor %lu", canId);
+    return ESP_OK;
 }
 
 esp_err_t MotorController::start_basic_tasks()
 {
     eTaskState task_state;
+    esp_err_t ret;
     vTaskDelay(3000 / portTICK_PERIOD_MS);
 
-    if (task_handle_query_status == nullptr)
-    {
-        ESP_LOGI(FUNCTION_NAME, "Task handle query status is invalid or deleted. Creating new task.");
-        BaseType_t xRet = xTaskCreatePinnedToCore(
-            &MotorController::vTask_query_status,
-            "TASK_queryStatus",
-            1024 * 4,
-            this,
-            1,
-            &task_handle_query_status,
-            tskNO_AFFINITY);
-        CHECK_THAT(task_handle_query_status != NULL);
-        task_state = eTaskGetState(task_handle_query_status);
-        ESP_LOGI(FUNCTION_NAME, "Task handle query status is in state: %d", task_state);
-        return ESP_OK;
-    }
-
-    CHECK_THAT(task_handle_query_status != NULL);
-    task_state = eTaskGetState(task_handle_query_status);
-    if (task_state == eDeleted || task_state == eInvalid)
-    {
-        ESP_LOGI(FUNCTION_NAME, "Task handle query status is invalid or deleted. Creating new task.");
-        BaseType_t xRet = xTaskCreatePinnedToCore(
-            &MotorController::vTask_query_status,
-            "TASK_queryStatus",
-            1024 * 4,
-            this,
-            1,
-            &task_handle_query_status,
-            tskNO_AFFINITY);
-        CHECK_THAT(task_handle_query_status != NULL);
-        task_state = eTaskGetState(task_handle_query_status);
-        ESP_LOGI(FUNCTION_NAME, "Task handle query status is in state: %d", task_state);
-    }
-    else
-    {
-        ESP_LOGI(FUNCTION_NAME, "Task handle query status is in state: %d", task_state);
-    }
+    /**
+     * Task: Query status
+     */
+    ret = get_task_state_without_panic(th_query_status, task_state);
+    BaseType_t xRet = xTaskCreatePinnedToCore(
+        &MotorController::vTask_query_status,
+        "TASK_queryStatus",
+        1024 * 4,
+        this,
+        1,
+        &th_query_status,
+        tskNO_AFFINITY);
+    CHECK_THAT(xRet == pdPASS);
+    CHECK_THAT(th_query_status != NULL);
+    ret = get_task_state_without_panic(th_query_status, task_state);
 
     return ESP_OK;
 }
@@ -208,61 +130,56 @@ esp_err_t MotorController::start_timed_tasks()
 {
     BaseType_t xReturned;
     eTaskState task_state;
-    ESP_LOGI(FUNCTION_NAME, "Initializing tasks");
+    ESP_LOGI(TAG, "Initializing tasks");
 
     vTaskDelay(2000 / portTICK_PERIOD_MS);
-    if (task_handle_query_position == nullptr)
-    {
-        ESP_LOGI(FUNCTION_NAME, "Task handle query position is invalid or deleted. Creating new task.");
-        xReturned = xTaskCreatePinnedToCore(&MotorController::vTask_query_position, "TASK_queryPosition", 1024 * 3, this, 3, &task_handle_query_position, tskNO_AFFINITY);
-        CHECK_THAT(task_handle_query_position != nullptr);
-        task_state = eTaskGetState(task_handle_query_position);
-        ESP_LOGI(FUNCTION_NAME, "Task handle query position is in state: %d", task_state);
-    }
-    else
-    {
-        task_state = eTaskGetState(task_handle_query_position);
-        if (task_state == eDeleted || task_state == eInvalid)
-        {
-            ESP_LOGI(FUNCTION_NAME, "Task handle query position is invalid or deleted. Creating new task.");
-            xReturned = xTaskCreatePinnedToCore(&MotorController::vTask_query_position, "TASK_queryPosition", 1024 * 3, this, 3, &task_handle_query_position, tskNO_AFFINITY);
-            CHECK_THAT(task_handle_query_position != nullptr);
-            task_state = eTaskGetState(task_handle_query_position);
-        }
-    }
-    ESP_LOGI(FUNCTION_NAME, "Task handle query position is in state: %d", task_state);
 
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-    if (task_handle_send_position == nullptr)
+    /**
+     * Task: Query position
+     */
+    get_task_state_without_panic(th_query_position, task_state);
+    if (task_state == eDeleted || task_state == eInvalid)
     {
+        xReturned = xTaskCreatePinnedToCore(
+            &MotorController::vTask_query_position,
+            "TASK_queryPosition",
+            1024 * 3,
+            this,
+            3,
+            &th_query_position,
+            tskNO_AFFINITY);
 
-        ESP_LOGI(FUNCTION_NAME, "Task handle send position is invalid or deleted. Creating new task.");
-        xReturned = xTaskCreatePinnedToCore(&MotorController::vtask_send_positon, "TASK_queryPosition", 1024 * 3, this, 3, &task_handle_send_position, tskNO_AFFINITY);
-        CHECK_THAT(task_handle_send_position != nullptr);
-        task_state = eTaskGetState(task_handle_send_position);
-        ESP_LOGI(FUNCTION_NAME, "Task handle query position is in state: %d", task_state);
+        get_task_state_without_panic(th_query_position, task_state);
     }
-    else
+
+    /**
+     * Task: Send position
+     */
+    ESP_LOGI(TAG, "Task handle query position is in state: %d", task_state);
+    get_task_state_without_panic(th_send_position, task_state);
+    if (task_state == eDeleted || task_state == eInvalid)
     {
-        task_state = eTaskGetState(task_handle_send_position);
-        if (task_state == eDeleted || task_state == eInvalid)
-        {
-
-            ESP_LOGI(FUNCTION_NAME, "Task handle send position is invalid or deleted. Creating new task.");
-            xReturned = xTaskCreatePinnedToCore(&MotorController::vtask_send_positon, "TASK_queryPosition", 1024 * 3, this, 3, &task_handle_send_position, tskNO_AFFINITY);
-            CHECK_THAT(task_handle_send_position != nullptr);
-            task_state = eTaskGetState(task_handle_send_position);
-        }
+        xReturned = xTaskCreatePinnedToCore(
+            &MotorController::vtask_send_positon,
+            "TASK_queryPosition",
+            1024 * 3,
+            this,
+            3,
+            &th_send_position,
+            tskNO_AFFINITY);
+        CHECK_THAT(th_send_position != nullptr);
+        get_task_state_without_panic(th_send_position, task_state);
     }
-    ESP_LOGI(FUNCTION_NAME, "Task handle query position is in state: %d", task_state);
+
+    ESP_LOGI(TAG, "Task handle query position is in state: %d", task_state);
 
     return ESP_OK;
 }
 
 void MotorController::stop_timed_tasks()
 {
-    vTaskDelete(task_handle_query_position);
-    vTaskDelete(task_handle_send_position);
+    vTaskDelete(th_query_position);
+    vTaskDelete(th_send_position);
 }
 
 // void MotorController::post_event(motor_event_id_t event)
@@ -273,7 +190,7 @@ void MotorController::stop_timed_tasks()
 esp_err_t MotorController::query_status()
 {
     esp_err_t ret = ESP_FAIL;
-    ESP_LOGI(FUNCTION_NAME, "Querying motor status");
+    ESP_LOGI(TAG, "Querying motor status");
     SEND_COMMAND_BY_ID(command_factory, QUERY_MOTOR_STATUS, context, ret);
     return ret;
 }
@@ -281,7 +198,7 @@ esp_err_t MotorController::query_status()
 esp_err_t MotorController::query_position()
 {
     esp_err_t ret = ESP_FAIL;
-    ESP_LOGI(FUNCTION_NAME, "Querying motor position");
+    ESP_LOGI(TAG, "Querying motor position");
     SEND_COMMAND_BY_ID(command_factory, READ_ENCODER_VALUE_CARRY, context, ret);
     return ret;
 }
@@ -302,14 +219,14 @@ esp_err_t MotorController::set_target_position()
 
     // uint32_t rand_pos_value = (esp_random() % 10) * STEPS_PER_REVOLUTION;
     uint32_t rand_pos_value = (esp_random() % 360);
-    ESP_LOGI(FUNCTION_NAME, "Random value: %u", static_cast<unsigned int>(rand_pos_value));
+    ESP_LOGI(TAG, "Random value: %u", static_cast<unsigned int>(rand_pos_value));
     uint32_t position = static_cast<uint32_t>(rand_pos_value);
-    ESP_LOGI(FUNCTION_NAME, "Random position: %u", static_cast<unsigned int>(position));
+    ESP_LOGI(TAG, "Random position: %u", static_cast<unsigned int>(position));
     uint32_t angle_steps = calculate_steps_for_angle(position);
     uint32_t angle_steps_with_ratio = angle_steps * ACTUATOR_GEAR_RATIO;
 
-    ESP_LOGI(FUNCTION_NAME, "Random angle_steps: %u", static_cast<unsigned int>(angle_steps));
-    ESP_LOGI(FUNCTION_NAME, "Random angle_steps_with_ratio: %u", static_cast<unsigned int>(angle_steps_with_ratio));
+    ESP_LOGI(TAG, "Random angle_steps: %u", static_cast<unsigned int>(angle_steps));
+    ESP_LOGI(TAG, "Random angle_steps_with_ratio: %u", static_cast<unsigned int>(angle_steps_with_ratio));
 
     uint16_t speed = esp_random() % 1600;
     uint8_t acceleration = esp_random() % 255;
@@ -326,7 +243,7 @@ esp_err_t MotorController::set_target_position()
     acceleration = 1;
     // position = STEPS_PER_REVOLUTION;
 
-    ESP_LOGI(FUNCTION_NAME, "Sending %s command to move motor at with speed: %d with acceleration of %d to about: %ld°", magic_enum::enum_name(command_id).data(), speed, acceleration, static_cast<uint24_t>(position));
+    ESP_LOGI(TAG, "Sending %s command to move motor at with speed: %d with acceleration of %d to about: %ld°", magic_enum::enum_name(command_id).data(), speed, acceleration, static_cast<uint24_t>(position));
     auto cmd = command_factory->create_command(command_id, speed, acceleration, static_cast<uint24_t>(angle_steps_with_ratio));
     SEND_COMMAND_BY_ID_WITH_PAYLOAD(cmd, context, ret);
 

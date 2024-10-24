@@ -39,15 +39,6 @@ public:
     MotorController(std::shared_ptr<MotorControllerDependencies> dependencies);
     ~MotorController();
 
-    esp_err_t set_target_position();
-    esp_err_t query_position();
-    esp_err_t query_status();
-
-    esp_err_t set_working_current(uint16_t currentMa);
-
-    CommandStateMachine::CommandState get_command_state() const;
-    void set_command_state(CommandStateMachine::CommandState new_state);
-
 private:
     uint32_t canId;
     std::shared_ptr<MotorControllerDependencies> dependencies;
@@ -66,26 +57,34 @@ private:
 
     int error_counter = 0;
 
-    esp_err_t execute_query_command(GenericCommand *cmd);
-
-    static void state_transition_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data);
-
     void post_event(motor_event_id_t event);
+
     esp_err_t start_basic_tasks();
     esp_err_t start_timed_tasks();
     void stop_timed_tasks();
     void stop_basic_tasks();
 
-    TaskHandle_t task_handle_handle_inQ = nullptr;
+    static void on_state_transition(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data);
+    esp_err_t handle_initialize();
+    esp_err_t handle_recover();
+    esp_err_t handle_error();
+    esp_err_t handle_ready();
+
+    esp_err_t set_target_position();
+    esp_err_t query_position();
+    esp_err_t query_status();
+    esp_err_t set_working_current(uint16_t currentMa);
+
+    TaskHandle_t th_handle_inQ = nullptr;
     static void vTask_handleInQ(void *pvParameters);
 
-    TaskHandle_t task_handle_query_position = nullptr;
+    TaskHandle_t th_query_position = nullptr;
     static void vTask_query_position(void *pvParameters);
 
-    TaskHandle_t task_handle_send_position = nullptr;
+    TaskHandle_t th_send_position = nullptr;
     static void vtask_send_positon(void *pvParameters);
 
-    TaskHandle_t task_handle_query_status = nullptr;
+    TaskHandle_t th_query_status = nullptr;
     static void vTask_query_status(void *pvParameters);
 };
 

@@ -32,6 +32,7 @@
 #define MOTOR_ERROR_BIT BIT1
 #define MOTOR_RECOVERING_BIT BIT2
 #define MOTOR_INIT_BIT BIT3
+#define MOTOR_IDLE_BIT BIT4
 
 class CommandFactory;
 class TWAIController;
