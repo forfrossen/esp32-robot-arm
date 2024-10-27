@@ -10,7 +10,7 @@ class LogMessageHandler : public ResponseHandlerBase
 public:
     bool handle_response(const twai_message_t &msg) override
     {
-        ESP_LOGI(FUNCTION_NAME, "called");
+        ESP_LOGD(FUNCTION_NAME, "called");
         log_twai_message(&msg, true);
         // Pass to the next handler
         return ResponseHandlerBase::handle_response(msg);

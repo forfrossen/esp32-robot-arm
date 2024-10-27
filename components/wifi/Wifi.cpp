@@ -1,5 +1,6 @@
 #include "Wifi.hpp"
 static int s_retry_num = 0;
+static EventGroupHandle_t s_wifi_event_group;
 
 void Wifi::event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
@@ -13,18 +14,18 @@ void Wifi::event_handler(void *arg, esp_event_base_t event_base, int32_t event_i
         {
             esp_wifi_connect();
             s_retry_num++;
-            ESP_LOGI(FUNCTION_NAME, "retry to connect to the AP");
+            ESP_LOGD(FUNCTION_NAME, "retry to connect to the AP");
         }
         else
         {
             xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
         }
-        ESP_LOGI(FUNCTION_NAME, "connect to the AP fail");
+        ESP_LOGD(FUNCTION_NAME, "connect to the AP fail");
     }
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
     {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
-        ESP_LOGI(FUNCTION_NAME, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+        ESP_LOGD(FUNCTION_NAME, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
         s_retry_num = 0;
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     }
@@ -57,7 +58,7 @@ void Wifi::wifi_init_sta(void)
                                                         NULL,
                                                         &instance_got_ip));
 
-    ESP_LOGI(FUNCTION_NAME, "CONNECTING TO: %s", CONFIG_ESP_WIFI_SSID);
+    ESP_LOGD(FUNCTION_NAME, "CONNECTING TO: %s", CONFIG_ESP_WIFI_SSID);
 
     wifi_config_t wifi_config = {
         .sta = {
@@ -77,7 +78,7 @@ void Wifi::wifi_init_sta(void)
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
 
-    ESP_LOGI(FUNCTION_NAME, "wifi_init_sta finished.");
+    ESP_LOGD(FUNCTION_NAME, "wifi_init_sta finished.");
 
     /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
      * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above) */
@@ -91,12 +92,12 @@ void Wifi::wifi_init_sta(void)
      * happened. */
     if (bits & WIFI_CONNECTED_BIT)
     {
-        ESP_LOGI(FUNCTION_NAME, "connected to ap SSID:%s password:%s",
+        ESP_LOGD(FUNCTION_NAME, "connected to ap SSID:%s password:%s",
                  CONFIG_ESP_WIFI_SSID, CONFIG_ESP_WIFI_PASSWORD);
     }
     else if (bits & WIFI_FAIL_BIT)
     {
-        ESP_LOGI(FUNCTION_NAME, "Failed to connect to SSID:%s, password:%s",
+        ESP_LOGD(FUNCTION_NAME, "Failed to connect to SSID:%s, password:%s",
                  CONFIG_ESP_WIFI_SSID, CONFIG_ESP_WIFI_PASSWORD);
     }
     else

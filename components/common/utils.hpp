@@ -10,9 +10,10 @@
 #include <cmath>
 #include <cstring>
 #include <hal/twai_types.h>
+#include <iostream>
+#include <sstream>
 #include <string>
-
-#define TAG "UTILS"
+#include <vector>
 
 inline const char *findFunctionNameStart(const char *prettyFunction)
 {
@@ -71,13 +72,13 @@ inline const char *getFunctionName(const char *prettyFunction)
 // Logging macros with function name
 #define LOGE(format, ...) ESP_LOGE(TAG, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
 #define LOGW(format, ...) ESP_LOGW(TAG, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
-#define LOGI(format, ...) ESP_LOGI(TAG, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
+#define LOGI(format, ...) ESP_LOGD(TAG, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
 #define LOGD(format, ...) ESP_LOGD(TAG, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
-#define LOGV(format, ...) ESP_LOGV(TAG, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
+#define LOGV(format, ...) ESP_LOGD(TAG, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
 
 // else
 // {
-//     ESP_LOGI(TAG, "Condition met: %s", #cond);
+//     ESP_LOGD(TAG, "Condition met: %s", #cond);
 // }
 
 #define GOTO_ON_ERROR(goto_tag, format, ...)                                                   \
@@ -124,7 +125,7 @@ inline const char *getFunctionName(const char *prettyFunction)
 #define RETURN_BOOL(cond)                                        \
     if ((cond))                                                  \
     {                                                            \
-        ESP_LOGI(FUNCTION_NAME, "Condition met: %s", #cond);     \
+        ESP_LOGD(FUNCTION_NAME, "Condition met: %s", #cond);     \
         return true;                                             \
     }                                                            \
     else                                                         \
@@ -207,36 +208,36 @@ inline const char *get_command_name(const twai_message_t *msg)
     CommandIds command = static_cast<CommandIds>(msg->data[0]);
     auto enum_name = magic_enum::enum_name(command);
 
-    ESP_LOGI(FUNCTION_NAME, "Command ID: 0x%02X ", msg->data[0]);
+    ESP_LOGD(FUNCTION_NAME, "Command ID: 0x%02X ", msg->data[0]);
 
     if (!enum_name.empty())
     {
-        ESP_LOGI(FUNCTION_NAME, "Command name: %s", enum_name.data());
+        ESP_LOGD(FUNCTION_NAME, "Command name: %s", enum_name.data());
         return enum_name.data();
     }
     else
     {
-        ESP_LOGI(FUNCTION_NAME, "Unknown Command ID");
+        ESP_LOGD(FUNCTION_NAME, "Unknown Command ID");
         return "Unknown Command ID";
     }
 }
 
 inline void log_twai_message(const twai_message_t *msg, std::optional<bool> is_received = false)
 {
-    ESP_LOGI(FUNCTION_NAME, "=================================================================================================");
+    ESP_LOGD(FUNCTION_NAME, "=================================================================================================");
     CommandIds command_id = static_cast<CommandIds>(msg->data[0]);
     const char *command_name = get_command_name(msg);
-    ESP_LOGI(FUNCTION_NAME, "MESSAGE %s", is_received.value() == true ? "RECEIVED <<=====" : "TO BE SENT =====>>");
-    ESP_LOGI(FUNCTION_NAME, "ID: 0x%02lu \t length: %d\t command_id: 0x%02X \t command_name: %s",
+    ESP_LOGD(FUNCTION_NAME, "MESSAGE %s", is_received.value() == true ? "RECEIVED <<=====" : "TO BE SENT =====>>");
+    ESP_LOGD(FUNCTION_NAME, "ID: 0x%02lu \t length: %d\t command_id: 0x%02X \t command_name: %s",
              msg->identifier, msg->data_length_code, command_id, command_name);
-    ESP_LOGI(FUNCTION_NAME, "Extended ID: %s", msg->extd ? "True" : "False");
-    ESP_LOGI(FUNCTION_NAME, "RTR: %s", msg->rtr ? "True" : "False");
+    ESP_LOGD(FUNCTION_NAME, "Extended ID: %s", msg->extd ? "True" : "False");
+    ESP_LOGD(FUNCTION_NAME, "RTR: %s", msg->rtr ? "True" : "False");
     for (int i = 0; i < msg->data_length_code - 1; i++)
     {
-        ESP_LOGI(FUNCTION_NAME, "  Data[%d]: \t 0x%02X \t %d ", i, msg->data[i], msg->data[i]);
+        ESP_LOGD(FUNCTION_NAME, "  Data[%d]: \t 0x%02X \t %d ", i, msg->data[i], msg->data[i]);
     }
-    ESP_LOGI(FUNCTION_NAME, "  Data CRC: \t 0x%02X \t %d ", msg->data[msg->data_length_code - 1], msg->data[msg->data_length_code - 1]);
-    ESP_LOGI(FUNCTION_NAME, "=================================================================================================");
+    ESP_LOGD(FUNCTION_NAME, "  Data CRC: \t 0x%02X \t %d ", msg->data[msg->data_length_code - 1], msg->data[msg->data_length_code - 1]);
+    ESP_LOGD(FUNCTION_NAME, "=================================================================================================");
 }
 
 inline esp_err_t get_task_state_without_panic(TaskHandle_t task_handle, eTaskState &task_state)
@@ -256,11 +257,28 @@ inline esp_err_t get_task_state_without_panic(TaskHandle_t task_handle, eTaskSta
         }
     }
 
-    ESP_LOGI(FUNCTION_NAME, "Task handle for %s is in state: %d", task_name, task_state);
+    ESP_LOGD(FUNCTION_NAME, "Task handle for %s is in state: %d", task_name, task_state);
 
     return ESP_OK;
 }
 
 #define IS_STATUS_IN_DATA1(command_id) (std::find(g_no_status_in_data1.begin(), g_no_status_in_data1.end(), command_id) == g_no_status_in_data1.end())
+
+inline esp_err_t split_ws_msg(const std::string &str, std::pair<std::string, std::string> &msg)
+{
+    size_t delimiter_pos = str.find(':');
+    if (delimiter_pos == std::string::npos)
+    {
+        ESP_LOGI(FUNCTION_NAME, "Delimiter not found in message: %s", str.c_str());
+        msg.first = str;
+    }
+    else
+    {
+        msg.first = str.substr(0, delimiter_pos);
+        msg.second = str.substr(delimiter_pos + 1);
+    }
+
+    return ESP_OK;
+}
 
 #endif // UTILS_HPP

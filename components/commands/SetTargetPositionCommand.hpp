@@ -64,10 +64,10 @@ public:
         data[6] = position & 0xFF;         // Untere 8 Bits der Position
                                            // data[7] = calculate_crc(data, 8)
 
-        ESP_LOGI(FUNCTION_NAME, "Setting target position: %lx", position);
-        ESP_LOGI(FUNCTION_NAME, "Speed: %d", speed);
-        ESP_LOGI(FUNCTION_NAME, "Acceleration: %d", acceleration);
-        ESP_LOGI(FUNCTION_NAME, "Mode: %s", absolute ? "Absolute" : "Relative");
+        ESP_LOGD(FUNCTION_NAME, "Setting target position: %lx", position);
+        ESP_LOGD(FUNCTION_NAME, "Speed: %d", speed);
+        ESP_LOGD(FUNCTION_NAME, "Acceleration: %d", acceleration);
+        ESP_LOGD(FUNCTION_NAME, "Mode: %s", absolute ? "Absolute" : "Relative");
 
         return ESP_OK;
     }

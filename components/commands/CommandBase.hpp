@@ -34,7 +34,7 @@ public:
     {
         uint8_t command_id_int = static_cast<uint8_t>(command_id);
 
-        ESP_LOGI(FUNCTION_NAME, "CommandBase constructor called for command_id: 0x%02X", command_id_int);
+        ESP_LOGD(FUNCTION_NAME, "CommandBase constructor called for command_id: 0x%02X", command_id_int);
         esp_err_t ret = init_new_command(command_id);
         if (ret != ESP_OK)
         {
@@ -42,7 +42,7 @@ public:
         }
         else
         {
-            ESP_LOGI(FUNCTION_NAME, "New command initialized successfully");
+            ESP_LOGD(FUNCTION_NAME, "New command initialized successfully");
         }
     }
 
@@ -83,7 +83,7 @@ public:
     esp_err_t set_default_values()
     {
         ESP_RETURN_ON_ERROR(msg_check(), FUNCTION_NAME, "msg is nullptr");
-        ESP_LOGI(FUNCTION_NAME, "Setting default values");
+        ESP_LOGD(FUNCTION_NAME, "Setting default values");
         msg.value().extd = 0;
         msg.value().rtr = 0;
         msg.value().ss = 0;
@@ -97,11 +97,11 @@ public:
     {
         ESP_RETURN_ON_ERROR(msg_check(), FUNCTION_NAME, "msg is nullptr");
         cmd_code = static_cast<uint8_t>(command_id);
-        ESP_LOGI(FUNCTION_NAME, "Setting command code to: 0x%02X", cmd_code);
+        ESP_LOGD(FUNCTION_NAME, "Setting command code to: 0x%02X", cmd_code);
         CHECK_THAT(cmd_code == static_cast<uint8_t>(command_id));
-        // ESP_LOGI(FUNCTION_NAME, "Command code: 0x%02X", command_id);
+        // ESP_LOGD(FUNCTION_NAME, "Command code: 0x%02X", command_id);
         // memset(&msg, 0, sizeof(msg));
-        // ESP_LOGI(FUNCTION_NAME, "Command msg has been zeroed out");
+        // ESP_LOGD(FUNCTION_NAME, "Command msg has been zeroed out");
         return ESP_OK;
     }
 
@@ -117,7 +117,7 @@ public:
 
     esp_err_t calculate_payload_size()
     {
-        ESP_LOGI(FUNCTION_NAME, "Calculating payload size");
+        ESP_LOGD(FUNCTION_NAME, "Calculating payload size");
         CHECK_THAT(payload_info.has_value());
         ESP_RETURN_ON_ERROR(get_semaphore(), FUNCTION_NAME, "Failed to take mutex");
         for (const auto &type : payload_info.value().type_info)
@@ -146,7 +146,7 @@ public:
         // Add 2 bytes for the command code and the crc
         data_length += 2;
         xSemaphoreGive(msg_mutex);
-        ESP_LOGI(FUNCTION_NAME, "data_length size: %d", data_length);
+        ESP_LOGD(FUNCTION_NAME, "data_length size: %d", data_length);
         CHECK_THAT(data_length <= 8);
         return ESP_OK;
     }
@@ -161,7 +161,7 @@ public:
     {
         ESP_RETURN_ON_ERROR(msg_check(), FUNCTION_NAME, "msg is nullptr");
         ESP_RETURN_ON_ERROR(get_semaphore(), FUNCTION_NAME, "Failed to take mutex");
-        ESP_LOGI(FUNCTION_NAME, "Setting data length code to: %d", data_length);
+        ESP_LOGD(FUNCTION_NAME, "Setting data length code to: %d", data_length);
         msg.value().data_length_code = data_length;
         xSemaphoreGive(msg_mutex);
         CHECK_THAT(msg.value().data_length_code == data_length);
@@ -170,7 +170,7 @@ public:
 
     esp_err_t create_msg_data()
     {
-        ESP_LOGI(FUNCTION_NAME, "Creating message data");
+        ESP_LOGD(FUNCTION_NAME, "Creating message data");
         data = new uint8_t[msg.value().data_length_code];
         return ESP_OK;
     }
@@ -179,7 +179,7 @@ public:
 
     esp_err_t execute()
     {
-        ESP_LOGI(FUNCTION_NAME, "Building and sending message");
+        ESP_LOGD(FUNCTION_NAME, "Building and sending message");
         ESP_RETURN_ON_ERROR(msg_check(), FUNCTION_NAME, "msg is nullptr");
         ESP_RETURN_ON_ERROR(build_twai_message(), FUNCTION_NAME, "Error building TWAI message");
         ESP_RETURN_ON_ERROR(set_msg_data(), FUNCTION_NAME, "Error setting message data");
@@ -191,7 +191,7 @@ public:
 
     esp_err_t set_msg_data()
     {
-        ESP_LOGI(FUNCTION_NAME, "Setting message data");
+        ESP_LOGD(FUNCTION_NAME, "Setting message data");
         ESP_RETURN_ON_ERROR(msg_check(), FUNCTION_NAME, "msg is nullptr");
         ESP_RETURN_ON_ERROR(data_check(), FUNCTION_NAME, "data is nullptr");
         CHECK_THAT(msg.value().data_length_code <= sizeof(msg.value().data));
@@ -204,7 +204,7 @@ public:
     esp_err_t set_msg_data_crc()
     {
         ESP_RETURN_ON_ERROR(msg_check(), FUNCTION_NAME, "msg is nullptr");
-        ESP_LOGI(FUNCTION_NAME, "Setting message data CRC");
+        ESP_LOGD(FUNCTION_NAME, "Setting message data CRC");
         CHECK_THAT(msg.value().data_length_code != 0);
         ESP_RETURN_ON_ERROR(get_semaphore(), FUNCTION_NAME, "Failed to take mutex");
         uint8_t crc = 0;
@@ -218,13 +218,13 @@ public:
         msg.value().data[msg.value().data_length_code - 1] = crc;
         xSemaphoreGive(msg_mutex);
         CHECK_THAT(msg.value().data[msg.value().data_length_code - 1] != 0);
-        ESP_LOGI(FUNCTION_NAME, "CRC: 0x%02X", msg.value().data[msg.value().data_length_code - 1]);
+        ESP_LOGD(FUNCTION_NAME, "CRC: 0x%02X", msg.value().data[msg.value().data_length_code - 1]);
         return ESP_OK;
     }
 
     esp_err_t calculate_crc(uint8_t &crc)
     {
-        ESP_LOGI(FUNCTION_NAME, "Calculating CRC");
+        ESP_LOGD(FUNCTION_NAME, "Calculating CRC");
         CHECK_THAT(msg.value().data_length_code != 0);
         crc = msg.value().identifier;
         for (uint8_t i = 0; i < msg.value().data_length_code - 1; i++)
@@ -238,10 +238,10 @@ public:
     esp_err_t post_event()
     {
         ESP_RETURN_ON_ERROR(get_semaphore(), FUNCTION_NAME, "Failed to take mutex");
-        ESP_LOGI(FUNCTION_NAME, "Copying data to aligned message");
+        ESP_LOGD(FUNCTION_NAME, "Copying data to aligned message");
         twai_message_t aligned_msg = msg.value();
         xSemaphoreGive(msg_mutex);
-        ESP_LOGI(FUNCTION_NAME, "Posting event");
+        ESP_LOGD(FUNCTION_NAME, "Posting event");
         CHECK_THAT(system_event_loop != nullptr);
 
         esp_err_t ret = esp_event_post_to(

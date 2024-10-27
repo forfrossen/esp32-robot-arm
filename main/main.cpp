@@ -2,6 +2,7 @@
 #define MAGIC_ENUM_RANGE_MAX 0xFF
 
 #include "esp_err.h"
+#include "esp_http_server.h"
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "freertos/FreeRTOS.h"
@@ -17,11 +18,11 @@
 #include "Events.hpp"
 
 #include "RobotArm.hpp"
-#include "WebSocketServer.hpp"
-#include "Wifi.hpp"
-#include "esp_http_server.h"
 #include "nvs_flash.h"
 #include "utils.hpp"
+
+#include "WebSocketServer.hpp"
+#include "Wifi.hpp"
 
 ESP_EVENT_DEFINE_BASE(SYSTEM_EVENTS);
 
@@ -33,46 +34,39 @@ esp_event_loop_args_t system_loop_args = {
     .task_priority = 1,
     .task_stack_size = 1024 * 10,
     .task_core_id = tskNO_AFFINITY};
+
 esp_event_loop_handle_t system_event_loop;
 
 RobotArm *robot_arm;
 static httpd_handle_t server = NULL;
-
-// void log_cmd(CommandIds cmd)
-// {
-//     ESP_LOGI(FUNCTION_NAME, "Command: 0x%02X", cmd);
-//     ESP_LOGI(FUNCTION_NAME, "Command: %s", magic_enum::enum_name(cmd).data());
-//     ESP_LOGI(FUNCTION_NAME, "Command: %s", GET_CMDPTR(&cmd));
-// }
+WebSocket *ws;
 
 extern "C" void app_main()
 {
-    // log_cmd(READ_ENCODER_VALUE_CARRY);
-
     esp_err_t ret;
-    esp_log_level_set("*", ESP_LOG_INFO);
+    esp_log_level_set("*", ESP_LOG_DEBUG);
 
-    const std::map<std::string, esp_log_level_t> logLevels = {
-        {"TWAIController::transmit", ESP_LOG_ERROR},
-        {"TWAIController::vTask_Reception", ESP_LOG_INFO},
-        {"MotorController::vTask_queryPosition", ESP_LOG_ERROR},
-        {"MotorController::sendCommand", ESP_LOG_INFO},
-        {"MotorController::handle_received_message", ESP_LOG_INFO},
-        {"MotorController::decodeMessage", ESP_LOG_INFO},
-        {"MotorController::handleQueryMotorPositionResponse", ESP_LOG_INFO},
-        {"QueryMotorPositionCommand::execute", ESP_LOG_ERROR},
-    };
-    // Apply log levels for specific FUNCTION_NAMEs
-    for (const auto &x : logLevels)
-    {
-        esp_log_level_set(x.first.c_str(), x.second);
-        ESP_LOGI("app_main", "Set log level for %s to %d", x.first.c_str(), x.second);
-    }
+    // const std::map<std::string, esp_log_level_t> logLevels = {
+    //     {"TWAIController::transmit", ESP_LOG_ERROR},
+    //     {"TWAIController::vTask_Reception", ESP_LOG_INFO},
+    //     {"MotorController::vTask_queryPosition", ESP_LOG_ERROR},
+    //     {"MotorController::sendCommand", ESP_LOG_INFO},
+    //     {"MotorController::handle_received_message", ESP_LOG_INFO},
+    //     {"MotorController::decodeMessage", ESP_LOG_INFO},
+    //     {"MotorController::handleQueryMotorPositionResponse", ESP_LOG_INFO},
+    //     {"QueryMotorPositionCommand::execute", ESP_LOG_ERROR},
+    // };
+    // // Apply log levels for specific FUNCTION_NAMEs
+    // for (const auto &x : logLevels)
+    // {
+    //     esp_log_level_set(x.first.c_str(), x.second);
+    //     ESP_LOGD("app_main", "Set log level for %s to %d", x.first.c_str(), x.second);
+    // }
 
-    ESP_LOGI(FUNCTION_NAME, "Hello world! Robot Arm starting up...");
+    ESP_LOGD(FUNCTION_NAME, "Hello world! Robot Arm starting up...");
 
-    ESP_LOGI(FUNCTION_NAME, "Hallo, Test from Arm !!!");
-    ESP_LOGI(FUNCTION_NAME, "Build date: %s", compile_date);
+    ESP_LOGD(FUNCTION_NAME, "Hallo, Test from Arm !!!");
+    ESP_LOGD(FUNCTION_NAME, "Build date: %s", compile_date);
 
     ESP_ERROR_CHECK(esp_netif_init());
 
@@ -88,18 +82,8 @@ extern "C" void app_main()
     }
     ESP_ERROR_CHECK(ret);
 
-    ESP_LOGI(FUNCTION_NAME, "ESP_WIFI_MODE_STA");
+    ESP_LOGD(FUNCTION_NAME, "ESP_WIFI_MODE_STA");
 
     Wifi::wifi_init_sta();
-
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &connect_handler, &server));
-    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &disconnect_handler, &server));
-    ESP_ERROR_CHECK(esp_event_handler_register_with(
-        system_event_loop,
-        SYSTEM_EVENTS,
-        PROPERTY_CHANGE_EVENT,
-        property_change_event_handler,
-        &server));
-
-    server = start_webserver();
+    ws = new WebSocket(server, system_event_loop);
 }

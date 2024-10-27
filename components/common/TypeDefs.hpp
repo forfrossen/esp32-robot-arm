@@ -13,7 +13,7 @@
 #include <memory>
 #include <optional>
 #include <type_traits>
-#include <variant>
+#include <utility>
 
 #define MAX_PROCESSED_MESSAGES 10
 
@@ -47,7 +47,7 @@ typedef struct EventLoops
     EventLoops(esp_event_loop_handle_t system_event_loop, esp_event_loop_handle_t motor_event_loop)
         : system_event_loop(system_event_loop), motor_event_loop(motor_event_loop)
     {
-        ESP_LOGI("EventLoops", "Constructor called");
+        ESP_LOGD("EventLoops", "Constructor called");
     }
 } event_loops_t;
 
@@ -58,7 +58,7 @@ typedef struct EventGroups
     EventGroups(EventGroupHandle_t system_event_group, EventGroupHandle_t motor_event_group)
         : system_event_group(system_event_group), motor_event_group(motor_event_group)
     {
-        ESP_LOGI("EventGroups", "Constructor called");
+        ESP_LOGD("EventGroups", "Constructor called");
     }
 } event_groups_t;
 
@@ -72,13 +72,13 @@ struct CommandFactorySettings
     CommandFactorySettings(uint32_t id, esp_event_loop_handle_t system_event_loop, std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry)
         : id(id), system_event_loop(system_event_loop), command_lifecycle_registry(command_lifecycle_registry)
     {
-        ESP_LOGI("CommandFactorySettings", "Constructor called");
+        ESP_LOGD("CommandFactorySettings", "Constructor called");
     }
 
     // Destructor
     ~CommandFactorySettings()
     {
-        ESP_LOGI("CommandFactorySettings", "Destructor called");
+        ESP_LOGD("CommandFactorySettings", "Destructor called");
     }
 };
 
@@ -99,7 +99,6 @@ typedef enum
 {
     STATE_TRANSITION_EVENT,
     INCOMING_MESSAGE_EVENT,
-    OUTGOING_MESSAGE_EVENT,
 } motor_event_id_t;
 
 typedef enum
@@ -112,7 +111,15 @@ typedef enum
     WIFI_ERROR_EVENT,
     WEBSOCKET_ERROR_EVENT,
     PROPERTY_CHANGE_EVENT,
+    OUTGOING_MESSAGE_EVENT,
+    REMOTE_CONTROL_EVENT
 } system_event_id_t;
+
+typedef enum
+{
+    START_MOTORS,
+    STOP_MOTORS,
+} remote_control_event_t;
 
 struct MotorControllerDependencies
 {
@@ -145,13 +152,17 @@ struct MotorControllerDependencies
           motor_context(motor_context),
           motor_response_handler(motor_response_handler)
     {
-        ESP_LOGI("MotorControllerDependencies", "Constructor called");
+        ESP_LOGD("MotorControllerDependencies", "Constructor called");
     }
 
     ~MotorControllerDependencies()
     {
-        ESP_LOGI("MotorControllerDependencies", "Destructor called");
+        ESP_LOGD("MotorControllerDependencies", "Destructor called");
     }
 };
+
+using ws_command_t = std::string;
+using ws_payload_t = std::string;
+using ws_message_t = std::pair<ws_command_t, ws_payload_t>;
 
 #endif // TYPEDEFS_HPP

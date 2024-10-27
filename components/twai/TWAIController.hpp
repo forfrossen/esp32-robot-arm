@@ -65,7 +65,7 @@ public:
     TWAIController(esp_event_loop_handle_t system_event_loop) : system_event_loop(system_event_loop)
     {
         esp_err_t ret;
-        ESP_LOGI(FUNCTION_NAME, "TWAIController constructor called");
+        ESP_LOGD(FUNCTION_NAME, "TWAIController constructor called");
         twai_mutex = xSemaphoreCreateMutex();
         if (!_isConnected)
         {
@@ -75,14 +75,14 @@ public:
                 ESP_LOGE(FUNCTION_NAME, "TWAIController initialization failed.");
             }
         }
-        ESP_LOGI(FUNCTION_NAME, "TWAIController initialized.");
+        ESP_LOGD(FUNCTION_NAME, "TWAIController initialized.");
 
         // ret = setupQueues();
         // if (ret != ESP_OK)
         // {
         //     ESP_LOGE(FUNCTION_NAME, "TWAIController setupQueues failed.");
         // }
-        // ESP_LOGI(FUNCTION_NAME, "TWAIController setupQueues successful.");
+        // ESP_LOGD(FUNCTION_NAME, "TWAIController setupQueues successful.");
     }
 
     ~TWAIController();

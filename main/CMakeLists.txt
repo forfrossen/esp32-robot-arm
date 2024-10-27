@@ -1,7 +1,6 @@
 idf_component_register(
   SRCS 
     "main.cpp"
-    "../components/common/Events.cpp"
 REQUIRES driver
 REQUIRES esp_event
 REQUIRES esp_wifi
@@ -13,6 +12,6 @@ INCLUDE_DIRS
     "../components/common"
     "../components/motor"
     "../components/twai"
-    "../components/websocket"
     "../components/wifi"
+    "../components/websocket"
 )

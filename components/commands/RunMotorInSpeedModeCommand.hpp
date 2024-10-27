@@ -61,7 +61,7 @@ public:
         data[2] = speed & 0xFF;
         data[3] = acceleration;
 
-        ESP_LOGI(FUNCTION_NAME, "Running motor in speed mode: %u RPM, acceleration: %u, direction: %s", speed, acceleration, direction ? "CW" : "CCW");
+        ESP_LOGD(FUNCTION_NAME, "Running motor in speed mode: %u RPM, acceleration: %u, direction: %s", speed, acceleration, direction ? "CW" : "CCW");
 
         return ESP_OK;
     }

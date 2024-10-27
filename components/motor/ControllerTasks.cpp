@@ -12,24 +12,24 @@ void MotorController::on_state_transition(void *handler_arg, esp_event_base_t ev
     RETURN_VOID_IF(event_base != MOTOR_EVENTS);
     RETURN_VOID_IF(event_id != STATE_TRANSITION_EVENT);
 
-    ESP_LOGI(TAG, "GOT MOTOR EVENT FOR MOTOR %lu, EVENT_BASE: %s, EVENT_ID: %lu", instance->canId, event_base, event_id);
+    ESP_LOGD(TAG, "GOT MOTOR EVENT FOR MOTOR %lu, EVENT_BASE: %s, EVENT_ID: %lu", instance->canId, event_base, event_id);
 
     MotorContext::ReadyState *new_state = (MotorContext::ReadyState *)event_data;
     const char *state_name = magic_enum::enum_name(*new_state).data();
     state_name == nullptr && (state_name = "UNKNOWN");
 
-    ESP_LOGI(TAG, "TRANSITION_STATE: %s", state_name);
+    ESP_LOGD(TAG, "TRANSITION_STATE: %s", state_name);
 
     switch (*new_state)
     {
 
     case MotorContext::ReadyState::MOTOR_RECOVERING:
-        ESP_LOGI(TAG, "Handling MOTOR_EVENT_RECOVERING.");
+        ESP_LOGD(TAG, "Handling MOTOR_EVENT_RECOVERING.");
         ret = instance->handle_recover();
         break;
 
     case MotorContext::ReadyState::MOTOR_INITIALIZED:
-        ESP_LOGI(TAG, "Handling MOTOR_EVENT_INIT.");
+        ESP_LOGD(TAG, "Handling MOTOR_EVENT_INIT.");
         ret = instance->handle_initialize();
         break;
 
@@ -39,7 +39,7 @@ void MotorController::on_state_transition(void *handler_arg, esp_event_base_t ev
         break;
 
     case MotorContext::ReadyState::MOTOR_READY:
-        ESP_LOGI(TAG, "Handling MOTOR_EVENT_READY.");
+        ESP_LOGD(TAG, "Handling MOTOR_EVENT_READY.");
         ret = instance->handle_ready();
         break;
 
@@ -61,10 +61,10 @@ void MotorController::vTask_query_position(void *pvParameters)
     MotorController *instance = static_cast<MotorController *>(pvParameters);
     for (;;)
     {
-        ESP_LOGI(TAG, "New iteration of taskQueryMotorPosition");
+        ESP_LOGD(TAG, "New iteration of taskQueryMotorPosition");
         if (xEventGroupWaitBits(instance->motor_event_group, MOTOR_READY_BIT, pdFALSE, pdFALSE, portMAX_DELAY) & MOTOR_READY_BIT)
         {
-            ESP_LOGI(TAG, "New iteration of taskQueryMotorPosition");
+            ESP_LOGD(TAG, "New iteration of taskQueryMotorPosition");
             instance->query_position();
         }
 
@@ -81,7 +81,7 @@ void MotorController::vTask_query_status(void *pvParameters)
     int local_error_counter = 0;
     for (;;)
     {
-        ESP_LOGI(TAG, "New iteration of vTask_query_status");
+        ESP_LOGD(TAG, "New iteration of vTask_query_status");
         esp_err_t ret = instance->query_status();
         if (ret != ESP_OK)
         {
@@ -91,7 +91,7 @@ void MotorController::vTask_query_status(void *pvParameters)
         else
         {
             local_error_counter = 0;
-            ESP_LOGI(TAG, "Query status command enqueued successfully");
+            ESP_LOGD(TAG, "Query status command enqueued successfully");
         }
 
         vTaskDelay((4000 * (local_error_counter + 1)) / portTICK_PERIOD_MS);
@@ -108,7 +108,7 @@ void MotorController::vtask_send_positon(void *pvParameters)
     {
         if (xEventGroupWaitBits(instance->motor_event_group, MOTOR_READY_BIT, pdFALSE, pdFALSE, portMAX_DELAY) & MOTOR_READY_BIT)
         {
-            ESP_LOGI(TAG, "New iteration of taskSendRandomTargetPositionCommands");
+            ESP_LOGD(TAG, "New iteration of taskSendRandomTargetPositionCommands");
 
             bool is_ready_for_command = false;
             do
@@ -130,7 +130,7 @@ void MotorController::vtask_send_positon(void *pvParameters)
                     continue;
                 }
 
-                ESP_LOGI(TAG, "Waiting for Motor to be in stopped state. Currently is: %s", motor_status_name.data());
+                ESP_LOGD(TAG, "Waiting for Motor to be in stopped state. Currently is: %s", motor_status_name.data());
                 if (motor_status == MotorStatus::MotorStop)
                 {
                     is_ready_for_command = true;

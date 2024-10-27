@@ -29,7 +29,7 @@ public:
     bool handle_response(const twai_message_t &msg) override
     {
         CommandIds command_id = static_cast<CommandIds>(msg.data[0]);
-        ESP_LOGI("ResponseDataHandler", "Handling response for command ID: %d", static_cast<int>(command_id));
+        ESP_LOGD("ResponseDataHandler", "Handling response for command ID: %d", static_cast<int>(command_id));
         ESP_RETURN_ON_ERROR(extract_response_data(command_id, msg, *context), FUNCTION_NAME, "Failed to extract response data");
         auto it = g_response_payload_map.find(command_id);
         CHECK_THAT(it != g_response_payload_map.end());
@@ -45,7 +45,7 @@ private:
     {
         esp_err_t ret = ESP_OK;
 
-        ESP_LOGI(FUNCTION_NAME, "Extracting response data for command ID: %d", static_cast<int>(command_id));
+        ESP_LOGD(FUNCTION_NAME, "Extracting response data for command ID: %d", static_cast<int>(command_id));
 
         const auto it = g_response_payload_map.find(command_id);
         ESP_RETURN_ON_FALSE(it != g_response_payload_map.end(), ESP_FAIL, FUNCTION_NAME, "Command ID not found in response map");
@@ -81,7 +81,7 @@ private:
             const ResponsePropertyMetadata &metadata = prop_meta_it->second;
 
             uint64_t raw_value = extract_data(payload_type, msg.data, bit_offset);
-            ESP_LOGI(FUNCTION_NAME, "Extracted value: %llu for property: %s", raw_value, property_name.c_str());
+            ESP_LOGD(FUNCTION_NAME, "Extracted value: %llu for property: %s", raw_value, property_name.c_str());
             MotorProperties &properties = context.get_properties();
             uint8_t *base_ptr = reinterpret_cast<uint8_t *>(&properties);
             void *prop_ptr = base_ptr + metadata.offset;
@@ -90,10 +90,10 @@ private:
 
             if (value_changed)
             {
-                ESP_LOGI(FUNCTION_NAME, "===============================================================");
-                ESP_LOGI(FUNCTION_NAME, "Property changed: %s", property_name.c_str());
-                ESP_LOGI(FUNCTION_NAME, "Property %s changed to value: %llu", property_name.c_str(), raw_value);
-                ESP_LOGI(FUNCTION_NAME, "===============================================================");
+                ESP_LOGD(FUNCTION_NAME, "===============================================================");
+                ESP_LOGD(FUNCTION_NAME, "Property changed: %s", property_name.c_str());
+                ESP_LOGD(FUNCTION_NAME, "Property %s changed to value: %llu", property_name.c_str(), raw_value);
+                ESP_LOGD(FUNCTION_NAME, "===============================================================");
                 // context.post_property_change_event(metadata.name, prop_ptr, metadata.type);
             }
 

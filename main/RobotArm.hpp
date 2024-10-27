@@ -23,13 +23,15 @@ private:
 public:
     RobotArm(esp_event_loop_handle_t system_event_loop) : system_event_loop(system_event_loop)
     {
-        ESP_LOGI(FUNCTION_NAME, "RobotArm constructor called");
+        ESP_LOGD(FUNCTION_NAME, "RobotArm constructor called");
         system_event_group = xEventGroupCreate();
 
         if (system_event_group == NULL)
         {
             ESP_LOGE(FUNCTION_NAME, "Error creating event group");
         }
+
+        esp_event_handler_register_with(system_event_loop, SYSTEM_EVENTS, REMOTE_CONTROL_EVENT, on_REMOTE_CONTROL_EVENT, this);
 
         esp_err_t ret = esp_event_post_to(
             system_event_loop,
@@ -45,20 +47,6 @@ public:
         }
 
         twai_controller = std::make_shared<TWAIController>(system_event_loop);
-
-        for (int i = 1; i < 4; i++)
-        {
-            if (i == 2)
-            {
-                const std::shared_ptr<MotorControllerDependencies> motor_controller_dependencies = motor_controller_dependencies_init(i);
-                if (motor_controller_dependencies == nullptr)
-                {
-                    ESP_LOGE(FUNCTION_NAME, "Failed to create motor controller dependencies for motor %d", i);
-                    continue;
-                }
-                servos[i] = new MotorController(motor_controller_dependencies);
-            }
-        }
     }
 
     ~RobotArm()
@@ -72,6 +60,26 @@ public:
         ESP_ERROR_CHECK(esp_event_loop_delete(system_event_loop));
         // Löschen des system_event_group
         vEventGroupDelete(system_event_group);
+    }
+
+    esp_err_t start_motors()
+    {
+        ESP_LOGD(FUNCTION_NAME, "Starting motors");
+        for (int i = 1; i < 4; i++)
+        {
+            if (i == 2)
+            {
+                const std::shared_ptr<MotorControllerDependencies> motor_controller_dependencies = motor_controller_dependencies_init(i);
+                ESP_RETURN_ON_FALSE(
+                    motor_controller_dependencies,
+                    ESP_FAIL,
+                    FUNCTION_NAME,
+                    "Failed to create motor controller dependencies for motor %d", i);
+
+                servos[i] = new MotorController(motor_controller_dependencies);
+            }
+        }
+        return ESP_OK;
     }
 
     const std::shared_ptr<MotorControllerDependencies> motor_controller_dependencies_init(uint32_t id)
@@ -127,6 +135,37 @@ public:
         const std::shared_ptr<MotorControllerDependencies> container = std::make_shared<MotorControllerDependencies>(
             id, motor_mutex, event_groups, event_loops, command_lifecyle_registry, command_factory, motor_context, motor_response_handler);
         return container;
+    }
+
+    static void on_REMOTE_CONTROL_EVENT(void *args, esp_event_base_t event_base, int32_t event_id, void *event_data)
+    {
+
+        ESP_RETURN_VOID_ON_FALSE(event_id == REMOTE_CONTROL_EVENT, FUNCTION_NAME, "Event id is not REMOTE_CONTROL_EVENT");
+        RobotArm *robot_arm = static_cast<RobotArm *>(args);
+        ESP_RETURN_VOID_ON_FALSE(robot_arm != nullptr, FUNCTION_NAME, "RobotArm instance is null in system event handler");
+        ESP_LOGD(FUNCTION_NAME, "GOT SYSTEM EVENT, EVENT_BASE: %s, EVENT_ID: %ld", event_base, event_id);
+
+        remote_control_event_t evt_msg = *reinterpret_cast<remote_control_event_t *>(event_data);
+
+        ESP_LOGD(FUNCTION_NAME, "Message: %s", magic_enum::enum_name(evt_msg).data());
+
+        if (evt_msg == remote_control_event_t::START_MOTORS)
+        {
+            ESP_LOGI(FUNCTION_NAME, "Starting motors");
+            robot_arm->start_motors();
+        }
+        else if (evt_msg == remote_control_event_t::STOP_MOTORS)
+        {
+            ESP_LOGI(FUNCTION_NAME, "Stopping motors");
+            for (auto const &x : robot_arm->servos)
+            {
+                delete x.second;
+            }
+        }
+        else
+        {
+            ESP_LOGW(FUNCTION_NAME, "Unknown message: %d", evt_msg);
+        }
     }
 };
 #endif // ROBOTARM_HPP

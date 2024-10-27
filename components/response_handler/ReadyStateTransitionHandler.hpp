@@ -16,7 +16,7 @@ public:
 
     bool handle_response(const twai_message_t &msg) override
     {
-        ESP_LOGI(FUNCTION_NAME, "called");
+        ESP_LOGD(FUNCTION_NAME, "called");
         CHECK_THAT(do_transition(msg) == ESP_OK);
 
         return ResponseHandlerBase::handle_response(msg);
@@ -26,7 +26,7 @@ private:
     std::shared_ptr<MotorContext> context;
     esp_err_t do_transition(const twai_message_t &msg)
     {
-        ESP_LOGI(FUNCTION_NAME, "called");
+        ESP_LOGD(FUNCTION_NAME, "called");
         if (context->is_recovering() || context->is_init())
         {
             CHECK_THAT(context->transition_ready_state(MotorContext::ReadyState::MOTOR_READY) == ESP_OK);

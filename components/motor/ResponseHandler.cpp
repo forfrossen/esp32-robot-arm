@@ -13,7 +13,7 @@ ResponseHandler::ResponseHandler(
       motor_event_loop(event_loops->motor_event_loop),
       command_lifecycle_registry(registry)
 {
-    ESP_LOGI(TAG, "ResponseHandler constructor called");
+    ESP_LOGD(TAG, "ResponseHandler constructor called");
     esp_err_t err = esp_event_handler_instance_register_with(
         motor_event_loop,
         MOTOR_EVENTS,
@@ -48,7 +48,7 @@ ResponseHandler::~ResponseHandler() {}
 void ResponseHandler::incoming_message_event_handler(void *args, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     ResponseHandler *instance = static_cast<ResponseHandler *>(args);
-    ESP_LOGI(TAG, "GOT MOTOR EVENT FOR MOTOR %lu, EVENT_BASE: %s, EVENT_ID: %lu", instance->canId, event_base, event_id);
+    ESP_LOGD(TAG, "GOT MOTOR EVENT FOR MOTOR %lu, EVENT_BASE: %s, EVENT_ID: %lu", instance->canId, event_base, event_id);
 
     RETURN_IF_NOT(event_base == MOTOR_EVENTS);
     RETURN_IF_NOT(event_id == INCOMING_MESSAGE_EVENT);
@@ -126,12 +126,12 @@ void ResponseHandler::incoming_message_event_handler(void *args, esp_event_base_
 //     if (is_response_error(msg))
 //     {
 //         CHECK_THAT(handle_message_error());
-//         ESP_LOGI(TAG, "Error response received.");
+//         ESP_LOGD(TAG, "Error response received.");
 //     }
 //     else
 //     {
 //         CHECK_THAT(handle_received_no_error());
-//         ESP_LOGI(TAG, "Response does not contain an error.");
+//         ESP_LOGD(TAG, "Response does not contain an error.");
 //     }
 //     return ESP_OK;
 // }
@@ -142,7 +142,7 @@ void ResponseHandler::incoming_message_event_handler(void *args, esp_event_base_
 //     ESP_LOGW(TAG, "Unknown status response: %02X", status);
 //     for (int i = 0; i < msg->data_length_code; i++)
 //     {
-//         ESP_LOGI(TAG, "Data[%d] - raw: %d \t - hex: %02X", i, msg->data[i], msg->data[i]);
+//         ESP_LOGD(TAG, "Data[%d] - raw: %d \t - hex: %02X", i, msg->data[i], msg->data[i]);
 //     }
 //     return ESP_OK;
 // }
@@ -158,7 +158,7 @@ void ResponseHandler::incoming_message_event_handler(void *args, esp_event_base_
 
 //     else
 //     {
-//         ESP_LOGI(TAG, "Set command successful for command: %s", GET_MSGCMD(&msg));
+//         ESP_LOGD(TAG, "Set command successful for command: %s", GET_MSGCMD(&msg));
 //     }
 //     return ESP_OK;
 // }
@@ -166,7 +166,7 @@ void ResponseHandler::incoming_message_event_handler(void *args, esp_event_base_
 // esp_err_t ResponseHandler::handle_read_uint16_response(twai_message_t *msg)
 // {
 //     uint16_t response = (msg->data[1] << 8) | msg->data[2];
-//     ESP_LOGI(TAG, "Response: %u", response);
+//     ESP_LOGD(TAG, "Response: %u", response);
 //     return ESP_OK;
 // }
 
@@ -181,27 +181,27 @@ void ResponseHandler::incoming_message_event_handler(void *args, esp_event_base_
 //         context->set_motor_moving_state(MotorContext::MovingState::UNKNOWN);
 //         break;
 //     case 1:
-//         ESP_LOGI(TAG, "Motor gestoppt");
+//         ESP_LOGD(TAG, "Motor gestoppt");
 //         context->set_motor_moving_state(MotorContext::MovingState::STOPPED);
 //         break;
 //     case 2:
-//         ESP_LOGI(TAG, "Motor beschleunigt");
+//         ESP_LOGD(TAG, "Motor beschleunigt");
 //         context->set_motor_moving_state(MotorContext::MovingState::ACCELERATING);
 //         break;
 //     case 3:
-//         ESP_LOGI(TAG, "Motor verlangsamt");
+//         ESP_LOGD(TAG, "Motor verlangsamt");
 //         context->set_motor_moving_state(MotorContext::MovingState::DECELERATING);
 //         break;
 //     case 4:
-//         ESP_LOGI(TAG, "Motor volle Geschwindigkeit");
+//         ESP_LOGD(TAG, "Motor volle Geschwindigkeit");
 //         context->set_motor_moving_state(MotorContext::MovingState::FULL_SPEED);
 //         break;
 //     case 5:
-//         ESP_LOGI(TAG, "Motor fährt nach Hause");
+//         ESP_LOGD(TAG, "Motor fährt nach Hause");
 //         context->set_motor_moving_state(MotorContext::MovingState::HOMING);
 //         break;
 //     case 6:
-//         ESP_LOGI(TAG, "Motor wird kalibriert");
+//         ESP_LOGD(TAG, "Motor wird kalibriert");
 //         context->set_motor_moving_state(MotorContext::MovingState::CALIBRATING);
 //         break;
 //     default:
@@ -239,16 +239,16 @@ void ResponseHandler::incoming_message_event_handler(void *args, esp_event_base_
 //     int64_t absolutePosition = ((int64_t)carry << 14) + encoderValue;
 //     // context->set_absolute_position(absolutePosition);
 
-//     ESP_LOGI(TAG, "Carry value: %ld", carry);
-//     ESP_LOGI(TAG, "Encoder value: %u", encoderValue);
-//     ESP_LOGI(TAG, "Absolute position: %lld", absolutePosition);
+//     ESP_LOGD(TAG, "Carry value: %ld", carry);
+//     ESP_LOGD(TAG, "Encoder value: %u", encoderValue);
+//     ESP_LOGD(TAG, "Absolute position: %lld", absolutePosition);
 //     return ESP_OK;
 // }
 
 // esp_err_t ResponseHandler::handle_query_motor_speed_response(twai_message_t *msg)
 // {
 //     uint16_t speed = (msg->data[2] << 16) | (msg->data[3] << 8) | msg->data[4];
-//     ESP_LOGI(TAG, "Speed: %u", speed);
+//     ESP_LOGD(TAG, "Speed: %u", speed);
 //     return ESP_OK;
 // }
 
@@ -261,22 +261,22 @@ void ResponseHandler::incoming_message_event_handler(void *args, esp_event_base_
 //     {
 //     case 0:
 //         F5Status = "Run failed";
-//         ESP_LOGI(TAG, "Run failed");
+//         ESP_LOGD(TAG, "Run failed");
 //         // context->set_motor_moving_state(MotorContext::MovingState::ERROR);
 //         break;
 //     case 1:
 //         F5Status = "Run starting";
-//         ESP_LOGI(TAG, "Run starting");
+//         ESP_LOGD(TAG, "Run starting");
 //         // fsm_moving.set_state(MotorContext::ReadyState::);
 //         break;
 //     case 2:
 //         F5Status = "Run complete";
-//         ESP_LOGI(TAG, "Run complete");
+//         ESP_LOGD(TAG, "Run complete");
 //         // fsm_moving.set_state(MotorControllerFSM::State::COMPLETED);
 //         break;
 //     case 3:
 //         F5Status = "End limit stopped";
-//         ESP_LOGI(TAG, "End limit stopped");
+//         ESP_LOGD(TAG, "End limit stopped");
 //         // fsm_moving.set_state(MotorControllerFSM::State::COMPLETED);
 //         break;
 //     default:
@@ -309,7 +309,7 @@ void ResponseHandler::incoming_message_event_handler(void *args, esp_event_base_
 //         break;
 //     }
 
-//     ESP_LOGI(TAG, "Set Home Response: %s", statusMessage.c_str());
+//     ESP_LOGD(TAG, "Set Home Response: %s", statusMessage.c_str());
 //     return ESP_OK;
 // }
 
@@ -317,7 +317,7 @@ void ResponseHandler::incoming_message_event_handler(void *args, esp_event_base_
 // {
 //     if (msg->data[1] == 1)
 //     {
-//         ESP_LOGI(TAG, "Set Work Mode: Success");
+//         ESP_LOGD(TAG, "Set Work Mode: Success");
 //     }
 //     else
 //     {
@@ -330,7 +330,7 @@ void ResponseHandler::incoming_message_event_handler(void *args, esp_event_base_
 // {
 //     if (msg->data[1] == 1)
 //     {
-//         ESP_LOGI(TAG, "Set Current: Success");
+//         ESP_LOGD(TAG, "Set Current: Success");
 //     }
 //     else
 //     {

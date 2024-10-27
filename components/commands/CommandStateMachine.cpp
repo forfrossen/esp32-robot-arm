@@ -39,7 +39,7 @@ void CommandStateMachine::set_command_state(CommandState newState)
     if (std::find(validTransitions.begin(), validTransitions.end(), newState) != validTransitions.end())
     {
         state = newState;
-        ESP_LOGI(FUNCTION_NAME, "State changed to %s", stateToString(state));
+        ESP_LOGD(FUNCTION_NAME, "State changed to %s", stateToString(state));
     }
     else
     {

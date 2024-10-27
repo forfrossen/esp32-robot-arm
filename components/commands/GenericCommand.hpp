@@ -41,7 +41,7 @@ public:
                         msg_mutex(xSemaphoreCreateMutex()),
                         system_event_loop(settings->system_event_loop)
     {
-        ESP_LOGI(FUNCTION_NAME, "GenericCommand constructor called for Motor with id: %lu", id);
+        ESP_LOGD(FUNCTION_NAME, "GenericCommand constructor called for Motor with id: %lu", id);
         esp_err_t ret = init_new_command(std::forward<Args>(args)...);
         if (ret != ESP_OK)
         {
@@ -69,7 +69,7 @@ public:
         msg = twai_message_t();
         ESP_RETURN_ON_ERROR(set_default_values(), FUNCTION_NAME, "Error setting default values");
         CHECK_THAT(msg.identifier == id);
-        ESP_LOGI(FUNCTION_NAME, "Message identifier: %lu", msg.identifier);
+        ESP_LOGD(FUNCTION_NAME, "Message identifier: %lu", msg.identifier);
         ESP_RETURN_ON_ERROR(set_data(std::forward<Args>(args)...), FUNCTION_NAME, "Error setting data");
         ESP_RETURN_ON_ERROR(register_command(), FUNCTION_NAME, "Error registering command");
         return ESP_OK;
@@ -77,7 +77,7 @@ public:
 
     esp_err_t set_default_values()
     {
-        ESP_LOGI(FUNCTION_NAME, "Setting default values");
+        ESP_LOGD(FUNCTION_NAME, "Setting default values");
         msg.extd = 0;
         msg.rtr = 0;
         msg.ss = 0;
@@ -100,7 +100,7 @@ public:
     template <typename... Args>
     esp_err_t set_data(Args &&...args)
     {
-        ESP_LOGI(FUNCTION_NAME, "Setting data for CommandId %d", static_cast<int>(command_id));
+        ESP_LOGD(FUNCTION_NAME, "Setting data for CommandId %d", static_cast<int>(command_id));
 
         auto it = g_command_payload_map.find(command_id);
         CHECK_THAT(it != g_command_payload_map.end());
@@ -108,7 +108,7 @@ public:
         const CommandPayloadInfo &payload_info = it->second;
         constexpr size_t num_args = sizeof...(Args);
         size_t num_payload_types = count_valid_payloads(payload_info.type_info);
-        ESP_LOGI(FUNCTION_NAME, "Number of arguments: %d", num_args);
+        ESP_LOGD(FUNCTION_NAME, "Number of arguments: %d", num_args);
 
         CHECK_THAT(num_args == num_payload_types);
 
@@ -181,8 +181,8 @@ public:
 
     esp_err_t set_msg_data_crc(size_t &index)
     {
-        ESP_LOGI(FUNCTION_NAME, "Setting message data CRC");
-        ESP_LOGI(FUNCTION_NAME, "Index: %d", index);
+        ESP_LOGD(FUNCTION_NAME, "Setting message data CRC");
+        ESP_LOGD(FUNCTION_NAME, "Index: %d", index);
         CHECK_THAT(index != 0);
         uint8_t crc = 0;
         esp_err_t ret = calculate_crc(crc, index);
@@ -192,17 +192,17 @@ public:
             return ESP_FAIL;
         }
         msg.data[index] = crc;
-        ESP_LOGI(FUNCTION_NAME, "CRC: 0x%02X", msg.data[index]);
+        ESP_LOGD(FUNCTION_NAME, "CRC: 0x%02X", msg.data[index]);
         CHECK_THAT(msg.data[index] != 0);
         return ESP_OK;
     }
 
     esp_err_t calculate_crc(uint8_t &crc, size_t &index)
     {
-        ESP_LOGI(FUNCTION_NAME, "Calculating CRC");
-        ESP_LOGI(FUNCTION_NAME, "Index: %d", index);
-        ESP_LOGI(FUNCTION_NAME, "Command code: 0x%02X", msg.data[0]);
-        ESP_LOGI(FUNCTION_NAME, "Identifier: %lu", msg.identifier);
+        ESP_LOGD(FUNCTION_NAME, "Calculating CRC");
+        ESP_LOGD(FUNCTION_NAME, "Index: %d", index);
+        ESP_LOGD(FUNCTION_NAME, "Command code: 0x%02X", msg.data[0]);
+        ESP_LOGD(FUNCTION_NAME, "Identifier: %lu", msg.identifier);
         if (msg.identifier == 0)
         {
             ESP_LOGE(FUNCTION_NAME, "identifier is 0");
@@ -223,10 +223,10 @@ public:
     esp_err_t execute()
     {
         ESP_RETURN_ON_ERROR(get_semaphore(), FUNCTION_NAME, "Failed to take mutex");
-        ESP_LOGI(FUNCTION_NAME, "Copying data to aligned message");
+        ESP_LOGD(FUNCTION_NAME, "Copying data to aligned message");
         twai_message_t aligned_msg = msg;
         xSemaphoreGive(msg_mutex);
-        ESP_LOGI(FUNCTION_NAME, "Posting event");
+        ESP_LOGD(FUNCTION_NAME, "Posting event");
         CHECK_THAT(system_event_loop != nullptr);
 
         esp_err_t ret = esp_event_post_to(
