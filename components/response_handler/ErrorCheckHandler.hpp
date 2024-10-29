@@ -27,6 +27,10 @@ public:
                 esp_err_t ret = on_error(msg);
                 assert(ret == ESP_OK);
             }
+            else
+            {
+                ESP_LOGD(FUNCTION_NAME, "Response does not contain an error.");
+            }
         }
         return ResponseHandlerBase::handle_response(msg);
     }
@@ -46,6 +50,15 @@ private:
         registry->update_command_state(msg.identifier, msg.data[0]);
 
         CHECK_THAT(context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR) == ESP_OK);
+
+        return ESP_OK;
+    }
+
+    esp_err_t on_no_error(const twai_message_t &msg)
+    {
+        ESP_LOGD(FUNCTION_NAME, "Transitioning ReadyState to MOTOR_READY");
+
+        CHECK_THAT(context->transition_ready_state(MotorContext::ReadyState::MOTOR_READY) == ESP_OK);
 
         return ESP_OK;
     }

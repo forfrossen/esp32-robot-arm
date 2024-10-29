@@ -23,7 +23,11 @@
 class ResponseHandler
 {
 public:
-    ResponseHandler(uint32_t canId, std::shared_ptr<MotorContext> context, std::shared_ptr<EventLoops> event_loops, std::shared_ptr<CommandLifecycleRegistry> registry);
+    ResponseHandler(
+        uint32_t canId,
+        std::shared_ptr<MotorContext> context,
+        const std::shared_ptr<EventLoops> &event_loops,
+        std::shared_ptr<CommandLifecycleRegistry> registry);
     ~ResponseHandler();
 
 private:

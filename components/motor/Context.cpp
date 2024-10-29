@@ -1,4 +1,5 @@
 #include "Context.hpp"
+static const char *TAG = "MotorContext";
 
 esp_err_t MotorContext::get_semaphore()
 {
@@ -25,14 +26,15 @@ esp_err_t MotorContext::transition_ready_state(ReadyState new_state)
 esp_err_t MotorContext::post_new_state_event()
 {
     ESP_LOGD(TAG, "Posting to MOTOR_EVENTS: %d \t %s", static_cast<int>(ready_state), magic_enum::enum_name(ready_state).data());
-
-    ESP_ERROR_CHECK(esp_event_post_to(
-        motor_event_loop,
-        MOTOR_EVENTS,
-        STATE_TRANSITION_EVENT,
-        (void *)&ready_state,
-        sizeof(ReadyState),
-        portMAX_DELAY));
+    CHECK_THAT(motor_event_loop != nullptr);
+    ESP_ERROR_CHECK(
+        esp_event_post_to(
+            motor_event_loop,
+            MOTOR_EVENTS,
+            STATE_TRANSITION_EVENT,
+            (void *)&ready_state,
+            sizeof(ReadyState),
+            portMAX_DELAY));
 
     ESP_LOGD(TAG, "Posted to MOTOR_EVENTS");
     return ESP_OK;
@@ -127,6 +129,7 @@ esp_err_t MotorContext::post_property_change_event(const std::string &property_n
     }
 
     ESP_LOGD(TAG, "Posting to PROPERTY_CHANGE_EVENTS");
+    CHECK_THAT(system_event_loop != nullptr);
 
     CHECK_THAT(esp_event_post_to(
                    system_event_loop,

@@ -1,4 +1,5 @@
 #include "WebSocketServer.hpp"
+static const char *TAG = "WebSocket";
 
 // Initialize the static URI handler
 const httpd_uri_t WebSocket::ws_uri = {
@@ -9,7 +10,13 @@ const httpd_uri_t WebSocket::ws_uri = {
     .is_websocket = true,
 };
 
-WebSocket::WebSocket(httpd_handle_t server, esp_event_loop_handle_t system_event_loop) : server(server), system_event_loop(system_event_loop)
+WebSocket::WebSocket(
+    httpd_handle_t server,
+    esp_event_loop_handle_t system_event_loop,
+    EventGroupHandle_t &system_event_group)
+    : server(server),
+      system_event_loop(system_event_loop),
+      system_event_group(system_event_group)
 {
     ESP_LOGD(TAG, "WebSocket instance created");
     assert(start() == ESP_OK);
@@ -38,6 +45,7 @@ esp_err_t WebSocket::start()
 
     register_event_handlers();
     ESP_LOGD(TAG, "WebSocket server started");
+    xEventGroupSetBits(system_event_group, WEBSOCKET_READY);
     return ESP_OK;
 }
 
@@ -55,6 +63,7 @@ esp_err_t WebSocket::stop()
     {
         server = nullptr;
         ESP_LOGD(TAG, "WebSocket server stopped");
+        xEventGroupClearBits(system_event_group, WEBSOCKET_READY);
     }
     else
     {
@@ -132,6 +141,7 @@ esp_err_t WebSocket::register_event_handlers()
             this),
         TAG,
         "Failed to register connect event handler");
+    CHECK_THAT(system_event_loop != nullptr);
 
     ESP_RETURN_ON_ERROR(
         esp_event_handler_register_with(
@@ -157,10 +167,42 @@ esp_err_t WebSocket::unregister_event_handlers()
     return ESP_OK;
 }
 
+esp_err_t WebSocket::send_response(httpd_req_t *req, int client_fd, int id, const cJSON *data)
+{
+    cJSON *response = cJSON_CreateObject();
+    cJSON_AddNumberToObject(response, "id", id);
+    cJSON_AddStringToObject(response, "status", "success");
+    cJSON_AddItemToObject(response, "data", cJSON_Duplicate(data, true));
+
+    char *response_str = cJSON_PrintUnformatted(response);
+    AsyncRespArg *resp_arg = new AsyncRespArg{req->handle, client_fd, response_str};
+    httpd_queue_work(req->handle, ws_async_send, resp_arg);
+
+    cJSON_Delete(response);
+    free(response_str);
+    return ESP_OK;
+}
+
+esp_err_t WebSocket::send_error_response(httpd_req_t *req, int client_fd, int id, const char *error_message)
+{
+    cJSON *response = cJSON_CreateObject();
+    cJSON_AddNumberToObject(response, "id", id);
+    cJSON_AddStringToObject(response, "status", "error");
+    cJSON *error_data = cJSON_CreateObject();
+    cJSON_AddStringToObject(error_data, "message", error_message);
+    cJSON_AddItemToObject(response, "error", error_data);
+
+    char *response_str = cJSON_PrintUnformatted(response);
+    AsyncRespArg *resp_arg = new AsyncRespArg{req->handle, client_fd, response_str};
+    httpd_queue_work(req->handle, ws_async_send, resp_arg);
+
+    cJSON_Delete(response);
+    free(response_str);
+    return ESP_OK;
+}
+
 void WebSocket::ws_async_send(void *arg)
 {
-    const char *data = "Async data";
-
     AsyncRespArg *resp_arg = static_cast<AsyncRespArg *>(arg);
     if (resp_arg == nullptr)
     {
@@ -170,6 +212,7 @@ void WebSocket::ws_async_send(void *arg)
 
     httpd_handle_t hd = resp_arg->hd;
     int fd = resp_arg->fd;
+    const char *data = resp_arg->data.c_str();
 
     httpd_ws_frame_t ws_pkt;
     memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
@@ -183,12 +226,12 @@ void WebSocket::ws_async_send(void *arg)
         ESP_LOGE(TAG, "httpd_ws_send_frame_async failed with %d", ret);
     }
 
-    free(resp_arg);
+    delete resp_arg;
 }
 
-esp_err_t WebSocket::trigger_async_send(httpd_handle_t handle, httpd_req_t *req)
+esp_err_t WebSocket::trigger_async_send(httpd_handle_t handle, httpd_req_t *req, const std::string &data)
 {
-    AsyncRespArg *resp_arg = (AsyncRespArg *)malloc(sizeof(AsyncRespArg));
+    AsyncRespArg *resp_arg = new AsyncRespArg;
     if (resp_arg == nullptr)
     {
         ESP_LOGE(TAG, "Failed to allocate memory for AsyncRespArg");
@@ -196,11 +239,13 @@ esp_err_t WebSocket::trigger_async_send(httpd_handle_t handle, httpd_req_t *req)
     }
     resp_arg->hd = handle;
     resp_arg->fd = httpd_req_to_sockfd(req);
+    resp_arg->data = data;
+
     esp_err_t ret = httpd_queue_work(handle, ws_async_send, resp_arg);
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "httpd_queue_work failed with %d", ret);
-        free(resp_arg);
+        delete resp_arg;
     }
     return ret;
 }
@@ -257,11 +302,6 @@ esp_err_t WebSocket::process_message(httpd_req_t *req, httpd_ws_frame_t &ws_pkt,
 
     esp_err_t ret = ESP_OK;
 
-    if (command == "Trigger async")
-    {
-        return ws_instance->trigger_async_send(req->handle, req);
-    }
-
     if (command == "GET")
     {
         ret = ws_instance->handle_get(req, payload);
@@ -277,11 +317,40 @@ esp_err_t WebSocket::process_message(httpd_req_t *req, httpd_ws_frame_t &ws_pkt,
     else if (command == "START")
     {
         ret = ws_instance->post_system_event(REMOTE_CONTROL_EVENT, remote_control_event_t::START_MOTORS);
-        
     }
     else if (command == "STOP")
     {
         ret = ws_instance->post_system_event(REMOTE_CONTROL_EVENT, remote_control_event_t::STOP_MOTORS);
+    }
+    else if (command == "SET_RUNLEVEL")
+    {
+        ESP_LOGI(TAG, "Setting runlevel: %s", payload.c_str());
+        switch (std::stoi(payload))
+        {
+        case 0:
+            xEventGroupSetBits(system_event_group, RUNLEVEL_0);
+            xEventGroupClearBits(system_event_group, RUNLEVEL_1 | RUNLEVEL_2 | RUNLEVEL_3);
+            trigger_async_send(req->handle, req, "SUCCESS");
+            break;
+        case 1:
+            xEventGroupSetBits(system_event_group, RUNLEVEL_1 | RUNLEVEL_0);
+            xEventGroupClearBits(system_event_group, RUNLEVEL_2 | RUNLEVEL_3);
+            trigger_async_send(req->handle, req, "SUCCESS");
+            break;
+        case 2:
+            xEventGroupSetBits(system_event_group, RUNLEVEL_2 | RUNLEVEL_1 | RUNLEVEL_0);
+            xEventGroupClearBits(system_event_group, RUNLEVEL_3);
+            trigger_async_send(req->handle, req, "SUCCESS");
+            break;
+        case 3:
+            xEventGroupSetBits(system_event_group, RUNLEVEL_3 | RUNLEVEL_2 | RUNLEVEL_1 | RUNLEVEL_0);
+            trigger_async_send(req->handle, req, "SUCCESS");
+            break;
+        default:
+            ESP_LOGW(TAG, "Invalid runlevel: %s", payload.c_str());
+            trigger_async_send(req->handle, req, "ERROR");
+            ret = ESP_ERR_INVALID_ARG;
+        }
     }
     else
     {
@@ -437,7 +506,6 @@ void WebSocket::property_change_event_handler(void *args, esp_event_base_t event
 esp_err_t WebSocket::post_system_event(system_event_id_t event, remote_control_event_t message)
 {
     ESP_LOGD(TAG, "Posting system event %s with message: %s", magic_enum::enum_name(event).data(), magic_enum::enum_name(message).data());
-
     CHECK_THAT(system_event_loop != nullptr);
 
     esp_err_t ret = esp_event_post_to(

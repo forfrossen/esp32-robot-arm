@@ -84,14 +84,24 @@ esp_err_t TWAIController::setupQueues()
     return ESP_OK;
 }
 
-void TWAIController::post_event(uint32_t id, twai_message_t *msg)
+esp_err_t TWAIController::post_event(uint32_t id, twai_message_t *msg)
 {
     ESP_LOGD(FUNCTION_NAME, "Posting twai_message to motor event loop");
-    esp_err_t ret = esp_event_post_to(get_event_loop_for_id(id), MOTOR_EVENTS, INCOMING_MESSAGE_EVENT, (void *)msg, sizeof(twai_message_t), portMAX_DELAY);
-    if (ret != ESP_OK)
-    {
-        ESP_LOGE(FUNCTION_NAME, "Failed to post event to motor event loop");
-    }
+
+    CHECK_THAT(msg != nullptr);
+    CHECK_THAT(get_event_loop_for_id(id) != nullptr);
+
+    esp_err_t ret = esp_event_post_to(
+        get_event_loop_for_id(id),
+        MOTOR_EVENTS,
+        INCOMING_MESSAGE_EVENT,
+        (void *)msg,
+        sizeof(twai_message_t),
+        portMAX_DELAY);
+
+    CHECK_THAT(ret == ESP_OK);
+
+    return ESP_OK;
 }
 
 esp_err_t TWAIController::register_motor_id(uint32_t id, esp_event_loop_handle_t motor_event_loop)
@@ -217,6 +227,9 @@ void TWAIController::outgoing_message_event_handler(void *args, esp_event_base_t
 
 void TWAIController::handleTransmitError(esp_err_t *error)
 {
+    xEventGroupClearBits(system_event_group, TWAI_READY);
+    xEventGroupSetBits(system_event_group, TWAI_ERROR);
+
     switch (*error)
     {
     case ESP_ERR_INVALID_ARG:

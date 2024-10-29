@@ -6,6 +6,8 @@ REQUIRES esp_event
 REQUIRES esp_wifi
 REQUIRES esp_http_server
 REQUIRES nvs_flash
+REQUIRES json
+
 INCLUDE_DIRS 
     "." 
     "../components/commands" 

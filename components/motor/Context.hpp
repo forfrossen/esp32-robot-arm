@@ -24,7 +24,7 @@ public:
     enum class ReadyState
     {
         MOTOR_UNINITIALIZED,
-        MOTOR_INITIALIZED,
+        MOTOR_INITIALIZING,
         MOTOR_READY,
         MOTOR_ERROR,
         MOTOR_RECOVERING,
@@ -43,10 +43,12 @@ public:
         CALIBRATING
     };
 
-    MotorContext(uint32_t can_id, std::shared_ptr<EventLoops> event_loops) : can_id(can_id),
-                                                                             context_mutex(xSemaphoreCreateMutex()),
-                                                                             system_event_loop(event_loops->system_event_loop),
-                                                                             motor_event_loop(event_loops->motor_event_loop) {};
+    MotorContext(uint32_t can_id,
+                 std::shared_ptr<EventLoops> event_loops)
+        : can_id(can_id),
+          context_mutex(xSemaphoreCreateMutex()),
+          system_event_loop(event_loops->system_event_loop),
+          motor_event_loop(event_loops->motor_event_loop) {};
 
     ~MotorContext() {}
 
@@ -61,7 +63,7 @@ public:
 
     bool is_ready() const { return ready_state == ReadyState::MOTOR_READY; };
     bool is_recovering() const { return ready_state == ReadyState::MOTOR_RECOVERING; };
-    bool is_init() const { return ready_state == ReadyState::MOTOR_INITIALIZED; };
+    bool is_init() const { return ready_state == ReadyState::MOTOR_INITIALIZING; };
     bool is_error() const { return ready_state == ReadyState::MOTOR_ERROR; };
 
     esp_err_t set_property_value(const ResponsePropertyMetadata &metadata, const uint8_t *data);

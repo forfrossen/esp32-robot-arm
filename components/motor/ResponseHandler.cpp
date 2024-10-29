@@ -1,11 +1,11 @@
 #include "ResponseHandler.hpp"
-
+static const char *TAG = "MotorResponseHandler";
 // ESP_EVENT_DEFINE_BASE(MOTOR_EVENTS);
 
 ResponseHandler::ResponseHandler(
     uint32_t canId,
     std::shared_ptr<MotorContext> context,
-    std::shared_ptr<EventLoops> event_loops,
+    const std::shared_ptr<EventLoops> &event_loops,
     std::shared_ptr<CommandLifecycleRegistry> registry)
     : canId(canId),
       context(context),
@@ -14,6 +14,9 @@ ResponseHandler::ResponseHandler(
       command_lifecycle_registry(registry)
 {
     ESP_LOGD(TAG, "ResponseHandler constructor called");
+
+    assert(motor_event_loop != nullptr);
+
     esp_err_t err = esp_event_handler_instance_register_with(
         motor_event_loop,
         MOTOR_EVENTS,

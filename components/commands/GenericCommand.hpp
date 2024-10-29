@@ -228,7 +228,6 @@ public:
         xSemaphoreGive(msg_mutex);
         ESP_LOGD(FUNCTION_NAME, "Posting event");
         CHECK_THAT(system_event_loop != nullptr);
-
         esp_err_t ret = esp_event_post_to(
             system_event_loop,
             SYSTEM_EVENTS,

@@ -70,11 +70,11 @@ inline const char *getFunctionName(const char *prettyFunction)
 #define FUNCTION_NAME getFunctionName(__PRETTY_FUNCTION__)
 
 // Logging macros with function name
-#define LOGE(format, ...) ESP_LOGE(TAG, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
-#define LOGW(format, ...) ESP_LOGW(TAG, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
-#define LOGI(format, ...) ESP_LOGD(TAG, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
-#define LOGD(format, ...) ESP_LOGD(TAG, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
-#define LOGV(format, ...) ESP_LOGD(TAG, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
+#define LOGE(format, ...) ESP_LOGE(tag, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
+#define LOGW(format, ...) ESP_LOGW(tag, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
+#define LOGI(format, ...) ESP_LOGD(tag, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
+#define LOGD(format, ...) ESP_LOGD(tag, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
+#define LOGV(format, ...) ESP_LOGD(tag, "%s: " format, FUNCTION_NAME, ##__VA_ARGS__)
 
 // else
 // {
@@ -240,24 +240,24 @@ inline void log_twai_message(const twai_message_t *msg, std::optional<bool> is_r
     ESP_LOGD(FUNCTION_NAME, "=================================================================================================");
 }
 
-inline esp_err_t get_task_state_without_panic(TaskHandle_t task_handle, eTaskState &task_state)
+inline esp_err_t get_task_state_without_panic(TaskHandle_t task_handle, eTaskState *task_state)
 {
     const char *task_name = pcTaskGetName(task_handle);
     if (task_handle == nullptr)
     {
         ESP_LOGW(FUNCTION_NAME, "Task handle for %s is null!", task_name);
-        task_state = eDeleted;
+        *task_state = eDeleted;
     }
     else
     {
-        task_state = eTaskGetState(task_handle);
-        if (task_state == eDeleted || task_state == eInvalid)
+        *task_state = eTaskGetState(task_handle);
+        if (*task_state == eDeleted || *task_state == eInvalid)
         {
             ESP_LOGW(FUNCTION_NAME, "Task handle for %s is invalid or deleted!", task_name);
         }
     }
 
-    ESP_LOGD(FUNCTION_NAME, "Task handle for %s is in state: %d", task_name, task_state);
+    ESP_LOGD(FUNCTION_NAME, "Task handle for %s is in state: %s", task_name, magic_enum::enum_name(*task_state).data());
 
     return ESP_OK;
 }
@@ -281,4 +281,41 @@ inline esp_err_t split_ws_msg(const std::string &str, std::pair<std::string, std
     return ESP_OK;
 }
 
+inline bool wait_for_bits(EventGroupHandle_t event_group, ...)
+{
+    va_list args;
+    va_start(args, event_group);
+
+    EventBits_t bits_to_wait_for = 0;
+    EventBits_t bit;
+    while ((bit = va_arg(args, EventBits_t)) != 0)
+    {
+        bits_to_wait_for |= bit;
+    }
+    va_end(args);
+
+    EventBits_t bits = xEventGroupWaitBits(event_group, bits_to_wait_for, pdFALSE, pdTRUE, pdMS_TO_TICKS(500));
+
+    if ((bits & bits_to_wait_for) == bits_to_wait_for)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+#define WAIT_FOR_BITS(event_group, ...) \
+    (wait_for_bits(event_group, __VA_ARGS__, 0))
+
+#define WAIT_FOR_CONDITIONS(...)                  \
+    for (;;)                                      \
+    {                                             \
+        if (!(__VA_ARGS__))                       \
+        {                                         \
+            vTaskDelay(500 / portTICK_PERIOD_MS); \
+            break;                                \
+        }                                         \
+    }
 #endif // UTILS_HPP

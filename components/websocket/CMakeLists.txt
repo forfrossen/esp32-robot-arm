@@ -5,6 +5,7 @@ idf_component_register(
 REQUIRES esp_event
 REQUIRES esp_wifi
 REQUIRES esp_http_server
+REQUIRES json
 
 INCLUDE_DIRS 
     "." 

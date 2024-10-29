@@ -1,6 +1,7 @@
 #ifndef WEB_SOCKET_H
 #define WEB_SOCKET_H
 
+#include "cJSON.h"
 #include "esp_check.h"
 #include "esp_err.h"
 #include "esp_event.h"
@@ -21,7 +22,10 @@
 class WebSocket
 {
 public:
-    WebSocket(httpd_handle_t server, esp_event_loop_handle_t system_event_loop);
+    WebSocket(
+        httpd_handle_t server,
+        esp_event_loop_handle_t system_event_loop,
+        EventGroupHandle_t &system_event_group);
     ~WebSocket();
 
     /**
@@ -61,9 +65,9 @@ public:
                                 int32_t event_id, void *event_data);
 
 private:
-    static constexpr const char *TAG = "WebSocket";
     httpd_handle_t server;
     esp_event_loop_handle_t system_event_loop;
+    EventGroupHandle_t system_event_group;
 
     /**
      * @brief Structure holding server handle and internal socket fd for async operations.
@@ -72,6 +76,7 @@ private:
     {
         httpd_handle_t hd;
         int fd;
+        std::string data; // Add a member to hold the string data
     };
 
     /**
@@ -88,7 +93,7 @@ private:
      * @param req HTTP request.
      * @return esp_err_t ESP_OK on success, otherwise an error code.
      */
-    esp_err_t trigger_async_send(httpd_handle_t handle, httpd_req_t *req);
+    esp_err_t trigger_async_send(httpd_handle_t handle, httpd_req_t *req, const std::string &data);
 
     /**
      * @brief Echo handler for WebSocket messages.
@@ -194,6 +199,10 @@ private:
      * @brief Websocket post to system event loop
      */
     esp_err_t post_system_event(system_event_id_t event, remote_control_event_t message);
+
+    esp_err_t send_response(httpd_req_t *req, int client_fd, int id, const cJSON *data);
+
+    esp_err_t send_error_response(httpd_req_t *req, int client_fd, int id, const char *error_message);
 };
 
 #endif // WEB_SOCKET_H

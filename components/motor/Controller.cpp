@@ -2,6 +2,7 @@
 #include "Events.hpp"
 
 ESP_EVENT_DEFINE_BASE(MOTOR_EVENTS);
+static const char *TAG = "MotorController";
 
 int24_t calculate_steps_for_angle(int24_t angleDegrees)
 {
@@ -26,10 +27,12 @@ MotorController::MotorController(
                                                                  context(dependencies->motor_context),
                                                                  response_handler(dependencies->motor_response_handler)
 {
+    xSemaphoreTake(motor_mutex, portMAX_DELAY);
     ESP_LOGD(TAG, "New MotorController-Object created with CAN ID: %lu", canId);
+    assert(system_event_loop != nullptr);
 
     esp_err_t ret = esp_event_handler_instance_register_with(
-        motor_event_loop,
+        system_event_loop,
         MOTOR_EVENTS,
         motor_event_id_t::STATE_TRANSITION_EVENT,
         &on_state_transition,
@@ -39,54 +42,68 @@ MotorController::MotorController(
     if (ret != ESP_OK)
     {
         ESP_LOGE(TAG, "Failed to register event handler: %s", esp_err_to_name(ret));
+        xSemaphoreGive(motor_mutex);
     }
 
     ESP_LOGD(TAG, "Motor ID: %lu -> on_state_transition registered for MOTOR_EVENTS", canId);
-    context->transition_ready_state(MotorContext::ReadyState::MOTOR_INITIALIZED);
+    xSemaphoreGive(motor_mutex);
+    context->transition_ready_state(MotorContext::ReadyState::MOTOR_INITIALIZING);
 }
 
 MotorController::~MotorController()
 {
     vTaskDelete(th_query_status);
     vTaskDelete(th_send_position);
-    esp_event_loop_delete(motor_event_loop);
 }
 
 esp_err_t MotorController::handle_initialize()
 {
+    xSemaphoreTake(motor_mutex, portMAX_DELAY);
     ESP_LOGD(TAG, "Handle initialize transition event for motor controller with Id: %lu", canId);
     esp_err_t ret = ESP_OK;
     ret = start_basic_tasks();
-    ret == ESP_OK ? context->transition_ready_state(MotorContext::ReadyState::MOTOR_READY)
-                  : context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);
+    if (ret != ESP_OK)
+    {
+        context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);
+        xSemaphoreGive(motor_mutex);
+    }
     ESP_RETURN_ON_ERROR(ret, TAG, "Error starting basic tasks. Error: %s", esp_err_to_name(ret));
+    xSemaphoreGive(motor_mutex);
     return ret;
 }
 
 esp_err_t MotorController::handle_recover()
 {
+    xSemaphoreTake(motor_mutex, portMAX_DELAY);
     ESP_LOGD(TAG, "Handle recovery event for motor controller with Id: %lu", canId);
     esp_err_t ret = ESP_OK;
     ret = start_basic_tasks();
-    ret == ESP_OK ? context->transition_ready_state(MotorContext::ReadyState::MOTOR_READY)
-                  : context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);
+    if (ret != ESP_OK)
+    {
+        context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);
+        xSemaphoreGive(motor_mutex);
+    }
     ESP_RETURN_ON_ERROR(ret, TAG, "Error starting basic tasks. Error: %s", esp_err_to_name(ret));
+    xSemaphoreGive(motor_mutex);
     return ret;
 }
 
 esp_err_t MotorController::handle_error()
 {
+    xSemaphoreTake(motor_mutex, portMAX_DELAY);
     ESP_LOGD(TAG, "Handle error event transition for motor with Id: %lu", canId);
     xEventGroupClearBits(motor_event_group, MOTOR_READY_BIT);
     xEventGroupSetBits(motor_event_group, MOTOR_ERROR_BIT);
     context->transition_ready_state(MotorContext::ReadyState::MOTOR_RECOVERING);
     stop_timed_tasks();
     ESP_LOGD(TAG, "Error state for motor %lu", canId);
+    xSemaphoreGive(motor_mutex);
     return ESP_OK;
 }
 
 esp_err_t MotorController::handle_ready()
 {
+    xSemaphoreTake(motor_mutex, portMAX_DELAY);
     ESP_LOGD(TAG, "Handle ready event transition for motor with Id:  %lu", canId);
     esp_err_t ret = ESP_OK;
     xEventGroupClearBits(motor_event_group, MOTOR_ERROR_BIT);
@@ -95,9 +112,11 @@ esp_err_t MotorController::handle_ready()
     if (ret != ESP_OK)
     {
         context->transition_ready_state(MotorContext::ReadyState::MOTOR_ERROR);
+        xSemaphoreGive(motor_mutex);
     }
 
     ESP_LOGD(TAG, "Ready state for motor %lu", canId);
+    xSemaphoreGive(motor_mutex);
     return ESP_OK;
 }
 
@@ -105,23 +124,26 @@ esp_err_t MotorController::start_basic_tasks()
 {
     eTaskState task_state;
     esp_err_t ret;
-    vTaskDelay(3000 / portTICK_PERIOD_MS);
 
     /**
      * Task: Query status
      */
-    ret = get_task_state_without_panic(th_query_status, task_state);
-    BaseType_t xReturned = xTaskCreatePinnedToCore(
-        &MotorController::vTask_query_status,
-        "TASK_queryStatus",
-        1024 * 4,
-        this,
-        1,
-        &th_query_status,
-        tskNO_AFFINITY);
-    CHECK_THAT(xReturned == pdPASS);
-    CHECK_THAT(th_query_status != NULL);
-    ret = get_task_state_without_panic(th_query_status, task_state);
+    ret = get_task_state_without_panic(th_query_status, &task_state);
+    if (task_state == eDeleted || task_state == eInvalid)
+    {
+        BaseType_t xReturned = xTaskCreatePinnedToCore(
+            &MotorController::vTask_query_status,
+            "TASK_queryStatus",
+            1024 * 3,
+            this,
+            1,
+            &th_query_status,
+            tskNO_AFFINITY);
+        CHECK_THAT(xReturned == pdPASS);
+        CHECK_THAT(th_query_status != nullptr);
+    }
+    ret = get_task_state_without_panic(th_query_status, &task_state);
+    ESP_LOGD(TAG, "Task handle query STATUS is in state: %s", magic_enum::enum_name(task_state).data());
     CHECK_THAT(ret == ESP_OK);
 
     return ESP_OK;
@@ -132,12 +154,10 @@ esp_err_t MotorController::start_timed_tasks()
     eTaskState task_state;
     ESP_LOGD(TAG, "Initializing tasks");
 
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
-
     /**
      * Task: Query position
      */
-    get_task_state_without_panic(th_query_position, task_state);
+    get_task_state_without_panic(th_query_position, &task_state);
     if (task_state == eDeleted || task_state == eInvalid)
     {
         BaseType_t xReturned = xTaskCreatePinnedToCore(
@@ -149,14 +169,12 @@ esp_err_t MotorController::start_timed_tasks()
             &th_query_position,
             tskNO_AFFINITY);
         CHECK_THAT(xReturned == pdPASS);
-        get_task_state_without_panic(th_query_position, task_state);
     }
-
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
     /**
      * Task: Send position
      */
-    ESP_LOGD(TAG, "Task handle query position is in state: %d", task_state);
-    get_task_state_without_panic(th_send_position, task_state);
+    get_task_state_without_panic(th_send_position, &task_state);
     if (task_state == eDeleted || task_state == eInvalid)
     {
         BaseType_t xReturned = xTaskCreatePinnedToCore(
@@ -169,10 +187,12 @@ esp_err_t MotorController::start_timed_tasks()
             tskNO_AFFINITY);
         CHECK_THAT(th_send_position != nullptr);
         CHECK_THAT(xReturned == pdPASS);
-        get_task_state_without_panic(th_send_position, task_state);
     }
 
-    ESP_LOGD(TAG, "Task handle query position is in state: %d", task_state);
+    get_task_state_without_panic(th_query_position, &task_state);
+    ESP_LOGD(TAG, "Task handle query STATE is in state:  %s", magic_enum::enum_name(task_state).data());
+    get_task_state_without_panic(th_send_position, &task_state);
+    ESP_LOGD(TAG, "Task handle SEND POSITION is in state: %s", magic_enum::enum_name(task_state).data());
 
     return ESP_OK;
 }

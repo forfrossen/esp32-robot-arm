@@ -23,9 +23,20 @@
 // #define STEPS_PER_REVOLUTION 256
 
 // Event group bits
-// SYSTEM BITS
-#define TWAI_READY BIT0
-#define SYSTEM_ERROR BIT1
+// SYSTEM ERROR BITS
+#define SYSTEM_ERROR BIT0
+#define TWAI_ERROR BIT1
+#define WIFI_ERROR BIT2
+#define WEBSOCKET_ERROR BIT3
+// SYSTTEM READY BITS
+#define TWAI_READY BIT4
+#define WIFI_READY BIT5
+#define WEBSOCKET_READY BIT6
+// RUNLEVEL BITS
+#define RUNLEVEL_0 BIT7  // System initialization
+#define RUNLEVEL_1 BIT8  // Query status
+#define RUNLEVEL_2 BIT9  // Query position
+#define RUNLEVEL_3 BIT10 // Move Motors
 
 // MOTOR BITS
 #define MOTOR_READY_BIT BIT0
@@ -44,7 +55,9 @@ typedef struct EventLoops
 {
     esp_event_loop_handle_t system_event_loop;
     esp_event_loop_handle_t motor_event_loop;
-    EventLoops(esp_event_loop_handle_t system_event_loop, esp_event_loop_handle_t motor_event_loop)
+    EventLoops(
+        esp_event_loop_handle_t system_event_loop,
+        esp_event_loop_handle_t motor_event_loop)
         : system_event_loop(system_event_loop), motor_event_loop(motor_event_loop)
     {
         ESP_LOGD("EventLoops", "Constructor called");
@@ -55,8 +68,11 @@ typedef struct EventGroups
 {
     EventGroupHandle_t system_event_group;
     EventGroupHandle_t motor_event_group;
-    EventGroups(EventGroupHandle_t system_event_group, EventGroupHandle_t motor_event_group)
-        : system_event_group(system_event_group), motor_event_group(motor_event_group)
+    EventGroups(
+        EventGroupHandle_t &system_event_group,
+        EventGroupHandle_t &motor_event_group)
+        : system_event_group(system_event_group),
+          motor_event_group(motor_event_group)
     {
         ESP_LOGD("EventGroups", "Constructor called");
     }
@@ -69,8 +85,13 @@ struct CommandFactorySettings
     std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
 
     // Constructor
-    CommandFactorySettings(uint32_t id, esp_event_loop_handle_t system_event_loop, std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry)
-        : id(id), system_event_loop(system_event_loop), command_lifecycle_registry(command_lifecycle_registry)
+    CommandFactorySettings(
+        uint32_t id,
+        esp_event_loop_handle_t system_event_loop,
+        std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry)
+        : id(id),
+          system_event_loop(system_event_loop),
+          command_lifecycle_registry(command_lifecycle_registry)
     {
         ESP_LOGD("CommandFactorySettings", "Constructor called");
     }

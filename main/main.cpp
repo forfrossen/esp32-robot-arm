@@ -30,16 +30,18 @@ const char compile_date[] = __DATE__ " " __TIME__;
 
 esp_event_loop_args_t system_loop_args = {
     .queue_size = 10,
-    .task_name = "system_event_task",
+    .task_name = "system_event_loop_task",
     .task_priority = 1,
     .task_stack_size = 1024 * 10,
     .task_core_id = tskNO_AFFINITY};
 
 esp_event_loop_handle_t system_event_loop;
+EventGroupHandle_t system_event_group;
 
 RobotArm *robot_arm;
 static httpd_handle_t server = NULL;
 WebSocket *ws;
+static const char *TAG = "MAIN";
 
 extern "C" void app_main()
 {
@@ -63,16 +65,18 @@ extern "C" void app_main()
     //     ESP_LOGD("app_main", "Set log level for %s to %d", x.first.c_str(), x.second);
     // }
 
-    ESP_LOGD(FUNCTION_NAME, "Hello world! Robot Arm starting up...");
+    ESP_LOGD(TAG, "Hello world! Robot Arm starting up...");
 
-    ESP_LOGD(FUNCTION_NAME, "Hallo, Test from Arm !!!");
-    ESP_LOGD(FUNCTION_NAME, "Build date: %s", compile_date);
+    ESP_LOGD(TAG, "Hallo, Test from Arm !!!");
+    ESP_LOGD(TAG, "Build date: %s", compile_date);
 
     ESP_ERROR_CHECK(esp_netif_init());
 
-    ESP_ERROR_CHECK(esp_event_loop_create(&system_loop_args, &system_event_loop));
+    // esp_event_loop_handle_t tmp_handle = nullptr;
 
-    robot_arm = new RobotArm(system_event_loop);
+    // ESP_ERROR_CHECK(esp_event_loop_create(&system_loop_args, &tmp_handle));
+    // assert(tmp_handle != nullptr);
+    // system_event_loop = std::make_shared<esp_event_loop_handle_t>(tmp_handle);
 
     ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
@@ -82,8 +86,18 @@ extern "C" void app_main()
     }
     ESP_ERROR_CHECK(ret);
 
-    ESP_LOGD(FUNCTION_NAME, "ESP_WIFI_MODE_STA");
+    system_event_group = xEventGroupCreate();
+    ESP_RETURN_VOID_ON_FALSE(system_event_group != NULL, TAG, "Failed to create system event group");
 
+    // Initialize the event loop handle
+
+    esp_event_loop_create(&system_loop_args, &system_event_loop);
+
+    ESP_LOGI(TAG, "System event loop created: %p", system_event_loop);
+    // Initialize the RobotArm, which will register the event handler
+    robot_arm = new RobotArm(system_event_loop, system_event_group);
+
+    ESP_LOGD(FUNCTION_NAME, "ESP_WIFI_MODE_STA");
     Wifi::wifi_init_sta();
-    ws = new WebSocket(server, system_event_loop);
+    ws = new WebSocket(server, system_event_loop, system_event_group);
 }

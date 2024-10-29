@@ -1,4 +1,5 @@
 #include "Controller.hpp"
+static const char *TAG = "MotorController";
 
 /**
  * Event handler for motor state transitions
@@ -28,7 +29,7 @@ void MotorController::on_state_transition(void *handler_arg, esp_event_base_t ev
         ret = instance->handle_recover();
         break;
 
-    case MotorContext::ReadyState::MOTOR_INITIALIZED:
+    case MotorContext::ReadyState::MOTOR_INITIALIZING:
         ESP_LOGD(TAG, "Handling MOTOR_EVENT_INIT.");
         ret = instance->handle_initialize();
         break;
@@ -54,33 +55,37 @@ void MotorController::on_state_transition(void *handler_arg, esp_event_base_t ev
 }
 
 /**
- * Task to query the motor position
- */
-void MotorController::vTask_query_position(void *pvParameters)
-{
-    MotorController *instance = static_cast<MotorController *>(pvParameters);
-    for (;;)
-    {
-        ESP_LOGD(TAG, "New iteration of taskQueryMotorPosition");
-        if (xEventGroupWaitBits(instance->motor_event_group, MOTOR_READY_BIT, pdFALSE, pdFALSE, portMAX_DELAY) & MOTOR_READY_BIT)
-        {
-            ESP_LOGD(TAG, "New iteration of taskQueryMotorPosition");
-            instance->query_position();
-        }
-
-        vTaskDelay(4000 / portTICK_PERIOD_MS);
-    }
-}
-
-/**
  * Task to query the motor status
  */
 void MotorController::vTask_query_status(void *pvParameters)
 {
     MotorController *instance = static_cast<MotorController *>(pvParameters);
     int local_error_counter = 0;
+    vTaskDelay(6000 / portTICK_PERIOD_MS);
     for (;;)
     {
+        // WAIT_FOR_CONDITIONS(
+        //     WAIT_FOR_BITS(instance->system_event_group, TWAI_READY, RUNLEVEL_1, 0) &&
+        //     WAIT_FOR_BITS(instance->motor_event_group, MOTOR_READY_BIT, 0));
+        ESP_LOGD(TAG, "Waiting for system bits");
+        if (instance->system_event_group == nullptr)
+        {
+            ESP_LOGE(TAG, "System event group is null");
+        }
+        if (instance->motor_event_group == nullptr)
+        {
+            ESP_LOGE(TAG, "Motor event group is null");
+        }
+        // EventBits_t group1_bits = xEventGroupWaitBits(instance->system_event_group, TWAI_READY | RUNLEVEL_1, pdFALSE, pdTRUE, pdMS_TO_TICKS(500));
+        // ESP_LOGD(TAG, "Waiting for motor bits");
+        // EventBits_t group2_bits = xEventGroupWaitBits(instance->motor_event_group, MOTOR_READY_BIT, pdFALSE, pdTRUE, pdMS_TO_TICKS(500));
+
+        // if ((group1_bits & (TWAI_READY | RUNLEVEL_1))
+        // || (group2_bits & (MOTOR_READY_BIT))
+        // )
+        // {
+        // Handle the case where the needed bits are set
+
         ESP_LOGD(TAG, "New iteration of vTask_query_status");
         esp_err_t ret = instance->query_status();
         if (ret != ESP_OK)
@@ -93,8 +98,34 @@ void MotorController::vTask_query_status(void *pvParameters)
             local_error_counter = 0;
             ESP_LOGD(TAG, "Query status command enqueued successfully");
         }
-
+        // }
         vTaskDelay((4000 * (local_error_counter + 1)) / portTICK_PERIOD_MS);
+    }
+}
+
+/**
+ * Task to query the motor position
+ */
+void MotorController::vTask_query_position(void *pvParameters)
+{
+    MotorController *instance = static_cast<MotorController *>(pvParameters);
+    vTaskDelay(6000 / portTICK_PERIOD_MS);
+    for (;;)
+    {
+        if (instance->system_event_group == nullptr)
+        {
+            ESP_LOGE(TAG, "System event group is null");
+        }
+        if (instance->motor_event_group == nullptr)
+        {
+            ESP_LOGE(TAG, "Motor event group is null");
+        }
+        WAIT_FOR_CONDITIONS(
+            WAIT_FOR_BITS(instance->system_event_group, TWAI_READY, RUNLEVEL_2, 0) &&
+            WAIT_FOR_BITS(instance->motor_event_group, MOTOR_READY_BIT, 0));
+        ESP_LOGD(TAG, "New iteration of taskQueryMotorPosition");
+        instance->query_position();
+        vTaskDelay(4000 / portTICK_PERIOD_MS);
     }
 }
 
@@ -104,47 +135,57 @@ void MotorController::vTask_query_status(void *pvParameters)
 void MotorController::vtask_send_positon(void *pvParameters)
 {
     MotorController *instance = static_cast<MotorController *>(pvParameters);
+    vTaskDelay(6000 / portTICK_PERIOD_MS);
     for (;;)
     {
-        if (xEventGroupWaitBits(instance->motor_event_group, MOTOR_READY_BIT, pdFALSE, pdFALSE, portMAX_DELAY) & MOTOR_READY_BIT)
+        if (instance->system_event_group == nullptr)
         {
-            ESP_LOGD(TAG, "New iteration of taskSendRandomTargetPositionCommands");
-
-            bool is_ready_for_command = false;
-            do
-            {
-                if (instance->context == nullptr)
-                {
-                    ESP_LOGE(TAG, "MotorController context is null");
-                    vTaskDelay(1000 / portTICK_PERIOD_MS);
-                    continue;
-                }
-
-                MotorStatus motor_status = static_cast<MotorStatus>(instance->context->get_property(&MotorProperties::motor_status));
-                auto motor_status_name = magic_enum::enum_name(motor_status);
-
-                if (motor_status_name.empty())
-                {
-                    ESP_LOGE(TAG, "Invalid MotorStatus value: %d", static_cast<int>(motor_status));
-                    vTaskDelay(1000 / portTICK_PERIOD_MS);
-                    continue;
-                }
-
-                ESP_LOGD(TAG, "Waiting for Motor to be in stopped state. Currently is: %s", motor_status_name.data());
-                if (motor_status == MotorStatus::MotorStop)
-                {
-                    is_ready_for_command = true;
-                }
-                else
-                {
-                    ESP_LOGW(TAG, "Motor is not in stopped state. Waiting for 1s");
-                }
-                vTaskDelay(1000 / portTICK_PERIOD_MS);
-            } while (!is_ready_for_command);
-
-            instance->set_target_position();
+            ESP_LOGE(TAG, "System event group is null");
         }
+        if (instance->motor_event_group == nullptr)
+        {
+            ESP_LOGE(TAG, "Motor event group is null");
+        }
+        WAIT_FOR_CONDITIONS(
+            WAIT_FOR_BITS(instance->system_event_group, TWAI_READY, RUNLEVEL_3, 0) &&
+            WAIT_FOR_BITS(instance->motor_event_group, MOTOR_READY_BIT, 0));
 
-        vTaskDelay(6000 / portTICK_PERIOD_MS);
+        ESP_LOGD(TAG, "New iteration of taskSendRandomTargetPositionCommands");
+
+        bool is_ready_for_command = false;
+        do
+        {
+            if (instance->context == nullptr)
+            {
+                ESP_LOGE(TAG, "MotorController context is null");
+                vTaskDelay(1000 / portTICK_PERIOD_MS);
+                continue;
+            }
+
+            MotorStatus motor_status = static_cast<MotorStatus>(instance->context->get_property(&MotorProperties::motor_status));
+            auto motor_status_name = magic_enum::enum_name(motor_status);
+
+            if (motor_status_name.empty())
+            {
+                ESP_LOGE(TAG, "Invalid MotorStatus value: %d", static_cast<int>(motor_status));
+                vTaskDelay(1000 / portTICK_PERIOD_MS);
+                continue;
+            }
+
+            ESP_LOGD(TAG, "Waiting for Motor to be in stopped state. Currently is: %s", motor_status_name.data());
+            if (motor_status == MotorStatus::MotorStop)
+            {
+                is_ready_for_command = true;
+            }
+            else
+            {
+                ESP_LOGW(TAG, "Motor is not in stopped state. Waiting for 1s");
+            }
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+        } while (!is_ready_for_command);
+
+        instance->set_target_position();
     }
+
+    vTaskDelay(6000 / portTICK_PERIOD_MS);
 }

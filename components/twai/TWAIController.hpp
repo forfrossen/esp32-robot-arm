@@ -62,7 +62,11 @@ public:
         ERROR_MCP2515_MERRF,
     };
 
-    TWAIController(esp_event_loop_handle_t system_event_loop) : system_event_loop(system_event_loop)
+    TWAIController(
+        esp_event_loop_handle_t system_event_loop,
+        EventGroupHandle_t system_event_group)
+        : system_event_loop(system_event_loop),
+          system_event_group(system_event_group)
     {
         esp_err_t ret;
         ESP_LOGD(FUNCTION_NAME, "TWAIController constructor called");
@@ -103,13 +107,13 @@ public:
     esp_event_loop_handle_t get_event_loop_for_id(uint32_t);
     esp_event_loop_handle_t system_event_loop;
     TaskHandle_t vTask_Reception_handle;
+    EventGroupHandle_t system_event_group;
 
-    bool
-    transmit(twai_message_t msg);
+    bool transmit(twai_message_t msg);
     void handleTransmitError(esp_err_t *error);
     void handleAlerts(uint32_t alerts);
 
-    void post_event(uint32_t id, twai_message_t *msg);
+    esp_err_t post_event(uint32_t id, twai_message_t *msg);
 
     static void outgoing_message_event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data);
 };
