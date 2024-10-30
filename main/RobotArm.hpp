@@ -130,7 +130,7 @@ public:
         }
         else
         {
-            ESP_LOGW(FUNCTION_NAME, "Unknown message: %d", evt_msg);
+            ESP_LOGW(FUNCTION_NAME, "Unknown message: %d", magic_enum::enum_integer(evt_msg));
         }
     }
 };

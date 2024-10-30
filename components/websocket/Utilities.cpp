@@ -4,9 +4,11 @@
 
 static const char *TAG = "Utilities";
 
-esp_err_t split_ws_msg(const std::string &message, ws_message_t &msg) {
+esp_err_t parse_json_msg(const std::string &message, ws_message_t &msg)
+{
     cJSON *json = cJSON_Parse(message.c_str());
-    if (!json) {
+    if (!json)
+    {
         ESP_LOGE(TAG, "Failed to parse JSON message");
         return ESP_ERR_INVALID_ARG;
     }
@@ -14,7 +16,8 @@ esp_err_t split_ws_msg(const std::string &message, ws_message_t &msg) {
     cJSON *command = cJSON_GetObjectItemCaseSensitive(json, "command");
     cJSON *payload = cJSON_GetObjectItemCaseSensitive(json, "payload");
 
-    if (!cJSON_IsString(command) || !cJSON_IsString(payload)) {
+    if (!cJSON_IsString(command) || !cJSON_IsString(payload))
+    {
         ESP_LOGE(TAG, "Invalid JSON format: missing command or payload");
         cJSON_Delete(json);
         return ESP_ERR_INVALID_ARG;

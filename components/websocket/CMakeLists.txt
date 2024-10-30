@@ -1,6 +1,11 @@
 idf_component_register(
-  SRCS 
+  SRCS
     "WebSocketServer.cpp"
+    "EventManager.cpp"
+    "RequestHandler.cpp"
+    "ResponseSender.cpp"
+    "Utilities.cpp"
+    "WebSocket.cpp"
 
 REQUIRES esp_event
 REQUIRES esp_wifi

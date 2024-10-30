@@ -21,6 +21,7 @@
 #include "nvs_flash.h"
 #include "utils.hpp"
 
+#include "WebSocket.hpp"
 #include "WebSocketServer.hpp"
 #include "Wifi.hpp"
 
@@ -99,5 +100,13 @@ extern "C" void app_main()
 
     ESP_LOGD(FUNCTION_NAME, "ESP_WIFI_MODE_STA");
     Wifi::wifi_init_sta();
-    ws = new WebSocket(server, system_event_loop, system_event_group);
+
+    ws = new WebSocket(system_event_loop, system_event_group);
+
+    // Start WebSocket server
+    ret = ws->start();
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE("MAIN", "Failed to start WebSocket: %s", esp_err_to_name(ret));
+    }
 }
