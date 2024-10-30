@@ -73,30 +73,8 @@ esp_err_t EventManager::post_event(system_event_id_t event, remote_control_event
 
 esp_err_t EventManager::set_runlevel(int runlevel, httpd_req_t *req)
 {
-    switch (runlevel)
-    {
-    case 0:
-        xEventGroupSetBits(system_event_group, RUNLEVEL_0);
-        xEventGroupClearBits(system_event_group, RUNLEVEL_1 | RUNLEVEL_2 | RUNLEVEL_3);
-        break;
-    case 1:
-        xEventGroupSetBits(system_event_group, RUNLEVEL_1 | RUNLEVEL_0);
-        xEventGroupClearBits(system_event_group, RUNLEVEL_2 | RUNLEVEL_3);
-        break;
-    case 2:
-        xEventGroupSetBits(system_event_group, RUNLEVEL_2 | RUNLEVEL_1 | RUNLEVEL_0);
-        xEventGroupClearBits(system_event_group, RUNLEVEL_3);
-        break;
-    case 3:
-        xEventGroupSetBits(system_event_group, RUNLEVEL_3 | RUNLEVEL_2 | RUNLEVEL_1 | RUNLEVEL_0);
-        break;
-    default:
-        ESP_LOGW(TAG, "Invalid runlevel: %d", runlevel);
-        return ESP_ERR_INVALID_ARG;
-    }
-
-    // Optionally, send a success message back to the client
-    // This may require further refactoring depending on your architecture
+    SetRunmodeCommand *command = new SetRunmodeCommand(runlevel);
+    command->post(system_event_loop, SYSTEM_EVENTS, system_event_id_t::SET_RUN_MODE_EVENT);
 
     return ESP_OK;
 }

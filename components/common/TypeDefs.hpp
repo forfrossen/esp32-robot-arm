@@ -133,7 +133,8 @@ typedef enum
     WEBSOCKET_ERROR_EVENT,
     PROPERTY_CHANGE_EVENT,
     OUTGOING_MESSAGE_EVENT,
-    REMOTE_CONTROL_EVENT
+    REMOTE_CONTROL_EVENT,
+    SET_RUN_MODE_EVENT,
 } system_event_id_t;
 
 typedef enum
@@ -185,5 +186,13 @@ struct MotorControllerDependencies
 using ws_command_t = std::string;
 using ws_payload_t = std::string;
 using ws_message_t = std::pair<ws_command_t, ws_payload_t>;
+
+enum class RunMode
+{
+    RUNLEVEL0,
+    RUNLEVEL1,
+    RUNLEVEL2,
+    RUNLEVEL3
+};
 
 #endif // TYPEDEFS_HPP

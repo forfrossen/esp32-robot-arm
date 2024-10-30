@@ -2,6 +2,7 @@
 #define EVENT_MANAGER_H
 
 #include "Events.hpp"
+#include "SetRunModeCommand.h"
 #include "TypeDefs.hpp"
 #include "Utilities.hpp"
 #include "esp_check.h"
