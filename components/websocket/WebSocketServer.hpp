@@ -13,9 +13,9 @@ class EventManager;
 class WebSocketServer {
 public:
     WebSocketServer(
-        std::shared_ptr<RequestHandler> requestHandler,
-        std::shared_ptr<ResponseSender> responseSender,
-        std::shared_ptr<EventManager> eventManager);
+        std::shared_ptr<RequestHandler> request_handler,
+        std::shared_ptr<ResponseSender> response_sender,
+        std::shared_ptr<EventManager> event_manager);
 
     ~WebSocketServer();
 
@@ -24,9 +24,9 @@ public:
 
 private:
     httpd_handle_t server;
-    std::shared_ptr<RequestHandler> requestHandler;
-    std::shared_ptr<ResponseSender> responseSender;
-    std::shared_ptr<EventManager> eventManager;
+    std::shared_ptr<RequestHandler> request_handler;
+    std::shared_ptr<ResponseSender> response_sender;
+    std::shared_ptr<EventManager> event_manager;
 
     esp_err_t register_uri_handlers();
     static esp_err_t incoming_message_handler(httpd_req_t *req);

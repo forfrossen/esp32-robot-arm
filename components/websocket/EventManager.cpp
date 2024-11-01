@@ -2,9 +2,15 @@
 
 static const char *TAG = "EventManager";
 
-EventManager::EventManager(esp_event_loop_handle_t system_event_loop, EventGroupHandle_t &system_event_group)
+EventManager::EventManager(esp_event_loop_handle_t system_event_loop, EventGroupHandle_t &system_event_group, std::shared_ptr<WsCommandFactory> command_factory)
     : system_event_loop(system_event_loop),
-      system_event_group(system_event_group) {}
+      system_event_group(system_event_group),
+      command_factory(command_factory)
+{
+    assert(system_event_group != nullptr);
+    assert(system_event_loop != nullptr);
+    assert(command_factory != nullptr);
+}
 
 EventManager::~EventManager()
 {
@@ -43,6 +49,16 @@ esp_err_t EventManager::register_handlers()
         TAG,
         "Failed to register property change event handler");
 
+    // Register HTTP server event handler
+    ESP_RETURN_ON_ERROR(
+        esp_event_handler_register(
+            ESP_HTTP_SERVER_EVENT,
+            ESP_EVENT_ANY_ID,
+            &EventManager::http_server_event_handler,
+            this),
+        TAG,
+        "Failed to register HTTP server event handler");
+
     return ESP_OK;
 }
 
@@ -51,6 +67,8 @@ esp_err_t EventManager::unregister_handlers()
     esp_event_handler_unregister(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &EventManager::disconnect_handler);
     esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &EventManager::connect_handler);
     esp_event_handler_unregister_with(system_event_loop, SYSTEM_EVENTS, PROPERTY_CHANGE_EVENT, &EventManager::property_change_event_handler);
+    esp_event_handler_unregister(ESP_HTTP_SERVER_EVENT, ESP_EVENT_ANY_ID, &EventManager::property_change_event_handler);
+
     return ESP_OK;
 }
 
@@ -71,10 +89,17 @@ esp_err_t EventManager::post_event(system_event_id_t event, remote_control_event
     return ESP_OK;
 }
 
-esp_err_t EventManager::set_runlevel(int runlevel, httpd_req_t *req)
+esp_err_t EventManager::set_runlevel(ws_payload_t payload)
 {
-    SetRunmodeCommand *command = new SetRunmodeCommand(runlevel);
-    command->post(system_event_loop, SYSTEM_EVENTS, system_event_id_t::SET_RUN_MODE_EVENT);
+    RunMode run_mode;
+    CHECK_THAT(get_run_mode(payload, run_mode) == ESP_OK);
+    CHECK_THAT(run_mode != RunMode::UNKNOWN);
+    CHECK_THAT(command_factory != nullptr);
+    ESP_LOGD(TAG, "Creating command, to set RunMode to: %s", magic_enum::enum_name(run_mode).data());
+    std::variant<int, std::string, RunMode, ws_set_target_position_payload_t> payload = run_mode;
+    ws_payload_t payload2 = run_mode;
+
+    CHECK_THAT(command_factory->create(ws_command_id::SET_RUNMODE, payload) == ESP_OK);
 
     return ESP_OK;
 }
@@ -107,6 +132,13 @@ void EventManager::disconnect_handler(void *arg, esp_event_base_t event_base, in
     {
         ESP_LOGE(TAG, "EventManager instance is null in disconnect_handler");
     }
+}
+
+void EventManager::http_server_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
+{
+    EventManager *manager = static_cast<EventManager *>(arg);
+    RETURN_VOID_IF(manager == nullptr);
+    ESP_LOGI(TAG, "HTTP server event received: %ld - %s", event_id, magic_enum::enum_name(static_cast<esp_http_server_event_id_t>(event_id)).data());
 }
 
 void EventManager::property_change_event_handler(void *args, esp_event_base_t event_base, int32_t event_id, void *event_data)

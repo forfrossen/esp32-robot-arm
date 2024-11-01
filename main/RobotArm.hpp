@@ -5,7 +5,7 @@
 #include "CommandFactory.hpp"
 #include "CommandLifecycleRegistry.hpp"
 #include "Controller.hpp"
-#include "ICommand.h"
+#include "IWsCommand.h"
 #include "SetRunModeCommand.h"
 #include "TWAIController.hpp"
 #include "TypeDefs.hpp"
@@ -43,6 +43,7 @@ private:
     std::shared_ptr<TWAIController> twai_controller;
     std::shared_ptr<CommandLifecycleRegistry> command_lifecyle_registry;
     MotorRegistry motors;
+    RunMode run_mode;
 
 public:
     RobotArm(
@@ -173,63 +174,41 @@ public:
 
         ESP_LOGD(FUNCTION_NAME, "GOT SYSTEM EVENT, EVENT_BASE: %s, EVENT_ID: %ld", event_base, event_id);
 
-        CommandEventData *data = static_cast<CommandEventData *>(event_data);
-        if (!data || !data->command)
-        {
-            ESP_LOGE(FUNCTION_NAME, "Failed to cast event_data to CommandEventData*.");
-            delete data;
-            delete data->command;
-            return;
-        }
+        auto *data = static_cast<CommandEventData *>(event_data);
+        ESP_RETURN_VOID_ON_FALSE(data != nullptr, FUNCTION_NAME, "CommandEventData is null in system event handler");
+        ESP_RETURN_VOID_ON_FALSE(data->command != nullptr, FUNCTION_NAME, "CommandEventData command is null in system event handler");
 
-        SetRunmodeCommand *set_runmode_cmd = static_cast<SetRunmodeCommand *>(data->command);
-        if (!set_runmode_cmd)
-        {
-            ESP_LOGE("HandlerRegistration", "Failed to cast ICommand* to SetRunmodeCommand*.");
-            delete data->command;
-            delete data;
-            return;
-        }
+        auto *set_runmode_cmd = static_cast<SetRunmodeCommand *>(data->command);
+        ESP_RETURN_VOID_ON_FALSE(set_runmode_cmd != nullptr, FUNCTION_NAME, "Failed to cast IWsCommand* to SetRunmodeCommand*.");
 
-        int run_level = set_runmode_cmd->get_run_mode();
-        RunMode run_mode = static_cast<RunMode>(run_level);
-
-        if (run_level >= 0 && run_level <= 3)
+        self->run_mode = set_runmode_cmd->get_run_mode();
+        auto set_runlevel = [self](uint32_t set_bits, uint32_t clear_bits)
         {
-            ESP_LOGE(FUNCTION_NAME, "Invalid runlevel: %d", run_level);
-            delete data->command;
-            delete data;
-            return;
-        }
+            xEventGroupSetBits(self->system_event_group, set_bits);
+            xEventGroupClearBits(self->system_event_group, clear_bits);
+        };
 
-        switch (run_level)
+        switch (self->run_mode)
         {
-        case 0:
-            xEventGroupSetBits(self->system_event_group, RUNLEVEL_0);
-            xEventGroupClearBits(self->system_event_group, RUNLEVEL_1 | RUNLEVEL_2 | RUNLEVEL_3);
+        case RunMode::RUNMODE0:
+            set_runlevel(RUNLEVEL_0, RUNLEVEL_1 | RUNLEVEL_2 | RUNLEVEL_3);
             ESP_LOGI(FUNCTION_NAME, "Setting runlevel 0");
             break;
-        case 1:
-            xEventGroupSetBits(self->system_event_group, RUNLEVEL_1 | RUNLEVEL_0);
-            xEventGroupClearBits(self->system_event_group, RUNLEVEL_2 | RUNLEVEL_3);
+        case RunMode::RUNMODE1:
+            set_runlevel(RUNLEVEL_1 | RUNLEVEL_0, RUNLEVEL_2 | RUNLEVEL_3);
             ESP_LOGI(FUNCTION_NAME, "Setting runlevel 1");
             break;
-        case 2:
-            xEventGroupSetBits(self->system_event_group, RUNLEVEL_2 | RUNLEVEL_1 | RUNLEVEL_0);
-            xEventGroupClearBits(self->system_event_group, RUNLEVEL_3);
+        case RunMode::RUNMODE2:
+            set_runlevel(RUNLEVEL_2 | RUNLEVEL_1 | RUNLEVEL_0, RUNLEVEL_3);
             ESP_LOGI(FUNCTION_NAME, "Setting runlevel 2");
             break;
-        case 3:
-            xEventGroupSetBits(self->system_event_group, RUNLEVEL_3 | RUNLEVEL_2 | RUNLEVEL_1 | RUNLEVEL_0);
+        case RunMode::RUNMODE3:
+            set_runlevel(RUNLEVEL_3 | RUNLEVEL_2 | RUNLEVEL_1 | RUNLEVEL_0, 0);
             ESP_LOGI(FUNCTION_NAME, "Setting runlevel 3");
             break;
         default:
-            ESP_LOGW(FUNCTION_NAME, "Invalid runlevel: %d", run_level);
+            ESP_LOGW(FUNCTION_NAME, "Invalid runlevel: %d", static_cast<int>(self->run_mode));
         }
-        delete set_runmode_cmd;
-        delete data->command;
-        delete data;
-        ESP_LOGD(FUNCTION_NAME, "Run mode: %s", magic_enum::enum_name(run_mode).data());
     }
 };
 #endif // ROBOTARM_HPP

@@ -16,4 +16,5 @@ INCLUDE_DIRS
     "." 
     "../magic_enum"
     "../common"
+    "./commands"
 )

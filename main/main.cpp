@@ -49,6 +49,34 @@ extern "C" void app_main()
     esp_err_t ret;
     esp_log_level_set("*", ESP_LOG_DEBUG);
 
+    // WebSocket and WebServer logs
+    esp_log_level_set("httpd_parse", ESP_LOG_INFO);
+    esp_log_level_set("httpd_txrx", ESP_LOG_INFO);
+    esp_log_level_set("httpd_ws", ESP_LOG_INFO);
+    esp_log_level_set("httpd_uri", ESP_LOG_INFO);
+    esp_log_level_set("httpd_sess", ESP_LOG_INFO);
+    esp_log_level_set("httpd", ESP_LOG_INFO);
+
+    // Wifi logs
+    esp_log_level_set("wifi_init_default", ESP_LOG_INFO);
+    esp_log_level_set("esp_netif_lwip", ESP_LOG_INFO);
+    esp_log_level_set("esp_netif_handlers", ESP_LOG_WARN);
+    esp_log_level_set("nvs", ESP_LOG_INFO);
+    esp_log_level_set("wifi", ESP_LOG_INFO);
+    esp_log_level_set("wifi:wifi", ESP_LOG_WARN);
+    esp_log_level_set("Wifi::wifi_init_sta", ESP_LOG_INFO);
+    esp_log_level_set("esp_netif_objects", ESP_LOG_INFO);
+    esp_log_level_set("wifi:mode", ESP_LOG_INFO);
+    esp_log_level_set("esp_netif_objects", ESP_LOG_INFO);
+    esp_log_level_set("wifi:state", ESP_LOG_INFO);
+    esp_log_level_set("wifi_init", ESP_LOG_INFO);
+
+    // General logs
+    esp_log_level_set("efuse", ESP_LOG_INFO);
+    esp_log_level_set("cpu_start", ESP_LOG_INFO);
+    esp_log_level_set("esp_event", ESP_LOG_INFO);
+    esp_log_level_set("esp_event_loop", ESP_LOG_INFO);
+
     // const std::map<std::string, esp_log_level_t> logLevels = {
     //     {"TWAIController::transmit", ESP_LOG_ERROR},
     //     {"TWAIController::vTask_Reception", ESP_LOG_INFO},

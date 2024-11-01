@@ -183,16 +183,13 @@ struct MotorControllerDependencies
     }
 };
 
-using ws_command_t = std::string;
-using ws_payload_t = std::string;
-using ws_message_t = std::pair<ws_command_t, ws_payload_t>;
-
 enum class RunMode
 {
-    RUNLEVEL0,
-    RUNLEVEL1,
-    RUNLEVEL2,
-    RUNLEVEL3
+    RUNMODE0 = 0,
+    RUNMODE1 = 1,
+    RUNMODE2 = 2,
+    RUNMODE3 = 3,
+    UNKNOWN = 99
 };
 
 #endif // TYPEDEFS_HPP

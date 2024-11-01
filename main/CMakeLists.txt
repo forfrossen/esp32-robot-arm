@@ -16,4 +16,5 @@ INCLUDE_DIRS
     "../components/twai"
     "../components/wifi"
     "../components/websocket"
+    "../components/websocket/commands"
 )
