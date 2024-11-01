@@ -23,7 +23,7 @@ enum class ws_command_id
     START_MOTORS,
     STOP_MOTORS,
     SET_RUNMODE,
-    SET_TARGETPOSITION,
+    SET_TARGET_POSITION,
     UNKNOWN
 };
 
@@ -33,11 +33,6 @@ struct CommandEventConfig
     esp_event_base_t event_base;
     int32_t event_id;
 };
-
-using ws_command_t = std::string;
-using ws_message_t = std::pair<ws_command_id, ws_payload_t>;
-using ws_command_config_map_t = std::map<ws_command_id, CommandEventConfig>;
-using ws_payload_t = std::variant<int, std::string, RunMode, ws_set_target_position_payload_t>;
 typedef struct
 {
     uint8_t motor_id;
@@ -45,6 +40,11 @@ typedef struct
     int32_t speed;
     int32_t acceleration;
 } ws_set_target_position_payload_t;
+
+using ws_command_t = std::string;
+using ws_payload_t = std::variant<int, std::string, RunMode>;
+using ws_message_t = std::pair<ws_command_id, ws_payload_t>;
+using ws_command_config_map_t = std::map<ws_command_id, CommandEventConfig>;
 
 struct CommandEventData
 {

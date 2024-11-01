@@ -96,10 +96,8 @@ esp_err_t EventManager::set_runlevel(ws_payload_t payload)
     CHECK_THAT(run_mode != RunMode::UNKNOWN);
     CHECK_THAT(command_factory != nullptr);
     ESP_LOGD(TAG, "Creating command, to set RunMode to: %s", magic_enum::enum_name(run_mode).data());
-    std::variant<int, std::string, RunMode, ws_set_target_position_payload_t> payload = run_mode;
-    ws_payload_t payload2 = run_mode;
 
-    CHECK_THAT(command_factory->create(ws_command_id::SET_RUNMODE, payload) == ESP_OK);
+    CHECK_THAT(command_factory->create(ws_command_id::SET_RUNMODE, run_mode) == ESP_OK);
 
     return ESP_OK;
 }
