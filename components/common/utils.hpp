@@ -101,6 +101,14 @@ inline const char *getFunctionName(const char *prettyFunction)
         }                                                                   \
     } while (0)
 
+#define ERRCHECK_OR_DELETE_COMMAND(ret)                             \
+    if (ret != ESP_OK)                                              \
+    {                                                               \
+        ESP_LOGE(FUNCTION_NAME, "Error: %s", esp_err_to_name(ret)); \
+        delete command;                                             \
+        return ret;                                                 \
+    }
+
 #define CHECK_THAT_AND_LOG(x, y, z) \
     if (!(x))                       \
     {                               \
