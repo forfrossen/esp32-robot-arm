@@ -1,12 +1,7 @@
 #include "RequestHandler.hpp"
-#include "EventManager.hpp"
-#include "ResponseSender.hpp"
-#include "Utilities.hpp"
-#include "cJSON.h"
-#include "esp_log.h"
-#include <cstring>
 
 static const char *TAG = "RequestHandler";
+using json = nlohmann::json;
 
 RequestHandler::RequestHandler(
     std::shared_ptr<ResponseSender> response_sender,
@@ -44,6 +39,38 @@ esp_err_t RequestHandler::handle_handshake(httpd_req_t *req)
     return httpd_ws_send_frame(req, &ws_pkt);
 }
 
+void handle_incoming_json_rpc_message(const std::string &incoming_message)
+{
+    try
+    {
+        // Deserialisiere die eingehende Nachricht
+        json message = json::parse(incoming_message);
+
+        if (message.contains("jsonrpc") && message["jsonrpc"] == "2.0" && message.contains("method"))
+        {
+            std::string method = message["method"];
+            json params = message["params"];
+            int id = message["id"];
+
+            // Logische Behandlung der Methoden
+            ESP_LOGI("JSON-RPC", "Received method: %s", method.c_str());
+            // Füge hier die Behandlung der spezifischen Methoden hinzu
+        }
+        else
+        {
+            ESP_LOGE("JSON-RPC", "Invalid JSON-RPC message format");
+        }
+    }
+    catch (json::parse_error &e)
+    {
+        ESP_LOGE("JSON-RPC", "JSON parsing error: %s", e.what());
+    }
+    catch (json::type_error &e)
+    {
+        ESP_LOGE("JSON-RPC", "JSON type error: %s", e.what());
+    }
+}
+
 esp_err_t RequestHandler::process_message(httpd_req_t *req, httpd_ws_frame_t &ws_pkt, uint8_t *buf)
 {
     ESP_LOGD(TAG, "Packet type: %d", ws_pkt.type);
@@ -60,6 +87,13 @@ esp_err_t RequestHandler::process_message(httpd_req_t *req, httpd_ws_frame_t &ws
     {
         ESP_LOGD(TAG, "Received ping");
         return handle_heartbeat(req);
+    }
+
+    if (message.find("jsonrpc") != std::string::npos)
+    {
+        handle_incoming_json_rpc_message(message);
+        free(buf);
+        return ESP_OK;
     }
 
     ESP_LOGD(TAG, "Received message: %s", message.c_str());

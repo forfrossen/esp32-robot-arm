@@ -4,36 +4,41 @@ static const char *TAG = "Utilities";
 
 esp_err_t parse_json_msg(const std::string &message, ws_message_t &msg)
 {
-    cJSON *json = cJSON_Parse(message.c_str());
-    if (!json)
+    // Versuch, die Nachricht als JSON zu parsen
+    nlohmann::json json;
+    if (nlohmann::json::accept(message))
+    {
+        json = nlohmann::json::parse(message, nullptr, false);
+    }
+    else
     {
         ESP_LOGE(TAG, "Failed to parse JSON message");
         return ESP_ERR_INVALID_ARG;
     }
 
-    cJSON *command_name = cJSON_GetObjectItemCaseSensitive(json, "command");
-    cJSON *payload = cJSON_GetObjectItemCaseSensitive(json, "payload");
-
-    if (!cJSON_IsString(command_name) || !cJSON_IsString(payload))
+    // Prüfe, ob die notwendigen Felder vorhanden und Strings sind
+    if (!json.contains("command") || !json["command"].is_string() ||
+        !json.contains("payload") || !json["payload"].is_string())
     {
         ESP_LOGE(TAG, "Invalid JSON format: missing command or payload");
-        cJSON_Delete(json);
         return ESP_ERR_INVALID_ARG;
     }
-    const char *command_name_string = command_name->valuestring;
-    ESP_LOGD(TAG, "Command: %s", command_name_string);
+
+    // Extrahiere den "command" und "payload"
+    std::string command_name_string = json["command"].get<std::string>();
+    ESP_LOGD(TAG, "Command: %s", command_name_string.c_str());
+
     ws_command_id cmd = magic_enum::enum_cast<ws_command_id>(command_name_string).value_or(ws_command_id::UNKNOWN);
     if (cmd == ws_command_id::UNKNOWN)
     {
-        ESP_LOGE(TAG, "Invalid command: %s", command_name->valuestring);
-        cJSON_Delete(json);
+        ESP_LOGE(TAG, "Invalid command: %s", command_name_string.c_str());
         return ESP_ERR_INVALID_ARG;
     }
 
+    // Setze die Felder in der Nachricht
     msg.first = cmd;
-    msg.second = payload->valuestring;
+    msg.second = json["payload"].get<std::string>();
 
-    cJSON_Delete(json);
     return ESP_OK;
 }
 
@@ -92,4 +97,5 @@ esp_err_t get_run_mode(ws_payload_t &payload, RunMode &run_mode)
         ESP_LOGE(TAG, "Invalid payload type");
         return ESP_ERR_INVALID_ARG;
     }
+    return ESP_OK;
 }

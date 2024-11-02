@@ -1,8 +1,15 @@
 #ifndef REQUEST_HANDLER_H
 #define REQUEST_HANDLER_H
 
+// #include "..\managed_components\johboh__nlohmann-json\single_include\nlohmann\json.hpp"
+#include "../../managed_components/johboh__nlohmann-json/single_include/nlohmann/json.hpp"
+#include "EventManager.hpp"
+#include "ResponseSender.hpp"
+#include "Utilities.hpp"
 #include "esp_err.h"
 #include "esp_http_server.h"
+#include "esp_log.h"
+#include <cstring>
 #include <memory>
 #include <string>
 

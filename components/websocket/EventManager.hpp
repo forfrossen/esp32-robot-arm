@@ -1,6 +1,7 @@
 #ifndef EVENT_MANAGER_H
 #define EVENT_MANAGER_H
 
+#include "../../managed_components/johboh__nlohmann-json/single_include/nlohmann/json.hpp"
 #include "../magic_enum/include/magic_enum/magic_enum.hpp"
 #include "Events.hpp"
 #include "SetRunModeCommand.h"
@@ -15,6 +16,7 @@
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include <cassert>
+#include <cstring>
 #include <memory>
 
 class EventManager

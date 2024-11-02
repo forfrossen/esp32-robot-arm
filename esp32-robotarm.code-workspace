@@ -82,7 +82,11 @@
       "unordered_set": "cpp",
       "any": "cpp",
       "cfloat": "cpp",
-      "climits": "cpp"
+      "climits": "cpp",
+      "codecvt": "cpp",
+      "csignal": "cpp",
+      "ranges": "cpp",
+      "valarray": "cpp"
     },
     "editor.detectIndentation": false,
     "editor.tabSize": 4,
