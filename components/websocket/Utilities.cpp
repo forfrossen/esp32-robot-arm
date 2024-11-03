@@ -91,8 +91,7 @@ esp_err_t receive_frame(httpd_req_t *req, httpd_ws_frame_t &ws_pkt, uint8_t *&bu
 {
     memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
     ws_pkt.type = HTTPD_WS_TYPE_TEXT;
-
-    // Get frame length
+    ESP_RETURN_ON_FALSE(req != nullptr, ESP_ERR_INVALID_ARG, TAG, "Request is null");
     esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
     ESP_RETURN_ON_ERROR(ret, TAG, "httpd_ws_recv_frame failed to get frame len with %d", ret);
     ESP_LOGD(TAG, "Frame length is %d", ws_pkt.len);

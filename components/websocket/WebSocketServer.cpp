@@ -3,6 +3,7 @@
 #include "RequestHandler.hpp"
 #include "ResponseSender.hpp"
 #include "esp_log.h"
+#include <memory>
 
 static const char *TAG = "WebSocketServer";
 
@@ -70,6 +71,32 @@ esp_err_t WebSocketServer::stop()
     return ESP_OK;
 }
 
+esp_err_t WebSocketServer::set_client_ctx(ws_client_info ctx)
+{
+
+    client_ctx = ctx;
+    return ESP_OK;
+}
+
+std::string WebSocketServer::get_client_id_from_ctx()
+{
+    if (client_ctx.client_id.empty())
+    {
+        client_ctx = ws_client_info();
+        client_ctx.client_id = "";
+    }
+    return client_ctx.client_id;
+}
+esp_err_t WebSocketServer::set_client_id_in_ctx(std::string client_id)
+{
+    if (client_ctx.client_id.empty())
+    {
+        client_ctx = ws_client_info();
+    }
+    client_ctx.client_id = client_id;
+    return ESP_OK;
+}
+
 esp_err_t WebSocketServer::incoming_message_handler(httpd_req_t *req)
 {
     WebSocketServer *server_instance = static_cast<WebSocketServer *>(req->user_ctx);
@@ -81,8 +108,8 @@ esp_err_t WebSocketServer::incoming_message_handler(httpd_req_t *req)
 
     ESP_LOGD(TAG, "Received message in incoming_message_handler. Method is: %d", req->method);
 
-    ESP_LOGD(TAG, "Received headers directly in incoming_message_handler: ");
-    log_all_headers(req);
+    // ESP_LOGD(TAG, "Received headers directly in incoming_message_handler: ");
+    // log_all_headers(req);
 
     esp_err_t ret = server_instance->request_handler->handle_request(req);
     if (ret != ESP_OK)

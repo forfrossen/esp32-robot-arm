@@ -62,4 +62,5 @@ typedef struct
 typedef struct
 {
     std::string client_id;
-} ws_session_t;
+    int message_count;
+} ws_client_info;
