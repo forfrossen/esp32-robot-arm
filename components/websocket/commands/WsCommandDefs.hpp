@@ -4,6 +4,7 @@
 #include "esp_event.h"
 #include <map>
 
+#include "../../managed_components/johboh__nlohmann-json/single_include/nlohmann/json.hpp"
 #include "TypeDefs.hpp"
 #include <any>
 #include <array>
@@ -27,12 +28,13 @@ enum class ws_command_id
     UNKNOWN
 };
 
-struct CommandEventConfig
+typedef struct
 {
     esp_event_loop_handle_t loop;
     esp_event_base_t event_base;
     int32_t event_id;
-};
+} rpc_event_config_t;
+
 typedef struct
 {
     uint8_t motor_id;
@@ -41,12 +43,23 @@ typedef struct
     int32_t acceleration;
 } ws_set_target_position_payload_t;
 
-using ws_command_t = std::string;
-using ws_payload_t = std::variant<int, std::string, RunMode>;
-using ws_message_t = std::pair<ws_command_id, ws_payload_t>;
-using ws_command_config_map_t = std::map<ws_command_id, CommandEventConfig>;
+// using ws_command_t = std::string;
+// using ws_payload_t = std::variant<int, std::string, RunLevel>;
+typedef struct
+{
+    ws_command_id command;
+    nlohmann::json params;
+    int id;
+} ws_message_t;
 
-struct CommandEventData
+using ws_command_config_map_t = std::map<ws_command_id, rpc_event_config_t>;
+
+typedef struct
 {
     class IWsCommand *command;
-};
+} rpc_event_data;
+
+typedef struct
+{
+    std::string client_id;
+} ws_session_t;

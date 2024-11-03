@@ -2,8 +2,10 @@
 
 static const char *TAG = "ResponseSender";
 
-ResponseSender::ResponseSender(httpd_handle_t server)
-    : server(server) {}
+ResponseSender::ResponseSender(
+    httpd_handle_t server,
+    std::shared_ptr<ClientManager> client_manager)
+    : server(server), client_manager(client_manager) {}
 
 esp_err_t ResponseSender::handle_get(httpd_req_t *req, const std::string &payload)
 {
@@ -110,4 +112,20 @@ esp_err_t ResponseSender::trigger_async_send(httpd_handle_t handle, httpd_req_t 
         delete resp_arg;
     }
     return ret;
+}
+
+esp_err_t ResponseSender::send_rpc_response(rpc_event_data *data)
+{
+    auto command = static_cast<IWsCommand *>(data->command);
+    ESP_RETURN_ON_FALSE(command != nullptr, ESP_ERR_INVALID_ARG, TAG, "Command is null");
+
+    auto client_id = command->get_client_id();
+    client_details_t client_details;
+    ESP_RETURN_ON_ERROR(client_manager->get_client(client_id, client_details), TAG, "Failed to get client");
+
+    nlohmann::json response;
+    response["id"] = command->get_client_id();
+    response["status"] = command->get_result() ? "success" : "error";
+
+    return ESP_OK;
 }

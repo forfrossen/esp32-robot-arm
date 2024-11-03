@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef WEB_SOCKET_H
 #define WEB_SOCKET_H
 
@@ -28,6 +30,7 @@ public:
     esp_err_t stop();
 
 private:
+    std::shared_ptr<ClientManager> client_manager;
     std::shared_ptr<WsCommandFactory> command_factory;
     std::shared_ptr<RequestHandler> request_handler;
     std::shared_ptr<ResponseSender> response_sender;

@@ -6,6 +6,7 @@ idf_component_register(
     "ResponseSender.cpp"
     "Utilities.cpp"
     "WebSocket.cpp"
+    "ClientManager.cpp"
 
 REQUIRES esp_event
 REQUIRES esp_wifi

@@ -1,4 +1,5 @@
 #include "WebSocket.hpp"
+ESP_EVENT_DEFINE_BASE(RPC_EVENTS);
 
 static const char *TAG = "WebSocket";
 
@@ -14,17 +15,23 @@ WebSocket::WebSocket(
 
     command_config_map = {
         {ws_command_id::SET_RUNMODE, {system_event_loop, SYSTEM_EVENTS, SET_RUN_MODE_EVENT}},
-        {ws_command_id::START_MOTORS, {system_event_loop, SYSTEM_EVENTS, REMOTE_CONTROL_EVENT}},
-        {ws_command_id::STOP_MOTORS, {system_event_loop, SYSTEM_EVENTS, REMOTE_CONTROL_EVENT}}};
+        {ws_command_id::START_MOTORS, {system_event_loop, SYSTEM_EVENTS, START_MOTORS}},
+        {ws_command_id::STOP_MOTORS, {system_event_loop, SYSTEM_EVENTS, STOP_MOTORS}}};
 
     // Initialize submodules
-    command_factory = std::make_shared<WsCommandFactory>(command_config_map);
+    client_manager = std::make_shared<ClientManager>();
+    assert(client_manager != nullptr);
+
+    command_factory = std::make_shared<WsCommandFactory>(command_config_map, system_event_loop, RPC_EVENTS, SEND_RESPONSE);
     assert(command_factory != nullptr);
-    response_sender = std::make_shared<ResponseSender>(nullptr);
+
+    response_sender = std::make_shared<ResponseSender>(nullptr, client_manager);
     assert(response_sender != nullptr);
-    event_manager = std::make_shared<EventManager>(system_event_loop, system_event_group, command_factory);
+
+    event_manager = std::make_shared<EventManager>(system_event_loop, system_event_group, command_factory, response_sender, client_manager);
     assert(event_manager != nullptr);
-    request_handler = std::make_shared<RequestHandler>(response_sender, event_manager);
+
+    request_handler = std::make_shared<RequestHandler>(response_sender, event_manager, client_manager);
     assert(request_handler != nullptr);
 
     server = std::make_shared<WebSocketServer>(request_handler, response_sender, event_manager);
@@ -40,12 +47,10 @@ esp_err_t WebSocket::start()
 {
     ESP_LOGI(TAG, "Starting WebSocket");
     ESP_RETURN_ON_ERROR(event_manager->register_handlers(),
-                        TAG,
-                        "Failed to register event handlers");
+                        TAG, "Failed to register event handlers");
 
     ESP_RETURN_ON_ERROR(server->start(),
-                        TAG,
-                        "Failed to start WebSocket server");
+                        TAG, "Failed to start WebSocket server");
 
     xEventGroupSetBits(system_event_group, WEBSOCKET_READY);
     return ESP_OK;

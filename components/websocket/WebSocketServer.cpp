@@ -28,7 +28,7 @@ esp_err_t WebSocketServer::start()
     ESP_RETURN_ON_FALSE(server == nullptr, ESP_FAIL, TAG, "Server already running");
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.enable_so_linger = true;
+    // config.enable_so_linger = true;
     config.keep_alive_enable = true;
     config.keep_alive_idle = 60;
     config.keep_alive_interval = 5;
@@ -70,21 +70,6 @@ esp_err_t WebSocketServer::stop()
     return ESP_OK;
 }
 
-esp_err_t WebSocketServer::register_uri_handlers()
-{
-    httpd_uri_t ws_uri = {
-        .uri = "/ws",
-        .method = HTTP_GET,
-        .handler = WebSocketServer::incoming_message_handler,
-        .user_ctx = this,
-        .is_websocket = true,
-        .handle_ws_control_frames = true,
-        .supported_subprotocol = nullptr};
-
-    ESP_LOGD(TAG, "Registering URI handlers");
-    return httpd_register_uri_handler(server, &ws_uri);
-}
-
 esp_err_t WebSocketServer::incoming_message_handler(httpd_req_t *req)
 {
     WebSocketServer *server_instance = static_cast<WebSocketServer *>(req->user_ctx);
@@ -94,6 +79,30 @@ esp_err_t WebSocketServer::incoming_message_handler(httpd_req_t *req)
         return ESP_ERR_INVALID_ARG;
     }
 
-    // Delegate handling to RequestHandler
-    return server_instance->request_handler->handle_request(req);
+    ESP_LOGD(TAG, "Received message in incoming_message_handler. Method is: %d", req->method);
+
+    ESP_LOGD(TAG, "Received headers directly in incoming_message_handler: ");
+    log_all_headers(req);
+
+    esp_err_t ret = server_instance->request_handler->handle_request(req);
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to handle request");
+    }
+    return ret;
+}
+
+esp_err_t WebSocketServer::register_uri_handlers()
+{
+    httpd_uri_t ws_uri = {
+        .uri = "/ws",
+        .method = HTTP_GET,
+        .handler = WebSocketServer::incoming_message_handler,
+        .user_ctx = this,
+        .is_websocket = true,
+        .handle_ws_control_frames = false,
+        .supported_subprotocol = "jsonrpc2.0"};
+
+    ESP_LOGD(TAG, "Registering URI handlers");
+    return httpd_register_uri_handler(server, &ws_uri);
 }

@@ -2,10 +2,18 @@
 
 static const char *TAG = "EventManager";
 
-EventManager::EventManager(esp_event_loop_handle_t system_event_loop, EventGroupHandle_t &system_event_group, std::shared_ptr<WsCommandFactory> command_factory)
+EventManager::EventManager(
+    esp_event_loop_handle_t system_event_loop,
+    EventGroupHandle_t &system_event_group,
+    std::shared_ptr<WsCommandFactory> command_factory,
+    std::shared_ptr<ResponseSender> response_sender,
+    std::shared_ptr<ClientManager>
+        client_manager)
     : system_event_loop(system_event_loop),
       system_event_group(system_event_group),
-      command_factory(command_factory)
+      command_factory(command_factory),
+      response_sender(response_sender),
+      client_manager(client_manager)
 {
     assert(system_event_group != nullptr);
     assert(system_event_loop != nullptr);
@@ -49,6 +57,17 @@ esp_err_t EventManager::register_handlers()
         TAG,
         "Failed to register property change event handler");
 
+    // Register RPC response event handler
+    ESP_RETURN_ON_ERROR(
+        esp_event_handler_register_with(
+            system_event_loop,
+            RPC_EVENTS,
+            SEND_RESPONSE,
+            &EventManager::on_rpc_response,
+            this),
+        TAG,
+        "Failed to register HTTP server event handler");
+
     // Register HTTP server event handler
     ESP_RETURN_ON_ERROR(
         esp_event_handler_register(
@@ -89,25 +108,26 @@ esp_err_t EventManager::post_event(system_event_id_t event, remote_control_event
     return ESP_OK;
 }
 
-esp_err_t EventManager::set_runlevel(ws_payload_t payload)
+esp_err_t EventManager::set_runlevel(json payload, int id, std::string client_id)
 {
-    RunMode run_mode;
-    CHECK_THAT(get_run_mode(payload, run_mode) == ESP_OK);
-    CHECK_THAT(run_mode != RunMode::UNKNOWN);
+    RunLevel run_level;
+    CHECK_THAT(get_run_level_from_json(payload, run_level) == ESP_OK);
+    CHECK_THAT(run_level != RunLevel::UNKNOWN);
     CHECK_THAT(command_factory != nullptr);
-    ESP_LOGD(TAG, "Creating command, to set RunMode to: %s", magic_enum::enum_name(run_mode).data());
+    ESP_LOGD(TAG, "Creating command, to set RunLevel to: %s", magic_enum::enum_name(run_level).data());
 
-    CHECK_THAT(command_factory->create(ws_command_id::SET_RUNMODE, run_mode) == ESP_OK);
+    CHECK_THAT(command_factory->create(ws_command_id::SET_RUNMODE, run_level, id, client_id) == ESP_OK);
 
     return ESP_OK;
 }
 
 void EventManager::connect_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
-    EventManager *manager = static_cast<EventManager *>(arg);
-    if (manager)
+    EventManager *instance = static_cast<EventManager *>(arg);
+    if (instance)
     {
         ESP_LOGD(TAG, "Connect event received");
+
         // Handle connect event, e.g., start WebSocket server
         // This might require access to WebSocketServer instance
     }
@@ -152,4 +172,15 @@ void EventManager::property_change_event_handler(void *args, esp_event_base_t ev
     {
         ESP_LOGE(TAG, "EventManager instance is null in property_change_event_handler");
     }
+}
+
+void EventManager::on_rpc_response(void *args, esp_event_base_t event_base, int32_t event_id, void *event_data)
+{
+    // Implement your event handler here
+    auto *instance = static_cast<EventManager *>(args);
+    auto *data = static_cast<rpc_event_data *>(event_data);
+    ESP_RETURN_VOID_ON_FALSE(instance != nullptr, TAG, "ResponseSender instance is null");
+    ESP_RETURN_VOID_ON_FALSE(data != nullptr, TAG, "CommandEventData is null");
+    esp_err_t ret = instance->response_sender->send_rpc_response(data);
+    ESP_RETURN_VOID_ON_ERROR(ret != ESP_OK, TAG, "Failed to send RPC response");
 }
