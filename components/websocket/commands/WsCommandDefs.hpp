@@ -18,13 +18,15 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 enum class ws_command_id
 {
     START_MOTORS,
     STOP_MOTORS,
-    SET_RUNMODE,
+    SET_RUNLEVEL,
     SET_TARGET_POSITION,
+    MOTOR_CONTROL_COMMAND,
     UNKNOWN
 };
 
@@ -47,9 +49,10 @@ typedef struct
 // using ws_payload_t = std::variant<int, std::string, RunLevel>;
 typedef struct
 {
-    ws_command_id command;
+    std::variant<ws_command_id, motor_command_id_t> command;
     nlohmann::json params;
     int id;
+    std::string client_id;
 } ws_message_t;
 
 using ws_command_config_map_t = std::map<ws_command_id, rpc_event_config_t>;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Events.hpp"
+#include "MotorControlCommand.h"
 #include "SetRunLevelCommand.h"
 #include "TypeDefs.hpp"
 #include "WsCommandDefs.hpp"
@@ -29,12 +30,13 @@ public:
 
     esp_err_t create(ws_command_id cmd, nlohmann::json payload, int id, std::string client_id)
     {
-        this->cmd = cmd;
+
+        this->cmd = static_cast<ws_command_id>(cmd);
         auto it = config_map.find(cmd);
         rpc_event_config_t cmd_config = it->second;
         rpc_event_config_t cmd_response_config = {response_loop, response_event_base, response_event_id};
 
-        if (cmd == ws_command_id::SET_RUNMODE)
+        if (cmd == ws_command_id::SET_RUNLEVEL)
         {
             ESP_LOGD(FUNCTION_NAME, "Creating SET_RUN_MODE command");
             SetRunLevelCommand *command = new SetRunLevelCommand(id, client_id);
@@ -44,6 +46,24 @@ public:
 
             command->post();
         }
+
+        return ESP_OK;
+    }
+
+    esp_err_t create_motor_command(httpd_req_t *req, ws_message_t msg)
+    {
+        this->cmd = cmd;
+        auto it = config_map.find(ws_command_id::MOTOR_CONTROL_COMMAND);
+        rpc_event_config_t cmd_config = it->second;
+        rpc_event_config_t cmd_response_config = {response_loop, response_event_base, response_event_id};
+
+        ESP_LOGD(FUNCTION_NAME, "Creating SET_RUN_MODE command");
+        std::string client_id = msg.client_id;
+        int id = msg.id;
+        MotorControlCommand *command = new MotorControlCommand(id, client_id, req, msg);
+        ERRCHECK_OR_DELETE_COMMAND(command->set_config(cmd_config));
+        ERRCHECK_OR_DELETE_COMMAND(command->set_response_config(cmd_response_config));
+        command->post();
 
         return ESP_OK;
     }

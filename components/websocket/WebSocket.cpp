@@ -14,9 +14,12 @@ WebSocket::WebSocket(
     assert(system_event_loop != nullptr);
 
     command_config_map = {
-        {ws_command_id::SET_RUNMODE, {system_event_loop, SYSTEM_EVENTS, SET_RUN_MODE_EVENT}},
+        {ws_command_id::SET_RUNLEVEL, {system_event_loop, SYSTEM_EVENTS, SET_RUN_MODE_EVENT}},
         {ws_command_id::START_MOTORS, {system_event_loop, SYSTEM_EVENTS, START_MOTORS}},
-        {ws_command_id::STOP_MOTORS, {system_event_loop, SYSTEM_EVENTS, STOP_MOTORS}}};
+        {ws_command_id::STOP_MOTORS, {system_event_loop, SYSTEM_EVENTS, STOP_MOTORS}},
+        {ws_command_id::MOTOR_CONTROL_COMMAND, {system_event_loop, SYSTEM_EVENTS, MOTOR_CONTROL_COMMAND}}
+
+    };
 
     // Initialize submodules
     client_manager = std::make_shared<ClientManager>();
@@ -34,7 +37,7 @@ WebSocket::WebSocket(
     request_handler = std::make_shared<RequestHandler>(response_sender, event_manager, client_manager);
     assert(request_handler != nullptr);
 
-    server = std::make_shared<WebSocketServer>(request_handler, response_sender, event_manager);
+    server = std::make_shared<WebSocketServer>(request_handler, response_sender, event_manager, client_manager);
 }
 
 WebSocket::~WebSocket()

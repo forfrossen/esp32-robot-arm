@@ -112,13 +112,13 @@ inline const char *getFunctionName(const char *prettyFunction)
         }                                                               \
     } while (0)
 
-#define ERRCHECK_OR_DELETE_THIS(ret)                                 \
+#define ERRCHECK_OR_DELETE_THIS(ret)                                    \
     do                                                                  \
     {                                                                   \
         if (ret != ESP_OK)                                              \
         {                                                               \
             ESP_LOGE(FUNCTION_NAME, "Error: %s", esp_err_to_name(ret)); \
-            delete this;                                             \
+            delete this;                                                \
             return ret;                                                 \
         }                                                               \
     } while (0)
@@ -184,10 +184,10 @@ inline const char *getFunctionName(const char *prettyFunction)
         continue;                                               \
     }
 
-// #define GET_CMD(msg) replace_underscores(magic_enum::enum_name(static_cast<CommandIds>((msg).data[0])).data()).c_str()
-#define GET_MSGCMD(msg) replace_underscores(magic_enum::enum_name(static_cast<CommandIds>(*reinterpret_cast<uint8_t *>(msg->data[0]))).data()).c_str()
-#define GET_CMDPTR(cmd) replace_underscores(magic_enum::enum_name(static_cast<CommandIds>(*reinterpret_cast<uint8_t *>(cmd))).data()).c_str()
-#define GET_CMD(cmd) magic_enum::enum_name(static_cast<CommandIds>(cmd)).data()
+// #define GET_CMD(msg) replace_underscores(magic_enum::enum_name(static_cast<motor_command_t>((msg).data[0])).data()).c_str()
+#define GET_MSGCMD(msg) replace_underscores(magic_enum::enum_name(static_cast<motor_command_id_t>(*reinterpret_cast<uint8_t *>(msg->data[0]))).data()).c_str()
+#define GET_CMDPTR(cmd) replace_underscores(magic_enum::enum_name(static_cast<motor_command_id_t>(*reinterpret_cast<uint8_t *>(cmd))).data()).c_str()
+#define GET_CMD(cmd) magic_enum::enum_name(static_cast<motor_command_id_t>(cmd)).data()
 
 inline std::string replace_underscores(const std::string &str)
 {
@@ -227,7 +227,7 @@ inline std::string replace_underscores(const std::string &str)
 // Function to get the enum name from twai_message_t.data[0]
 inline const char *get_command_name(const twai_message_t *msg)
 {
-    CommandIds command = static_cast<CommandIds>(msg->data[0]);
+    motor_command_id_t command = static_cast<motor_command_id_t>(msg->data[0]);
     auto enum_name = magic_enum::enum_name(command);
 
     ESP_LOGD(FUNCTION_NAME, "Command ID: 0x%02X ", msg->data[0]);
@@ -247,7 +247,7 @@ inline const char *get_command_name(const twai_message_t *msg)
 inline void log_twai_message(const twai_message_t *msg, std::optional<bool> is_received = false)
 {
     ESP_LOGD(FUNCTION_NAME, "=================================================================================================");
-    CommandIds command_id = static_cast<CommandIds>(msg->data[0]);
+    motor_command_id_t command_id = static_cast<motor_command_id_t>(msg->data[0]);
     const char *command_name = get_command_name(msg);
     ESP_LOGD(FUNCTION_NAME, "MESSAGE %s", is_received.value() == true ? "RECEIVED <<=====" : "TO BE SENT =====>>");
     ESP_LOGD(FUNCTION_NAME, "ID: 0x%02lu \t length: %d\t command_id: 0x%02X \t command_name: %s",

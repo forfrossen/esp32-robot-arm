@@ -13,6 +13,7 @@
 #include <cstring>
 #include <memory>
 #include <string>
+#include <variant>
 
 class ResponseSender;
 class EventManager;
@@ -34,9 +35,8 @@ private:
     std::shared_ptr<EventManager> event_manager;
     std::shared_ptr<ClientManager> client_manager;
 
-    esp_err_t handle_handshake(httpd_req_t *req, std::string client_id);
+    esp_err_t handle_handshake(httpd_req_t *req, std::string &client_id);
     esp_err_t validate_jsonrpc2_header(httpd_req_t *req);
-    // esp_err_t validate_jsonrpc2_header(httpd_req_t *req);
     esp_err_t process_message(httpd_req_t *req, httpd_ws_frame_t &ws_pkt, uint8_t *buf, std::string client_id);
     esp_err_t handle_heartbeat(httpd_req_t *req);
     esp_err_t identify_client(httpd_req_t *req, std::string &client_id);

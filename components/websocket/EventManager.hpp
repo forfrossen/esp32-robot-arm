@@ -33,6 +33,13 @@ public:
 
     ~EventManager();
 
+    esp_err_t on_rpc_request(httpd_req_t *req, ws_message_t msg);
+
+    esp_err_t on_set_motor_command(httpd_req_t *req, ws_message_t msg);
+
+    esp_err_t on_system_command(httpd_req_t *req, ws_message_t msg);
+    esp_err_t send_system_command(httpd_req_t *req, ws_message_t msg);
+
     esp_err_t register_handlers();
     esp_err_t unregister_handlers();
     esp_err_t post_event(system_event_id_t event, remote_control_event_t message);

@@ -14,51 +14,71 @@ RequestHandler::RequestHandler(
 esp_err_t RequestHandler::handle_request(httpd_req_t *req)
 {
     ESP_LOGD(TAG, "RequestHandler::handle_request - Handling request");
-    // ESP_LOGD(TAG, "Headers received in RequestHandler::handle_request: ");
-    // log_all_headers(req);
 
     httpd_ws_frame_t ws_pkt;
     uint8_t *buf = nullptr;
     std::string client_id;
 
-    // if (!req->sess_ctx)
-    // {
-    //     ESP_LOGD(TAG, "Creating session context");
-    //     req->sess_ctx = malloc(sizeof(ws_client_info));
-    // }
-    // ws_client_info *ctx_data = (ws_client_info *)req->sess_ctx;
-    // ESP_RETURN_ON_FALSE(ctx_data != nullptr, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for session context");
-    // if (ctx_data->client_id.empty())
-    // {
-    //     ctx_data->client_id = strdup(client_id.c_str());
-    // }
-
     if (req->method == HTTP_GET)
     {
         esp_err_t ret = handle_handshake(req, client_id);
+        if (ret == ESP_ERR_NOT_FOUND && !client_id.empty())
+        {
+            ESP_LOGD(TAG, "New client registration");
+            httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Client Id unknown. Please register a new one.");
+            return ESP_OK;
+        }
+        if (ret == ESP_ERR_NOT_FOUND && client_id.empty())
+        {
+            ESP_LOGD(TAG, "Client ID is empty. Returning.");
+            httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Client Id missing. Please register one.");
+            return ESP_OK;
+        }
         if (ret != ESP_OK)
         {
             ESP_LOGE(TAG, "Failed to handle handshake");
-            httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Failed to handle handshake");
+            httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Failed to handle handshake.");
+            return ESP_OK;
         }
 
         ESP_LOGD(TAG, "Handshake done, returning.");
-        return ret;
+        return ESP_OK;
     }
 
     ESP_RETURN_ON_ERROR(receive_frame(req, ws_pkt, buf), TAG, "Failed to receive frame");
     return process_message(req, ws_pkt, buf, client_id);
 }
 
+esp_err_t RequestHandler::handle_handshake(httpd_req_t *req, std::string &client_id)
+{
+    ESP_LOGD(TAG, "Handling WebSocket handshake");
+    ESP_RETURN_ON_FALSE(req != nullptr, ESP_ERR_INVALID_ARG, TAG, "Request is null");
+    ESP_RETURN_ON_FALSE(req->handle != nullptr, ESP_ERR_INVALID_ARG, TAG, "Request handle is null");
+    ESP_RETURN_ON_ERROR(validate_jsonrpc2_header(req), TAG, "Failed to validate JSON-RPC2 header");
+
+    esp_err_t ret = identify_client(req, client_id);
+
+    if (ret == ESP_ERR_NOT_FOUND)
+    {
+        ESP_LOGD(TAG, "Failed to identify client. New id has to be registered!");
+        return ret;
+    }
+    return ESP_OK;
+}
+
 esp_err_t RequestHandler::identify_client(httpd_req_t *req, std::string &client_id)
 {
-    char *cookie = nullptr;
-    size_t buf_len = httpd_req_get_hdr_value_len(req, "Cookie");
-    ESP_RETURN_ON_FALSE(buf_len > 0, ESP_ERR_NOT_FOUND, TAG, "No cookie found");
-    cookie = (char *)calloc(1, buf_len + 1);
-    ESP_RETURN_ON_ERROR(httpd_req_get_hdr_value_str(req, "Cookie", cookie, buf_len + 1), TAG, "Failed to get cookie value");
-    ESP_LOGD(TAG, "Cookie: %s", cookie);
-    ESP_RETURN_ON_ERROR(get_cookie_value(cookie, "client_id", client_id), TAG, "Failed to get client_id from cookie");
+    char query[100];
+    char param1[50];
+    size_t query_len = httpd_req_get_url_query_len(req) + 1;
+    ESP_RETURN_ON_FALSE(query_len > 1, ESP_ERR_NOT_FOUND, TAG, "No query found");
+    ESP_RETURN_ON_ERROR(httpd_req_get_url_query_str(req, query, query_len), TAG, "Failed to get URL query");
+    ESP_LOGI(TAG, "Found URL query => %s", query);
+    ESP_RETURN_ON_ERROR(httpd_query_key_value(query, "client_id", param1, sizeof(param1)), TAG, "Failed to get URL query parameter");
+    ESP_LOGI(TAG, "Found URL query parameter => %s", param1);
+    ESP_RETURN_ON_FALSE(strlen(param1) > 0, ESP_ERR_NOT_FOUND, TAG, "Client Id is empty");
+    client_id = param1;
+
     client_details_t client_details;
     return client_manager->get_client(client_id, client_details);
 }
@@ -123,63 +143,6 @@ esp_err_t RequestHandler::validate_jsonrpc2_header(httpd_req_t *req)
     return ESP_OK;
 }
 
-esp_err_t RequestHandler::handle_handshake(httpd_req_t *req, std::string client_id)
-{
-    ESP_LOGD(TAG, "Handling WebSocket handshake");
-    ESP_RETURN_ON_FALSE(req != nullptr, ESP_ERR_INVALID_ARG, TAG, "Request is null");
-    ESP_RETURN_ON_FALSE(req->handle != nullptr, ESP_ERR_INVALID_ARG, TAG, "Request handle is null");
-    ESP_RETURN_ON_ERROR(validate_jsonrpc2_header(req), TAG, "Failed to validate JSON-RPC2 header");
-
-    esp_err_t ret = identify_client(req, client_id);
-
-    if (ret == ESP_ERR_NOT_FOUND)
-    {
-        ESP_LOGD(TAG, "Failed to identify client. Registering new one");
-        client_id = generate_uuid();
-        ESP_RETURN_ON_ERROR(client_manager->upsert_client(client_id, req->handle, req), TAG, "Failed to upsert client in client manager");
-        ESP_RETURN_ON_ERROR(update_usr_ctx(req, client_id), TAG, "Failed to update user context");
-    }
-
-    httpd_resp_set_hdr(req, "Sec-WebSocket-Protocol", ws_subprotocol.c_str());
-    char set_cookie[100];
-    snprintf(set_cookie, sizeof(set_cookie), "client_id=%s; Path=/;", client_id.c_str());
-    httpd_resp_set_hdr(req, "Set-Cookie", set_cookie);
-    httpd_resp_set_hdr(req, "X-TEST-Header", "WOW... such test... very wow");
-    // const char *resp_str = "WebSocket handshake response";
-    // httpd_resp_send(req, resp_str, HTTPD_RESP_USE_STRLEN);
-
-    // char handshake_response[512];
-    // int len = snprintf(handshake_response, sizeof(handshake_response),
-    //                    "HTTP/1.1 101 Switching Protocols\r\n"
-    //                    "Upgrade: websocket\r\n"
-    //                    "Connection: Upgrade\r\n"
-    //                    "Sec-WebSocket-Accept: %s\r\n"
-    //                    "Set-Cookie: client_id=%s; Path=/",
-    //                    ws_subprotocol.c_str(), client_id.c_str());
-
-    // // Include Sec-WebSocket-Protocol if provided
-    // if (!ws_subprotocol.empty() && ws_subprotocol.length() > 0)
-    // {
-    //     len += snprintf(handshake_response + len, sizeof(handshake_response) - len,
-    //                     "Sec-WebSocket-Protocol: %s\r\n", ws_subprotocol.c_str());
-    // }
-    // ESP_LOGI(TAG, "Handshake response: %s", handshake_response);
-
-    // esp_err_t ret = httpd_resp_send(req, handshake_response, strlen(handshake_response));
-    // ESP_RETURN_ON_ERROR(ret, TAG, "Failed to send handshake response");
-
-    // const char *message = "Welcome to ESP32 WebSocket Server!";
-    // ESP_LOGD(TAG, "WebSocket handshake successful");
-
-    // httpd_ws_frame_t ws_pkt;
-    // memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
-    // ws_pkt.payload = (uint8_t *)message;
-    // ws_pkt.len = strlen(message);
-    // ws_pkt.type = HTTPD_WS_TYPE_TEXT;
-    // return httpd_ws_send_frame(req, &ws_pkt);
-    return ESP_OK;
-}
-
 esp_err_t RequestHandler::process_message(httpd_req_t *req, httpd_ws_frame_t &ws_pkt, uint8_t *buf, std::string client_id)
 {
     ESP_LOGD(TAG, "Packet type: %d", ws_pkt.type);
@@ -214,18 +177,17 @@ esp_err_t RequestHandler::process_message(httpd_req_t *req, httpd_ws_frame_t &ws
         return ESP_FAIL;
     }
 
-    switch (msg.command)
+    if (msg.params.contains("client_id"))
     {
-    case ws_command_id::START_MOTORS:
-        return event_manager->post_event(REMOTE_CONTROL_EVENT, remote_control_event_t::START_MOTORS);
-    case ws_command_id::STOP_MOTORS:
-        return event_manager->post_event(REMOTE_CONTROL_EVENT, remote_control_event_t::STOP_MOTORS);
-    case ws_command_id::SET_RUNMODE:
-        return event_manager->set_runlevel(msg.params, msg.id, client_id);
-    default:
-        ESP_LOGW(TAG, "Unknown command: %s", message.c_str());
-        return ESP_ERR_INVALID_ARG;
+        client_id = msg.params["client_id"].get<std::string>();
+        msg.params.erase("client_id");
     }
+
+    if (!client_id.empty())
+    {
+        ESP_RETURN_ON_ERROR(update_usr_ctx(req, client_id), TAG, "Failed to update user context");
+    }
+    return event_manager->on_rpc_request(req, msg);
 }
 
 esp_err_t RequestHandler::handle_heartbeat(httpd_req_t *req)

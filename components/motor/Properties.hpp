@@ -254,15 +254,15 @@ extern std::map<std::string, ResponsePropertyMetadata> response_property_metadat
 //     T MotorProperties::*property;
 // };
 
-// // Mapping CommandIds to uint16_t properties
-// const std::map<CommandIds, CommandPropertyMapping<uint16_t>> uint16_properties_map = {
+// // Mapping motor_command_id_t to uint16_t properties
+// const std::map<motor_command_id_t, CommandPropertyMapping<uint16_t>> uint16_properties_map = {
 //     {SET_WORKING_CURRENT, &MotorProperties::working_current},
 //     {SET_HOLDING_CURRENT, &MotorProperties::holding_current},
 //     {SET_HOME, &MotorProperties::home_speed},
 // };
 
-// // Mapping CommandIds to uint8_t properties
-// const std::map<CommandIds, CommandPropertyMapping<uint8_t>> uint8_properties_map = {
+// // Mapping motor_command_id_t to uint8_t properties
+// const std::map<motor_command_id_t, CommandPropertyMapping<uint8_t>> uint8_properties_map = {
 //     {SET_MOTOR_ROTATION_DIRECTION, &MotorProperties::motor_rotation_direction},
 //     {SET_SUBDIVISIONS, &MotorProperties::subdivisions},
 //     {SET_CAN_ID, &MotorProperties::can_id},
@@ -274,8 +274,8 @@ extern std::map<std::string, ResponsePropertyMetadata> response_property_metadat
 //     {SET_MODE0, &MotorProperties::mode0},
 // };
 
-// // Mapping CommandIds to bool properties
-// const std::map<CommandIds, CommandPropertyMapping<bool>> bool_properties_map = {
+// // Mapping motor_command_id_t to bool properties
+// const std::map<motor_command_id_t, CommandPropertyMapping<bool>> bool_properties_map = {
 //     {EMERGENCY_STOP, &MotorProperties::emergency_stop_triggered},
 //     {ENABLE_MOTOR, &MotorProperties::is_enabled},
 //     {SET_KEY_LOCK_ENABLE, &MotorProperties::key_lock_enabled},
@@ -285,13 +285,13 @@ extern std::map<std::string, ResponsePropertyMetadata> response_property_metadat
 //     {RUN_MOTOR_SPEED_MODE, &MotorProperties::is_moving},
 // };
 
-// // Mapping CommandIds to float properties
-// const std::map<CommandIds, CommandPropertyMapping<float>> float_properties_map = {
+// // Mapping motor_command_id_t to float properties
+// const std::map<motor_command_id_t, CommandPropertyMapping<float>> float_properties_map = {
 //     {READ_MOTOR_SPEED, &MotorProperties::current_speed},
 // };
 
-// // Mapping CommandIds to int32_t properties
-// const std::map<CommandIds, CommandPropertyMapping<int32_t>> int32_properties_map = {
+// // Mapping motor_command_id_t to int32_t properties
+// const std::map<motor_command_id_t, CommandPropertyMapping<int32_t>> int32_properties_map = {
 //     {READ_MOTOR_POSITION, &MotorProperties::current_position},
 //     {READ_MOTOR_POSITION, &MotorProperties::target_position},
 // };

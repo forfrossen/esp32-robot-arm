@@ -52,7 +52,7 @@ struct CommandPayloadInfo
     }
 };
 
-const std::map<CommandIds, CommandPayloadInfo> g_command_payload_map = {
+const std::map<motor_command_id_t, CommandPayloadInfo> g_command_payload_map = {
     {MOTOR_CALIBRATION, CommandPayloadInfo()},
     {READ_MOTOR_SPEED, CommandPayloadInfo()},
     {EMERGENCY_STOP, CommandPayloadInfo()},

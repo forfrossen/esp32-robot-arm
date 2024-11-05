@@ -253,7 +253,7 @@ esp_err_t MotorController::set_target_position()
     uint8_t acceleration = esp_random() % 255;
     bool absolute = esp_random() % 2;
     absolute = true;
-    CommandIds command_id = (absolute) ? RUN_MOTOR_ABSOLUTE_MOTION_BY_AXIS : RUN_MOTOR_RELATIVE_MOTION_BY_AXIS;
+    motor_command_id_t command_id = (absolute) ? RUN_MOTOR_ABSOLUTE_MOTION_BY_AXIS : RUN_MOTOR_RELATIVE_MOTION_BY_AXIS;
     int negative_random = esp_random() % 2;
     if (negative_random && absolute != true)
     {

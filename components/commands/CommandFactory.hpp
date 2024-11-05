@@ -31,7 +31,7 @@ public:
     }
 
     template <typename... Args>
-    GenericCommand *create_command(CommandIds command_id, Args &&...args)
+    GenericCommand *create_command(motor_command_id_t command_id, Args &&...args)
     {
         ESP_LOGD(FUNCTION_NAME, "Creating Generic Command for motor: %lu \t command id: %s", settings->id, magic_enum::enum_name(command_id).data());
 

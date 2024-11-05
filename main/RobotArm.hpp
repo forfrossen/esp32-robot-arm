@@ -203,19 +203,19 @@ public:
 
         switch (run_level)
         {
-        case RunLevel::RUNMODE0:
+        case RunLevel::RUNLEVEL0:
             set_runlevel(RUNLEVEL_0, RUNLEVEL_1 | RUNLEVEL_2 | RUNLEVEL_3);
             ESP_LOGI(FUNCTION_NAME, "Setting runlevel 0");
             break;
-        case RunLevel::RUNMODE1:
+        case RunLevel::RUNLEVEL1:
             set_runlevel(RUNLEVEL_1 | RUNLEVEL_0, RUNLEVEL_2 | RUNLEVEL_3);
             ESP_LOGI(FUNCTION_NAME, "Setting runlevel 1");
             break;
-        case RunLevel::RUNMODE2:
+        case RunLevel::RUNLEVEL2:
             set_runlevel(RUNLEVEL_2 | RUNLEVEL_1 | RUNLEVEL_0, RUNLEVEL_3);
             ESP_LOGI(FUNCTION_NAME, "Setting runlevel 2");
             break;
-        case RunLevel::RUNMODE3:
+        case RunLevel::RUNLEVEL3:
             set_runlevel(RUNLEVEL_3 | RUNLEVEL_2 | RUNLEVEL_1 | RUNLEVEL_0, 0);
             ESP_LOGI(FUNCTION_NAME, "Setting runlevel 3");
             break;

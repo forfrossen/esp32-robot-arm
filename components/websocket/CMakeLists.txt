@@ -9,6 +9,7 @@ idf_component_register(
     "ClientManager.cpp"
 
 REQUIRES esp_event
+REQUIRES nvs_flash
 REQUIRES esp_wifi
 REQUIRES esp_http_server
 #REQUIRES nlohmann-json

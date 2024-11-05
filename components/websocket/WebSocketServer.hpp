@@ -9,6 +9,7 @@
 class RequestHandler;
 class ResponseSender;
 class EventManager;
+class ClientManager;
 
 class WebSocketServer
 {
@@ -16,7 +17,8 @@ public:
     WebSocketServer(
         std::shared_ptr<RequestHandler> request_handler,
         std::shared_ptr<ResponseSender> response_sender,
-        std::shared_ptr<EventManager> event_manager);
+        std::shared_ptr<EventManager> event_manager,
+        std::shared_ptr<ClientManager> client_manager);
 
     ~WebSocketServer();
 
@@ -33,10 +35,12 @@ private:
     std::shared_ptr<RequestHandler> request_handler;
     std::shared_ptr<ResponseSender> response_sender;
     std::shared_ptr<EventManager> event_manager;
+    std::shared_ptr<ClientManager> client_manager;
     ws_client_info client_ctx;
 
     esp_err_t register_uri_handlers();
     static esp_err_t incoming_message_handler(httpd_req_t *req);
+    static esp_err_t new_client_registration(httpd_req_t *req);
 };
 
 #endif // WEBSOCKET_SERVER_H

@@ -63,7 +63,7 @@ esp_err_t MotorContext::post_new_state_event()
 // template esp_err_t MotorContext::set_property<EndStopLevel>(MotorProperty<EndStopLevel> MotorProperties::*, EndStopLevel);
 // template esp_err_t MotorContext::set_property<CanBitrate>(MotorProperty<CanBitrate> MotorProperties::*, CanBitrate);
 
-// esp_err_t MotorContext::set_meta_property(MotorPropertyVariant MotorProperties::*property, MotorPropertyVariant value)
+// esp_err_t MotorContext::set_meta_property(motor_property_variant_t MotorProperties::*property, motor_property_variant_t value)
 // {
 //     CHECK_THAT(get_semaphore() == ESP_OK);
 

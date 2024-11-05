@@ -23,7 +23,7 @@ class GenericCommand
 {
 private:
     uint32_t id;
-    CommandIds command_id;
+    motor_command_id_t command_id;
     twai_message_t msg;
     std::shared_ptr<CommandLifecycleRegistry> command_lifecycle_registry;
     SemaphoreHandle_t msg_mutex;
@@ -34,7 +34,7 @@ public:
     template <typename... Args>
     GenericCommand(
         std::shared_ptr<CommandFactorySettings> settings,
-        CommandIds command_id,
+        motor_command_id_t command_id,
         Args... args) : id(settings->id),
                         command_id(command_id),
                         command_lifecycle_registry(settings->command_lifecycle_registry),

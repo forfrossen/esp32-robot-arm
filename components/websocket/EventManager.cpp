@@ -91,6 +91,63 @@ esp_err_t EventManager::unregister_handlers()
     return ESP_OK;
 }
 
+esp_err_t EventManager::on_rpc_request(httpd_req_t *req, ws_message_t msg)
+{
+
+    ESP_LOGD(TAG, "Params: %s", msg.params.dump().c_str());
+    ESP_LOGD(TAG, "ID: %d", msg.id);
+    ESP_LOGD(TAG, "Client ID: %s", msg.client_id.c_str());
+    esp_err_t ret = ESP_OK;
+
+    if (std::holds_alternative<ws_command_id>(msg.command))
+    {
+        ESP_LOGD(TAG, "Command: %s", magic_enum::enum_name(std::get<ws_command_id>(msg.command)).data());
+        ret = on_system_command(req, msg);
+    }
+    else if (std::holds_alternative<motor_command_id_t>(msg.command))
+    {
+        ESP_LOGD(TAG, "Command: %s", magic_enum::enum_name(std::get<motor_command_id_t>(msg.command)).data());
+        ret = on_set_motor_command(req, msg);
+    }
+    else
+    {
+        ESP_LOGE(TAG, "Invalid command requested");
+        return ESP_ERR_INVALID_ARG;
+    }
+    return ret;
+}
+
+esp_err_t EventManager::on_set_motor_command(httpd_req_t *req, ws_message_t msg)
+{
+    ESP_LOGD(TAG, "Params: %s", msg.params.dump().c_str());
+    ESP_LOGD(TAG, "ID: %d", msg.id);
+    ESP_LOGD(TAG, "Client ID: %s", msg.client_id.c_str());
+    ESP_RETURN_ON_FALSE(std::holds_alternative<motor_command_id_t>(msg.command), ESP_ERR_INVALID_ARG, TAG, "Invalid command type");
+
+    auto msg_command = std::get<motor_command_id_t>(msg.command);
+    auto cmd_name = magic_enum::enum_name(msg_command).data();
+    ESP_LOGD(TAG, "Creating Command for motor_command_id_t: %s", cmd_name);
+
+    ESP_RETURN_ON_ERROR(command_factory->create_motor_command(req, msg), TAG, "Failed to create motor command");
+
+    return ESP_OK;
+}
+
+esp_err_t EventManager::on_system_command(httpd_req_t *req, ws_message_t msg)
+{
+    ESP_LOGD(TAG, "Params: %s", msg.params.dump().c_str());
+    ESP_LOGD(TAG, "ID: %d", msg.id);
+    ESP_LOGD(TAG, "Client ID: %s", msg.client_id.c_str());
+
+    ESP_RETURN_ON_FALSE(std::holds_alternative<ws_command_id>(msg.command), ESP_ERR_INVALID_ARG, TAG, "Invalid command type");
+
+    auto msg_command = std::get<ws_command_id>(msg.command);
+    auto cmd_name = magic_enum::enum_name(msg_command).data();
+    ESP_LOGD(TAG, "Creating Command for ws_command_id: %s", cmd_name);
+
+    return send_system_command(req, msg);
+}
+
 esp_err_t EventManager::post_event(system_event_id_t event, remote_control_event_t message)
 {
     ESP_LOGD(TAG, "Posting system event %d with message: %d", static_cast<int>(event), static_cast<int>(message));
@@ -108,6 +165,27 @@ esp_err_t EventManager::post_event(system_event_id_t event, remote_control_event
     return ESP_OK;
 }
 
+esp_err_t EventManager::send_system_command(httpd_req_t *req, ws_message_t msg)
+{
+    ESP_RETURN_ON_FALSE(std::holds_alternative<ws_command_id>(msg.command), ESP_ERR_INVALID_ARG, TAG, "Invalid command type");
+    ESP_LOGD(TAG, "Command: %s", magic_enum::enum_name(std::get<ws_command_id>(msg.command)).data());
+
+    switch (std::get<ws_command_id>(msg.command))
+    {
+    case ws_command_id::START_MOTORS:
+        return post_event(REMOTE_CONTROL_EVENT, remote_control_event_t::START_MOTORS);
+    case ws_command_id::STOP_MOTORS:
+        return post_event(REMOTE_CONTROL_EVENT, remote_control_event_t::STOP_MOTORS);
+    case ws_command_id::SET_RUNLEVEL:
+        return set_runlevel(msg.params, msg.id, msg.client_id);
+    default:
+        ESP_LOGE(TAG, "Invalid command requested");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    return ESP_OK;
+}
+
 esp_err_t EventManager::set_runlevel(json payload, int id, std::string client_id)
 {
     RunLevel run_level;
@@ -116,7 +194,7 @@ esp_err_t EventManager::set_runlevel(json payload, int id, std::string client_id
     CHECK_THAT(command_factory != nullptr);
     ESP_LOGD(TAG, "Creating command, to set RunLevel to: %s", magic_enum::enum_name(run_level).data());
 
-    CHECK_THAT(command_factory->create(ws_command_id::SET_RUNMODE, run_level, id, client_id) == ESP_OK);
+    CHECK_THAT(command_factory->create(ws_command_id::SET_RUNLEVEL, run_level, id, client_id) == ESP_OK);
 
     return ESP_OK;
 }

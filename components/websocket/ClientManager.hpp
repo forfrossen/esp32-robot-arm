@@ -1,9 +1,13 @@
 #ifndef CLIENT_MANAGER_H
 #define CLIENT_MANAGER_H
 
+#include "../../managed_components/johboh__nlohmann-json/single_include/nlohmann/json.hpp"
+#include "TypeDefs.hpp"
 #include "esp_err.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
+#include "nvs_flash.h"
+#include "utils.hpp"
 #include <map>
 #include <memory>
 #include <string>
@@ -22,9 +26,12 @@ public:
     esp_err_t get_client(std::string client_id, client_details_t &client_details);
     esp_err_t upsert_client(std::string client_id, httpd_handle_t handle, httpd_req_t *req);
     esp_err_t remove_client(std::string client_id);
+    esp_err_t load_clients();
+    esp_err_t save_clients();
 
 private:
     std::map<std::string, client_details_t> clients;
+    esp_err_t load_from_nvs();
+    esp_err_t save_to_nvs();
 };
-
 #endif // CLIENT_MANAGER_H

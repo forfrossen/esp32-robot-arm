@@ -28,7 +28,7 @@ public:
 
     bool handle_response(const twai_message_t &msg) override
     {
-        CommandIds command_id = static_cast<CommandIds>(msg.data[0]);
+        motor_command_id_t command_id = static_cast<motor_command_id_t>(msg.data[0]);
         ESP_LOGD("ResponseDataHandler", "Handling response for command ID: %d", static_cast<int>(command_id));
         ESP_RETURN_ON_ERROR(extract_response_data(command_id, msg, *context), FUNCTION_NAME, "Failed to extract response data");
         auto it = g_response_payload_map.find(command_id);
@@ -41,7 +41,7 @@ public:
 
 private:
     std::shared_ptr<MotorContext> context;
-    esp_err_t extract_response_data(CommandIds command_id, const twai_message_t &msg, MotorContext &context)
+    esp_err_t extract_response_data(motor_command_id_t command_id, const twai_message_t &msg, MotorContext &context)
     {
         esp_err_t ret = ESP_OK;
 

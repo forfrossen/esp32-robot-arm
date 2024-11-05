@@ -26,7 +26,7 @@ struct ResponseInformation
     size_t get_num_properties() const { return property_names.size(); }
 };
 
-const std::map<CommandIds, ResponseInformation> g_response_payload_map = {
+const std::map<motor_command_id_t, ResponseInformation> g_response_payload_map = {
     {QUERY_MOTOR_STATUS, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"motor_status"})},
     {MOTOR_CALIBRATION, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"calibration_status"})},
     {EMERGENCY_STOP, ResponseInformation(CommandPayloadInfo(PayloadType::UINT8), {"emergency_stop_triggered"})},
