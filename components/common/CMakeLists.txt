@@ -4,4 +4,7 @@ idf_component_register(
 REQUIRES driver
 REQUIRES esp_event
 
-INCLUDE_DIRS ".")
+REQUIRES magic_enum
+
+INCLUDE_DIRS .
+)

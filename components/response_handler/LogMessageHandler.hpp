@@ -2,8 +2,8 @@
 #define LOG_MESSAGE_HANDLER_HPP
 
 #include "ResponseHandlerBase.hpp"
-#include "esp_log.h"
 #include "utils.hpp"
+#include <esp_log.h>
 
 class LogMessageHandler : public ResponseHandlerBase
 {

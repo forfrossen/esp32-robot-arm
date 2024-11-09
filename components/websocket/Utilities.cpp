@@ -17,8 +17,8 @@ esp_err_t parse_json_msg(const std::string &message, ws_message_t &msg)
     std::string command_name_string = json["command"].get<std::string>();
     ESP_LOGD(TAG, "Command: %s", command_name_string.c_str());
 
-    ws_command_id cmd = magic_enum::enum_cast<ws_command_id>(command_name_string).value_or(ws_command_id::UNKNOWN);
-    if (cmd == ws_command_id::UNKNOWN)
+    system_command_id_t cmd = magic_enum::enum_cast<system_command_id_t>(command_name_string).value_or(system_command_id_t::UNKNOWN);
+    if (cmd == system_command_id_t::UNKNOWN)
     {
         ESP_LOGE(TAG, "Invalid command: %s", command_name_string.c_str());
         return ESP_ERR_INVALID_ARG;
@@ -115,6 +115,7 @@ esp_err_t receive_frame(httpd_req_t *req, httpd_ws_frame_t &ws_pkt, uint8_t *&bu
 
 esp_err_t parse_json_rpc(const std::string &incoming_message, ws_message_t &msg)
 {
+
     ESP_RETURN_ON_FALSE(!incoming_message.empty(), ESP_ERR_INVALID_ARG, TAG, "Empty message");
     ESP_RETURN_ON_FALSE(nlohmann::json::accept(incoming_message), ESP_ERR_INVALID_ARG, TAG, "Failed to parse JSON message");
 
@@ -125,7 +126,15 @@ esp_err_t parse_json_rpc(const std::string &incoming_message, ws_message_t &msg)
 
         msg.id = message["id"];
         msg.client_id = message["params"]["client_id"];
-        msg.command = magic_enum::enum_cast<ws_command_id>(message["method"].get<std::string>().c_str()).value_or(ws_command_id::UNKNOWN);
+        std::string mtd = message["method"].get<std::string>();
+
+        auto mtd_id = string_to_command_id(mtd);
+        if (!mtd_id.has_value())
+        {
+            ESP_LOGE("JSON-RPC", "Invalid method: %s", mtd.c_str());
+            return ESP_FAIL;
+        }
+        msg.command = mtd_id.value();
         msg.params = message["params"];
         msg.params.erase("client_id");
         ESP_LOGI("JSON-RPC", "Received method: %s", magic_enum::enum_name(std::get<motor_command_id_t>(msg.command)).data());
@@ -185,4 +194,122 @@ void log_all_headers(httpd_req_t *req)
             ESP_LOGI(TAG, "%s header not found", header);
         }
     }
+}
+
+std::string payload_type_to_openapi(PayloadType type)
+{
+    switch (type)
+    {
+    case PayloadType::UINT8:
+        return "type: integer\n        format: int32";
+    case PayloadType::UINT16:
+        return "type: integer\n        format: int32";
+    case PayloadType::INT24:
+        return "type: integer\n        format: int32";
+    default:
+        return ""; // VOID or unrecognized
+    }
+}
+
+std::string generate_openapi_yaml()
+{
+    std::stringstream yaml;
+    yaml << "openapi: 3.0.0\n";
+    yaml << "info:\n";
+    yaml << "  title: Robot Arm WebSocket API\n";
+    yaml << "  version: 1.0.0\n";
+    yaml << "paths:\n";
+    yaml << "  /ws:\n";
+    yaml << "    post:\n";
+    yaml << "      summary: Execute a command on the WebSocket\n";
+    yaml << "      requestBody:\n";
+    yaml << "        required: true\n";
+    yaml << "        content:\n";
+    yaml << "          application/json:\n";
+    yaml << "            schema:\n";
+    yaml << "              oneOf:\n";
+
+    // Add command schemas to oneOf
+    for (const auto &[command, _] : g_command_payload_map)
+    {
+        std::string command_name = std::string(magic_enum::enum_name(command));
+        yaml << "                - $ref: '#/components/schemas/" << command_name << "'\n";
+    }
+
+    yaml << "              discriminator:\n";
+    yaml << "                propertyName: method\n";
+    yaml << "      responses:\n";
+    yaml << "        '200':\n";
+    yaml << "          description: Command executed successfully\n";
+    yaml << "        '400':\n";
+    yaml << "          description: Bad request - Invalid command or parameters\n";
+
+    // Ensure a single components.schemas section
+    yaml << "components:\n";
+    yaml << "  schemas:\n";
+
+    // Add command schemas under components.schemas
+    for (const auto &[command, payload_info] : g_command_payload_map)
+    {
+        std::string command_name = std::string(magic_enum::enum_name(command));
+        yaml << "    " << command_name << ":\n";
+        yaml << "      type: object\n";
+        yaml << "      required:\n";
+        yaml << "        - method\n";
+
+        // Add parameters to 'required' if they exist
+        size_t param_count = 0;
+        for (const auto &type : payload_info.type_info)
+        {
+            if (type != PayloadType::VOID)
+            {
+                yaml << "        - param_" << param_count << "\n";
+                param_count++;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        yaml << "      properties:\n";
+        yaml << "        method:\n";
+        yaml << "          type: string\n";
+        yaml << "          enum:\n";
+        yaml << "            - " << command_name << "\n";
+
+        // Add parameters with correct indentation
+        param_count = 0;
+        for (const auto &type : payload_info.type_info)
+        {
+            if (type != PayloadType::VOID)
+            {
+                yaml << "        param_" << param_count << ":\n";
+                yaml << "          type: integer\n";
+                yaml << "          format: int32\n";
+                param_count++;
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+
+    return yaml.str();
+}
+
+std::optional<ws_command_id_t> string_to_command_id(const std::string &commandStr)
+{
+
+    if (auto system_command = magic_enum::enum_cast<system_command_id_t>(commandStr))
+    {
+        return *system_command;
+    }
+    if (auto motor_command = magic_enum::enum_cast<motor_command_id_t>(commandStr))
+    {
+        return *motor_command;
+    }
+
+    return std::nullopt;
 }

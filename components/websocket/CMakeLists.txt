@@ -12,15 +12,13 @@ REQUIRES esp_event
 REQUIRES nvs_flash
 REQUIRES esp_wifi
 REQUIRES esp_http_server
-#REQUIRES nlohmann-json
 REQUIRES johboh__nlohmann-json
+REQUIRES common
+REQUIRES magic_enum
 
 INCLUDE_DIRS 
-    "." 
-    "../magic_enum"
-    "../common"
-    "./commands"
-    
+    "include"
+    "commands"    
 )
 
 target_compile_definitions(${COMPONENT_LIB} PRIVATE JSON_BuildTests=OFF JSON_ImplicitConversions=OFF)

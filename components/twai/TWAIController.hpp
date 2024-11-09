@@ -1,16 +1,17 @@
 #ifndef TWAICONTROLLER_H
 #define TWAICONTROLLER_H
 
-#include "../common/utils.hpp"
 #include "TypeDefs.hpp"
-#include "driver/gpio.h"
-#include "esp_err.h"
-#include "esp_event.h"
-#include "esp_log.h"
-#include "freertos/FreeRTOS.h"
+#include "utils.hpp"
+
 #include <cstdint>
 #include <cstring>
+#include <driver/gpio.h>
 #include <driver/twai.h>
+#include <esp_err.h>
+#include <esp_event.h>
+#include <esp_log.h>
+#include <freertos/FreeRTOS.h>
 #include <map>
 
 class TWAIController

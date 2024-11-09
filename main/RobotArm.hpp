@@ -10,8 +10,8 @@
 #include "TWAIController.hpp"
 #include "TypeDefs.hpp"
 #include "freeRTOS/queue.h"
-#include "freertos/FreeRTOS.h"
 #include "utils.hpp"
+#include <freertos/FreeRTOS.h>
 #include <memory>
 
 #include "Events.hpp"

@@ -1,23 +1,27 @@
 #pragma once
 
-#include "../../managed_components/johboh__nlohmann-json/single_include/nlohmann/json.hpp"
 #include "TypeDefs.hpp"
 #include "Utilities.hpp"
 #include "WsCommandDefs.hpp"
-#include "esp_err.h"
-#include "esp_event.h"
-#include "esp_log.h"
 #include "utils.hpp"
+#include <esp_err.h>
+#include <esp_event.h>
+#include <esp_log.h>
+#include <nlohmann/json.hpp>
 
 class IWsCommand
 {
 public:
-    explicit IWsCommand(int id, std::string client_id) : id(id), client_id(client_id) {}
-    virtual ~IWsCommand() = default;
+    IWsCommand(httpd_req_t *req, ws_message_t msg) : req(req), msg(msg) {}
+    virtual ~IWsCommand() {}
+
+    ws_message_t get_msg() const { return msg; }
+    httpd_req_t *get_req() const { return req; }
+
     void set_result(bool result) { this->result = result; }
     bool get_result() { return result; }
-    int get_id() { return id; }
-    std::string get_client_id() { return client_id; }
+    int get_id() { return msg.id; }
+    std::string get_client_id() { return msg.client_id; }
 
     esp_err_t set_config(rpc_event_config_t config)
     {
@@ -71,11 +75,12 @@ public:
     }
 
 private:
-    int id;
-    std::string client_id;
     rpc_event_config_t config;
     rpc_event_config_t response_config;
     rpc_event_data data;
+    httpd_req_t *req;
+    ws_message_t msg;
+
     bool result;
     const char *TAG = "IWsCommand";
 };

@@ -5,13 +5,14 @@
 class SetRunLevelCommand : public IWsCommand
 {
 public:
-    explicit SetRunLevelCommand(int id, std::string client_id) : IWsCommand(id, client_id) {}
+    explicit SetRunLevelCommand(httpd_req_t *req, ws_message_t msg) : IWsCommand(req, msg) {}
 
     RunLevel get_run_level() const { return run_level; }
 
-    esp_err_t set_run_level(nlohmann::json run_level)
+    esp_err_t set_run_level(nlohmann::json params)
     {
-        ESP_RETURN_ON_ERROR(get_run_level_from_json(run_level, this->run_level), TAG, "Failed to get run mode from JSON");
+        ESP_RETURN_ON_ERROR(get_run_level_from_json(params, run_level), TAG, "Failed to get run mode from JSON");
+        ESP_RETURN_ON_FALSE(run_level != RunLevel::UNKNOWN, ESP_ERR_INVALID_ARG, TAG, "Invalid run mode");
         return ESP_OK;
     }
 

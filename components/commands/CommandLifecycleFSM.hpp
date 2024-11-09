@@ -1,12 +1,12 @@
 #ifndef COMMAND_LIFECYCLE_FSM_H
 #define COMMAND_LIFECYCLE_FSM_H
 
-#include "../common/utils.hpp"
-#include "../magic_enum/include/magic_enum/magic_enum.hpp"
 #include "TypeDefs.hpp"
-#include "esp_err.h"
-#include "esp_log.h"
+#include "utils.hpp"
+#include <esp_err.h>
+#include <esp_log.h>
 #include <functional>
+#include <magic_enum.hpp>
 #include <map>
 
 class CommandLifecycleFSM

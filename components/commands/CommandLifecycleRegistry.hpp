@@ -1,14 +1,14 @@
 #ifndef COMMAND_LIFECYCLE_REGISTRY_H
 #define COMMAND_LIFECYCLE_REGISTRY_H
 
-#include "../common/utils.hpp"
-#include "../magic_enum/include/magic_enum/magic_enum.hpp"
 #include "CommandLifecycleFSM.hpp"
-#include "esp_err.h"
-#include "esp_log.h"
+#include "utils.hpp"
 #include <chrono>
+#include <esp_err.h>
+#include <esp_log.h>
 #include <functional>
 #include <future>
+#include <magic_enum.hpp>
 #include <map>
 
 struct CommandRegistryEntry

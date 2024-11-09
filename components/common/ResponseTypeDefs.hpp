@@ -1,8 +1,8 @@
 #ifndef RESPONSE_TYPEDEFS_HPP
 #define RESPONSE_TYPEDEFS_HPP
 
-#include "../motor/Properties.hpp"
 #include "MksEnums.hpp"
+#include "Properties.hpp"
 #include <any>
 #include <array>
 #include <esp_event.h>

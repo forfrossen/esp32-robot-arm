@@ -1,12 +1,12 @@
 #define MAGIC_ENUM_RANGE_MIN 0x00
 #define MAGIC_ENUM_RANGE_MAX 0xFF
 
-#include "esp_err.h"
 #include "esp_http_server.h"
-#include "esp_log.h"
 #include "esp_netif.h"
-#include "freertos/FreeRTOS.h"
 #include "sdkconfig.h"
+#include <esp_err.h>
+#include <esp_log.h>
+#include <freertos/FreeRTOS.h>
 
 #include <inttypes.h>
 #include <iostream>
@@ -18,8 +18,8 @@
 #include "Events.hpp"
 
 #include "RobotArm.hpp"
-#include "nvs_flash.h"
 #include "utils.hpp"
+#include <nvs_flash.h>
 
 #include "WebSocket.hpp"
 #include "WebSocketServer.hpp"

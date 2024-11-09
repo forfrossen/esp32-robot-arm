@@ -3,14 +3,14 @@
 
 #include "MksEnums.hpp"
 
-#include "../magic_enum/include/magic_enum/magic_enum.hpp"
-#include "esp_log.h"
-#include "freertos/FreeRTOS.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <esp_log.h>
+#include <freertos/FreeRTOS.h>
 #include <hal/twai_types.h>
 #include <iostream>
+#include <magic_enum.hpp>
 #include <sstream>
 #include <string>
 #include <vector>

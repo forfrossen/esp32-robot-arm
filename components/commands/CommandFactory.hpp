@@ -1,13 +1,14 @@
 #ifndef TWAI_COMMAND_FACTORY_H
 #define TWAI_COMMAND_FACTORY_H
 
-#include "../common/utils.hpp"
 #include "GenericCommand.hpp"
 #include "RunMotorInSpeedModeCommand.hpp"
 #include "SetTargetPositionCommand.hpp"
 #include "TypeDefs.hpp"
+#include "utils.hpp"
 #include <driver/twai.h>
 #include <iostream>
+#include <magic_enum.hpp>
 #include <memory>
 #include <type_traits>
 #include <typeinfo>

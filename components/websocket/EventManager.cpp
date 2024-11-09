@@ -93,109 +93,78 @@ esp_err_t EventManager::unregister_handlers()
 
 esp_err_t EventManager::on_rpc_request(httpd_req_t *req, ws_message_t msg)
 {
-
     ESP_LOGD(TAG, "Params: %s", msg.params.dump().c_str());
     ESP_LOGD(TAG, "ID: %d", msg.id);
     ESP_LOGD(TAG, "Client ID: %s", msg.client_id.c_str());
     esp_err_t ret = ESP_OK;
 
-    if (std::holds_alternative<ws_command_id>(msg.command))
-    {
-        ESP_LOGD(TAG, "Command: %s", magic_enum::enum_name(std::get<ws_command_id>(msg.command)).data());
-        ret = on_system_command(req, msg);
-    }
-    else if (std::holds_alternative<motor_command_id_t>(msg.command))
-    {
-        ESP_LOGD(TAG, "Command: %s", magic_enum::enum_name(std::get<motor_command_id_t>(msg.command)).data());
-        ret = on_set_motor_command(req, msg);
-    }
-    else
-    {
-        ESP_LOGE(TAG, "Invalid command requested");
-        return ESP_ERR_INVALID_ARG;
-    }
+    ret = command_factory->create(req, msg);
     return ret;
 }
 
-esp_err_t EventManager::on_set_motor_command(httpd_req_t *req, ws_message_t msg)
+// esp_err_t EventManager::send_system_command(httpd_req_t *req, ws_message_t msg)
+// {
+//     ESP_RETURN_ON_FALSE(std::holds_alternative<system_command_id_t>(msg.command), ESP_ERR_INVALID_ARG, TAG, "Invalid command type");
+//     ESP_LOGD(TAG, "Command: %s", magic_enum::enum_name(std::get<system_command_id_t>(msg.command)).data());
+
+//     switch (std::get<system_command_id_t>(msg.command))
+//     {
+//     case system_command_id_t::START_MOTORS:
+//         return post_event(REMOTE_CONTROL_EVENT, remote_control_event_t::START_MOTORS);
+//     case system_command_id_t::STOP_MOTORS:
+//         return post_event(REMOTE_CONTROL_EVENT, remote_control_event_t::STOP_MOTORS);
+//     case system_command_id_t::SET_RUNLEVEL:
+//         return set_runlevel(req, msg);
+//     default:
+//         ESP_LOGE(TAG, "Invalid command requested");
+//         return ESP_ERR_INVALID_ARG;
+//     }
+
+//     return ESP_OK;
+// }
+
+// esp_err_t EventManager::post_event(system_event_id_t event, remote_control_event_t message)
+// {
+//     ESP_LOGD(TAG, "Posting system event %d with message: %d", static_cast<int>(event), static_cast<int>(message));
+//     assert(system_event_loop != nullptr);
+
+//     esp_err_t ret = esp_event_post_to(
+//         system_event_loop,
+//         SYSTEM_EVENTS,
+//         event,
+//         static_cast<const void *>(&message),
+//         sizeof(remote_control_event_t),
+//         portMAX_DELAY);
+
+//     ESP_RETURN_ON_ERROR(ret, TAG, "Error posting system event");
+//     return ESP_OK;
+// }
+
+// esp_err_t EventManager::send_system_command(httpd_req_t *req, ws_message_t msg)
+// {
+//     ESP_RETURN_ON_FALSE(std::holds_alternative<system_command_id_t>(msg.command), ESP_ERR_INVALID_ARG, TAG, "Invalid command type");
+//     ESP_LOGD(TAG, "Command: %s", magic_enum::enum_name(std::get<system_command_id_t>(msg.command)).data());
+
+//     switch (std::get<system_command_id_t>(msg.command))
+//     {
+//     case system_command_id_t::START_MOTORS:
+//         return post_event(REMOTE_CONTROL_EVENT, remote_control_event_t::START_MOTORS);
+//     case system_command_id_t::STOP_MOTORS:
+//         return post_event(REMOTE_CONTROL_EVENT, remote_control_event_t::STOP_MOTORS);
+//     case system_command_id_t::SET_RUNLEVEL:
+//         return set_runlevel(req, msg);
+//     default:
+//         ESP_LOGE(TAG, "Invalid command requested");
+//         return ESP_ERR_INVALID_ARG;
+//     }
+
+//     return ESP_OK;
+// }
+
+esp_err_t EventManager::set_runlevel(httpd_req_t *req, ws_message_t msg)
 {
-    ESP_LOGD(TAG, "Params: %s", msg.params.dump().c_str());
-    ESP_LOGD(TAG, "ID: %d", msg.id);
-    ESP_LOGD(TAG, "Client ID: %s", msg.client_id.c_str());
-    ESP_RETURN_ON_FALSE(std::holds_alternative<motor_command_id_t>(msg.command), ESP_ERR_INVALID_ARG, TAG, "Invalid command type");
-
-    auto msg_command = std::get<motor_command_id_t>(msg.command);
-    auto cmd_name = magic_enum::enum_name(msg_command).data();
-    ESP_LOGD(TAG, "Creating Command for motor_command_id_t: %s", cmd_name);
-
-    ESP_RETURN_ON_ERROR(command_factory->create_motor_command(req, msg), TAG, "Failed to create motor command");
-
-    return ESP_OK;
-}
-
-esp_err_t EventManager::on_system_command(httpd_req_t *req, ws_message_t msg)
-{
-    ESP_LOGD(TAG, "Params: %s", msg.params.dump().c_str());
-    ESP_LOGD(TAG, "ID: %d", msg.id);
-    ESP_LOGD(TAG, "Client ID: %s", msg.client_id.c_str());
-
-    ESP_RETURN_ON_FALSE(std::holds_alternative<ws_command_id>(msg.command), ESP_ERR_INVALID_ARG, TAG, "Invalid command type");
-
-    auto msg_command = std::get<ws_command_id>(msg.command);
-    auto cmd_name = magic_enum::enum_name(msg_command).data();
-    ESP_LOGD(TAG, "Creating Command for ws_command_id: %s", cmd_name);
-
-    return send_system_command(req, msg);
-}
-
-esp_err_t EventManager::post_event(system_event_id_t event, remote_control_event_t message)
-{
-    ESP_LOGD(TAG, "Posting system event %d with message: %d", static_cast<int>(event), static_cast<int>(message));
-    assert(system_event_loop != nullptr);
-
-    esp_err_t ret = esp_event_post_to(
-        system_event_loop,
-        SYSTEM_EVENTS,
-        event,
-        static_cast<const void *>(&message),
-        sizeof(remote_control_event_t),
-        portMAX_DELAY);
-
-    ESP_RETURN_ON_ERROR(ret, TAG, "Error posting system event");
-    return ESP_OK;
-}
-
-esp_err_t EventManager::send_system_command(httpd_req_t *req, ws_message_t msg)
-{
-    ESP_RETURN_ON_FALSE(std::holds_alternative<ws_command_id>(msg.command), ESP_ERR_INVALID_ARG, TAG, "Invalid command type");
-    ESP_LOGD(TAG, "Command: %s", magic_enum::enum_name(std::get<ws_command_id>(msg.command)).data());
-
-    switch (std::get<ws_command_id>(msg.command))
-    {
-    case ws_command_id::START_MOTORS:
-        return post_event(REMOTE_CONTROL_EVENT, remote_control_event_t::START_MOTORS);
-    case ws_command_id::STOP_MOTORS:
-        return post_event(REMOTE_CONTROL_EVENT, remote_control_event_t::STOP_MOTORS);
-    case ws_command_id::SET_RUNLEVEL:
-        return set_runlevel(msg.params, msg.id, msg.client_id);
-    default:
-        ESP_LOGE(TAG, "Invalid command requested");
-        return ESP_ERR_INVALID_ARG;
-    }
-
-    return ESP_OK;
-}
-
-esp_err_t EventManager::set_runlevel(json payload, int id, std::string client_id)
-{
-    RunLevel run_level;
-    CHECK_THAT(get_run_level_from_json(payload, run_level) == ESP_OK);
-    CHECK_THAT(run_level != RunLevel::UNKNOWN);
-    CHECK_THAT(command_factory != nullptr);
-    ESP_LOGD(TAG, "Creating command, to set RunLevel to: %s", magic_enum::enum_name(run_level).data());
-
-    CHECK_THAT(command_factory->create(ws_command_id::SET_RUNLEVEL, run_level, id, client_id) == ESP_OK);
-
+    ESP_RETURN_ON_FALSE(command_factory != nullptr, ESP_ERR_INVALID_STATE, TAG, "Command factory is null");
+    ESP_RETURN_ON_ERROR(command_factory->create(req, msg), TAG, "Failed to create SET_RUNLEVEL command");
     return ESP_OK;
 }
 

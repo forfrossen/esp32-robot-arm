@@ -2,7 +2,7 @@
 #ifndef RESPONSE_DATA_HANDLER_HPP
 #define RESPONSE_DATA_HANDLER_HPP
 
-#include "../magic_enum/include/magic_enum/magic_enum.hpp"
+#include <magic_enum.hpp>
 
 #include "DataExtractor.hpp"
 #include "MksEnums.hpp"
@@ -13,10 +13,10 @@
 #include "lwip/def.h"
 
 #include "ResponseHandlerBase.hpp"
-#include "esp_check.h"
-#include "esp_err.h"
-#include "esp_log.h"
 #include "utils.hpp"
+#include <esp_check.h>
+#include <esp_err.h>
+#include <esp_log.h>
 
 class ResponseDataHandler : public ResponseHandlerBase
 {

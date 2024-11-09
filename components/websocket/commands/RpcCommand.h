@@ -5,7 +5,10 @@
 class RpcCommand : public IWsCommand
 {
 public:
-    explicit RpcCommand() {}
+    explicit RpcCommand(
+        httpd_req_t *req,
+        ws_message_t msg)
+        : IWsCommand(req, msg) {}
 
     nlohmann::json get_params() const { return params; }
 

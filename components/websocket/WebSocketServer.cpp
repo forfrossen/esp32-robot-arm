@@ -2,7 +2,7 @@
 #include "EventManager.hpp"
 #include "RequestHandler.hpp"
 #include "ResponseSender.hpp"
-#include "esp_log.h"
+#include <esp_log.h>
 #include <memory>
 
 static const char *TAG = "WebSocketServer";
@@ -38,10 +38,10 @@ esp_err_t WebSocketServer::start()
     config.keep_alive_count = 3;
 
     ESP_LOGD(TAG, "Starting server on port: '%d'", config.server_port);
-    esp_err_t ret = httpd_start(&server, &config);
-    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to start server");
 
-    ret = register_uri_handlers();
+    ESP_RETURN_ON_ERROR(httpd_start(&server, &config), TAG, "Failed to start server");
+
+    esp_err_t ret = register_uri_handlers();
     if (ret != ESP_OK)
     {
         httpd_stop(server);
@@ -99,6 +99,22 @@ esp_err_t WebSocketServer::set_client_id_in_ctx(std::string client_id)
     return ESP_OK;
 }
 
+esp_err_t WebSocketServer::set_cors_headers(httpd_req_t *req)
+{
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type, Authorization");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    return ESP_OK;
+}
+
+esp_err_t WebSocketServer::http_options_handler(httpd_req_t *req)
+{
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type, Authorization");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    return httpd_resp_send(req, NULL, 0);
+}
+
 esp_err_t WebSocketServer::incoming_message_handler(httpd_req_t *req)
 {
     WebSocketServer *server_instance = static_cast<WebSocketServer *>(req->user_ctx);
@@ -126,14 +142,11 @@ esp_err_t WebSocketServer::new_client_registration(httpd_req_t *req)
     ESP_LOGD(TAG, "New client registration");
     WebSocketServer *server_instance = static_cast<WebSocketServer *>(req->user_ctx);
 
-    // Handle OPTIONS preflight request
+    server_instance->set_cors_headers(req);
+
     if (req->method == HTTP_OPTIONS)
     {
-        httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
-        httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type, Authorization");
-        httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-        httpd_resp_send(req, NULL, 0); // Respond with no content
-        return ESP_OK;
+        return httpd_resp_send(req, NULL, 0);
     }
 
     std::string client_id = generate_uuid();
@@ -144,9 +157,6 @@ esp_err_t WebSocketServer::new_client_registration(httpd_req_t *req)
     snprintf(set_cookie, sizeof(set_cookie), "client_id=%s; Path=/;", client_id.c_str());
     httpd_resp_set_hdr(req, "Set-Cookie", set_cookie);
     httpd_resp_set_hdr(req, "X-TEST-Header", "WOW... such test... very wow");
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type, Authorization");
-    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     httpd_resp_set_status(req, "200 OK");
     httpd_resp_set_type(req, "application/json");
     std::string response = "{\"client_id\": \"" + client_id + "\"}";
@@ -155,35 +165,60 @@ esp_err_t WebSocketServer::new_client_registration(httpd_req_t *req)
     return ESP_OK;
 }
 
+esp_err_t WebSocketServer::api_docs_get_handler(httpd_req_t *req)
+{
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Headers", "Content-Type, Authorization");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    if (req->method == HTTP_OPTIONS)
+    {
+        return httpd_resp_send(req, NULL, 0);
+    }
+
+    std::string openapi_yaml = generate_openapi_yaml();
+    httpd_resp_set_status(req, "200 OK");
+    httpd_resp_set_type(req, "text/yaml");
+    httpd_resp_send(req, openapi_yaml.c_str(), openapi_yaml.size());
+    return ESP_OK;
+}
+
 esp_err_t WebSocketServer::register_uri_handlers()
 {
-
-    httpd_uri_t new_client_url = {
-        .uri = "/new_client",
-        .method = HTTP_GET,
-        .handler = WebSocketServer::new_client_registration,
-        .user_ctx = this,
-        .is_websocket = false};
-
-    // Register the OPTIONS handler for the /new_client endpoint
-    httpd_uri_t new_client_options = new_client_url;
-    new_client_options.method = HTTP_OPTIONS;
-
-    httpd_uri_t ws_uri = {
-        .uri = "/ws",
-        .method = HTTP_GET,
-        .handler = WebSocketServer::incoming_message_handler,
-        .user_ctx = this,
-        .is_websocket = true,
-        .handle_ws_control_frames = false,
-        .supported_subprotocol = "jsonrpc2.0"};
-
     ESP_LOGD(TAG, "Registering URI handlers");
-    esp_err_t ret = httpd_register_uri_handler(server, &new_client_url);
-    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to register new client URI handler");
-    ret = httpd_register_uri_handler(server, &new_client_options);
-    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to register new client OPTIONS URI handler");
+    esp_err_t ret;
+
+    // ret = httpd_register_uri_handler(server, &options);
+    // ESP_RETURN_ON_ERROR(ret, TAG, "Failed to register OPTIONS URI handler");
+    std::string api_base_path_str = "/api/v1";
+    std::string new_client_uri_str = api_base_path_str + "/new_client";
+    std::string api_docs_uri_str = api_base_path_str + "/docs";
+    std::string ws_uri_str = "/ws";
+
+    httpd_uri_t ws_uri = {.uri = ws_uri_str.c_str(), .method = HTTP_GET, .handler = WebSocketServer::incoming_message_handler, .user_ctx = this, .is_websocket = true, .handle_ws_control_frames = false, .supported_subprotocol = "jsonrpc2.0"};
+
+    httpd_uri_t new_client_url = {.uri = new_client_uri_str.c_str(), .method = HTTP_GET, .handler = WebSocketServer::new_client_registration, .user_ctx = this, .is_websocket = false};
+    httpd_uri_t new_client_options = {.uri = new_client_uri_str.c_str(), .method = HTTP_OPTIONS, .handler = WebSocketServer::new_client_registration, .user_ctx = this, .is_websocket = false};
+
+    httpd_uri_t api_docs_uri = {.uri = api_docs_uri_str.c_str(), .method = HTTP_GET, .handler = WebSocketServer::api_docs_get_handler, .user_ctx = this, .is_websocket = false};
+    httpd_uri_t api_docs_options = {.uri = api_docs_uri_str.c_str(), .method = HTTP_OPTIONS, .handler = WebSocketServer::api_docs_get_handler, .user_ctx = this, .is_websocket = false};
+
     ret = httpd_register_uri_handler(server, &ws_uri);
-    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to register WebSocket URI handler");
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to register WebSocket URI handler. Uri: %s", ws_uri.uri);
+    ESP_LOGD(TAG, "Registered WebSocket URI handler. Uri: %s", ws_uri.uri);
+
+    ret = httpd_register_uri_handler(server, &new_client_options);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to register new client URI handler. Uri: %s", new_client_options.uri);
+    ESP_LOGD(TAG, "Registered new client URI handler. Uri: %s", new_client_options.uri);
+    ret = httpd_register_uri_handler(server, &new_client_url);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to register new client URI handler. Uri: %s", new_client_url.uri);
+    ESP_LOGD(TAG, "Registered new client URI handler. Uri: %s", new_client_url.uri);
+
+    ret = httpd_register_uri_handler(server, &api_docs_options);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to register API docs URI handler. Uri: %s", api_docs_options.uri);
+    ESP_LOGD(TAG, "Registered API docs URI handler. Uri: %s", api_docs_options.uri);
+    ret = httpd_register_uri_handler(server, &api_docs_uri);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to register API docs URI handler. Uri: %s", api_docs_uri.uri);
+    ESP_LOGD(TAG, "Registered API docs URI handler. Uri: %s", api_docs_uri.uri);
+
     return ret;
 }

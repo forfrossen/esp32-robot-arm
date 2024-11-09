@@ -1,10 +1,12 @@
 #pragma once
 
+#ifndef WS_COMMAND_DEFS_H
+#define WS_COMMAND_DEFS_H
+
 #include "MksEnums.hpp"
-#include "esp_event.h"
+#include <esp_event.h>
 #include <map>
 
-#include "../../managed_components/johboh__nlohmann-json/single_include/nlohmann/json.hpp"
 #include "TypeDefs.hpp"
 #include <any>
 #include <array>
@@ -14,13 +16,14 @@
 #include <freertos/queue.h>
 #include <map>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
-enum class ws_command_id
+enum class system_command_id_t
 {
     START_MOTORS,
     STOP_MOTORS,
@@ -47,15 +50,16 @@ typedef struct
 
 // using ws_command_t = std::string;
 // using ws_payload_t = std::variant<int, std::string, RunLevel>;
+using ws_command_id_t = std::variant<system_command_id_t, motor_command_id_t>;
 typedef struct
 {
-    std::variant<ws_command_id, motor_command_id_t> command;
+    ws_command_id_t command;
     nlohmann::json params;
     int id;
     std::string client_id;
 } ws_message_t;
 
-using ws_command_config_map_t = std::map<ws_command_id, rpc_event_config_t>;
+using ws_command_config_map_t = std::map<ws_command_id_t, rpc_event_config_t>;
 
 typedef struct
 {
@@ -67,3 +71,5 @@ typedef struct
     std::string client_id;
     int message_count;
 } ws_client_info;
+
+#endif // WS_COMMAND_DEFS_H
