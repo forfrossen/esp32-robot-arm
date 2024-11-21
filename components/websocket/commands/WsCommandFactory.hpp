@@ -62,8 +62,13 @@ private:
         auto it = config_map.find(msg.command);
         if (it == config_map.end())
         {
-            ESP_LOGE(TAG, "Command configuration not found");
-            return ESP_ERR_INVALID_ARG;
+            ESP_LOGD(TAG, "Command configuration not found, using default");
+            it = config_map.find(system_command_id_t::MOTOR_CONTROL_COMMAND);
+            if (it == config_map.end())
+            {
+                ESP_LOGE(TAG, "Default command configuration not found");
+                return ESP_ERR_NOT_FOUND;
+            }
         }
 
         rpc_event_config_t cmd_config = it->second;

@@ -57,9 +57,8 @@ typedef struct
     nlohmann::json params;
     int id;
     std::string client_id;
-} ws_message_t;
 
-using ws_command_config_map_t = std::map<ws_command_id_t, rpc_event_config_t>;
+} ws_message_t;
 
 typedef struct
 {
@@ -71,5 +70,7 @@ typedef struct
     std::string client_id;
     int message_count;
 } ws_client_info;
+
+using ws_command_config_map_t = std::map<ws_command_id_t, rpc_event_config_t>;
 
 #endif // WS_COMMAND_DEFS_H

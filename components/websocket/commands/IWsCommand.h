@@ -20,8 +20,20 @@ public:
 
     void set_result(bool result) { this->result = result; }
     bool get_result() { return result; }
+
     int get_id() { return msg.id; }
     std::string get_client_id() { return msg.client_id; }
+    uint8_t get_motor_id() { return msg.params["motor_id"].get<uint8_t>(); }
+
+    std::string get_method() { return msg.params["method"].get<std::string>(); }
+
+    auto get_cmd_enum()
+    {
+        return std::visit([](auto &&arg)
+                          { return magic_enum::enum_name(arg).data(); }, msg.command);
+    }
+
+    ws_command_id_t get_command() { return msg.command; }
 
     esp_err_t set_config(rpc_event_config_t config)
     {

@@ -280,3 +280,16 @@ esp_err_t MotorController::set_target_position()
     xSemaphoreGive(motor_mutex);
     return ret;
 };
+
+esp_err_t MotorController::set_target_position(uint32_t position, uint16_t speed, uint8_t acceleration, bool direction)
+{
+    esp_err_t ret = ESP_FAIL;
+    xSemaphoreTake(motor_mutex, portMAX_DELAY);
+    motor_command_id_t command_id = RUN_MOTOR_RELATIVE_MOTION_BY_AXIS;
+    uint24_t angle_steps_with_ratio = position * ACTUATOR_GEAR_RATIO;
+    ESP_LOGD(TAG, "Sending RUN_MOTOR_ABSOLUTE_MOTION_BY_AXIS command to move motor at with speed: %d with acceleration of %d to about: %ld°", speed, acceleration, static_cast<uint24_t>(position));
+    auto cmd = command_factory->create_command(RUN_MOTOR_RELATIVE_MOTION_BY_AXIS, speed, acceleration, static_cast<uint24_t>(position));
+    SEND_COMMAND_BY_ID_WITH_PAYLOAD(cmd, context, ret);
+    xSemaphoreGive(motor_mutex);
+    return ret;
+}

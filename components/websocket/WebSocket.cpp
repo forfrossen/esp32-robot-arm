@@ -17,8 +17,7 @@ WebSocket::WebSocket(
         {system_command_id_t::SET_RUNLEVEL, {system_event_loop, SYSTEM_EVENTS, SET_RUN_MODE_EVENT}},
         {system_command_id_t::START_MOTORS, {system_event_loop, SYSTEM_EVENTS, START_MOTORS}},
         {system_command_id_t::STOP_MOTORS, {system_event_loop, SYSTEM_EVENTS, STOP_MOTORS}},
-        {system_command_id_t::MOTOR_CONTROL_COMMAND, {system_event_loop, SYSTEM_EVENTS, MOTOR_CONTROL_COMMAND}}
-
+        {system_command_id_t::MOTOR_CONTROL_COMMAND, {system_event_loop, SYSTEM_EVENTS, REMOTE_CONTROL_EVENT}},
     };
 
     // Initialize submodules

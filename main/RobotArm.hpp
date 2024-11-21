@@ -13,6 +13,7 @@
 #include "utils.hpp"
 #include <freertos/FreeRTOS.h>
 #include <memory>
+#include <variant>
 
 #include "Events.hpp"
 
@@ -141,26 +142,45 @@ public:
         ESP_RETURN_VOID_ON_FALSE(robot_arm != nullptr, FUNCTION_NAME, "RobotArm instance is null in system event handler");
         ESP_LOGD(FUNCTION_NAME, "GOT SYSTEM EVENT, EVENT_BASE: %s, EVENT_ID: %ld", event_base, event_id);
 
-        remote_control_event_t evt_msg = *reinterpret_cast<remote_control_event_t *>(event_data);
+        rpc_event_data evt_data = *reinterpret_cast<rpc_event_data *>(event_data);
+        auto ws_command = evt_data.command;
+        auto ws_msg = ws_command->get_msg();
+        auto cmd = ws_command->get_cmd_enum();
 
-        ESP_LOGD(FUNCTION_NAME, "Message: %s", magic_enum::enum_name(evt_msg).data());
+        ESP_LOGD(FUNCTION_NAME, "Remote Control Event with command  %s", cmd);
+        ESP_LOGD(FUNCTION_NAME, "Remote Control Event for command data %s", ws_msg.params.dump().c_str());
 
-        if (evt_msg == remote_control_event_t::START_MOTORS)
+        ESP_RETURN_VOID_ON_FALSE(
+            std::holds_alternative<motor_command_id_t>(ws_msg.command),
+            FUNCTION_NAME,
+            "Command is not a motor command");
+
+        ESP_LOGW(FUNCTION_NAME, "Command is not a motor command");
+        auto cmd_id = std::get<motor_command_id_t>(ws_msg.command);
+        ESP_LOGD(FUNCTION_NAME, "Command ID: %d", cmd_id);
+
+        auto cmd_string = magic_enum::enum_name(cmd_id).data();
+        ESP_LOGD(FUNCTION_NAME, "Command String: %s", cmd_string);
+
+        auto params = ws_msg.params;
+        ESP_LOGD(FUNCTION_NAME, "Params: %s", params.dump().c_str());
+
+        auto id = ws_command->get_motor_id();
+        auto position = params["position"].get<int32_t>();
+        auto speed = params["speed"].get<int32_t>();
+        auto acceleration = params["acceleration"].get<int32_t>();
+        auto direction = params["direction"].get<bool>();
+
+        auto ret = robot_arm->motors[id]->set_target_position(position, speed, acceleration, direction);
+        if (ret == ESP_OK)
         {
-            ESP_LOGI(FUNCTION_NAME, "Starting motors");
-            robot_arm->start_motors();
-        }
-        else if (evt_msg == remote_control_event_t::STOP_MOTORS)
-        {
-            ESP_LOGI(FUNCTION_NAME, "Stopping motors");
-            // for (auto const &x : robot_arm->servos)
-            // {
-            //     x.second->~MotorController();
-            // }
+            ESP_LOGI(FUNCTION_NAME, "Motor %d set to position %lx", id, position);
+            ws_command->post_result(true);
         }
         else
         {
-            ESP_LOGW(FUNCTION_NAME, "Unknown message: %d", magic_enum::enum_integer(evt_msg));
+            ESP_LOGE(FUNCTION_NAME, "Failed to set motor %d to position %lx", id, position);
+            ws_command->post_result(false);
         }
     }
 
@@ -194,7 +214,7 @@ public:
     {
         ESP_RETURN_ON_FALSE(rpc_cmd != nullptr, ESP_ERR_INVALID_ARG, FUNCTION_NAME, "Failed to cast IWsCommand* to SetRunLevelCommand*.");
 
-        run_level = rpc_cmd->get_run_level();
+        auto run_level = rpc_cmd->get_run_level();
         auto set_runlevel = [&](uint32_t set_bits, uint32_t clear_bits)
         {
             xEventGroupSetBits(system_event_group, set_bits);

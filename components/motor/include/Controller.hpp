@@ -39,6 +39,9 @@ public:
     MotorController(std::shared_ptr<MotorControllerDependencies> dependencies);
     ~MotorController();
 
+    esp_err_t set_target_position();
+    esp_err_t set_target_position(uint32_t position, uint16_t speed, uint8_t acceleration, bool direction);
+
 private:
     uint32_t canId;
     std::shared_ptr<MotorControllerDependencies> dependencies;
@@ -70,7 +73,6 @@ private:
     esp_err_t handle_error();
     esp_err_t handle_ready();
 
-    esp_err_t set_target_position();
     esp_err_t query_position();
     esp_err_t query_status();
     esp_err_t set_working_current(uint16_t currentMa);
