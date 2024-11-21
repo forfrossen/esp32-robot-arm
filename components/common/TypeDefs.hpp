@@ -135,7 +135,13 @@ typedef enum
     OUTGOING_MESSAGE_EVENT,
     REMOTE_CONTROL_EVENT,
     SET_RUN_MODE_EVENT,
+    MOTOR_CONTROL_COMMAND,
 } system_event_id_t;
+
+typedef enum
+{
+    SEND_RESPONSE,
+} rpc_event_id_t;
 
 typedef enum
 {
@@ -183,12 +189,12 @@ struct MotorControllerDependencies
     }
 };
 
-enum class RunMode
+enum class RunLevel
 {
-    RUNMODE0 = 0,
-    RUNMODE1 = 1,
-    RUNMODE2 = 2,
-    RUNMODE3 = 3,
+    RUNLEVEL0 = 0,
+    RUNLEVEL1 = 1,
+    RUNLEVEL2 = 2,
+    RUNLEVEL3 = 3,
     UNKNOWN = 99
 };
 

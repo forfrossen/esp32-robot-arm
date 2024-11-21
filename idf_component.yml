@@ -1,0 +1,5 @@
+dependencies:
+  johboh/nlohmann-json: "*"
+  magic_enum:
+    git: https://github.com/forfrossen/espidf-magic_enum.git
+    path: .

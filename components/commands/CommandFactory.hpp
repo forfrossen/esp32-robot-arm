@@ -1,13 +1,14 @@
 #ifndef TWAI_COMMAND_FACTORY_H
 #define TWAI_COMMAND_FACTORY_H
 
-#include "../common/utils.hpp"
 #include "GenericCommand.hpp"
 #include "RunMotorInSpeedModeCommand.hpp"
 #include "SetTargetPositionCommand.hpp"
 #include "TypeDefs.hpp"
+#include "utils.hpp"
 #include <driver/twai.h>
 #include <iostream>
+#include <magic_enum.hpp>
 #include <memory>
 #include <type_traits>
 #include <typeinfo>
@@ -31,7 +32,7 @@ public:
     }
 
     template <typename... Args>
-    GenericCommand *create_command(CommandIds command_id, Args &&...args)
+    GenericCommand *create_command(motor_command_id_t command_id, Args &&...args)
     {
         ESP_LOGD(FUNCTION_NAME, "Creating Generic Command for motor: %lu \t command id: %s", settings->id, magic_enum::enum_name(command_id).data());
 

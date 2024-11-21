@@ -7,7 +7,7 @@
 #include <variant>
 #include <vector>
 
-enum CommandIds : uint8_t
+enum motor_command_id_t : uint8_t
 {
     READ_ENCODER_VALUE_CARRY = 0x30,
     READ_ENCODED_VALUE_ADDITION = 0x31,
@@ -264,7 +264,7 @@ inline size_t get_payload_type_size(PayloadType type)
     }
 }
 
-using MotorPropertyVariant = std::variant<
+using motor_property_variant_t = std::variant<
     uint8_t,
     uint16_t,
     uint32_t,
@@ -287,11 +287,11 @@ using MotorPropertyVariant = std::variant<
     CanBitrate,
     std::chrono::system_clock::time_point>;
 
-const std::vector<CommandIds> g_no_status_in_data1 = {
-    CommandIds::READ_ENCODER_VALUE_CARRY,
-    CommandIds::READ_ENCODED_VALUE_ADDITION,
-    CommandIds::READ_MOTOR_SPEED,
-    CommandIds::READ_NUM_PULSES_RECEIVED,
-    CommandIds::READ_MOTOR_SHAFT_ANGLE_ERROR};
+const std::vector<motor_command_id_t> g_no_status_in_data1 = {
+    motor_command_id_t::READ_ENCODER_VALUE_CARRY,
+    motor_command_id_t::READ_ENCODED_VALUE_ADDITION,
+    motor_command_id_t::READ_MOTOR_SPEED,
+    motor_command_id_t::READ_NUM_PULSES_RECEIVED,
+    motor_command_id_t::READ_MOTOR_SHAFT_ANGLE_ERROR};
 
 #endif // MKS_ENUMS_HPP

@@ -3,8 +3,8 @@
 
 #include "CommandBase.hpp"
 #include "TypeDefs.hpp"
-#include "esp_log.h"
-#include "freertos/queue.h"
+#include <esp_log.h>
+#include <freertos/queue.h>
 
 class RunMotorInSpeedModeCommand : public CommandBase<RunMotorInSpeedModeCommand>
 {

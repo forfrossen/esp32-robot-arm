@@ -4,5 +4,8 @@ idf_component_register(
 
 REQUIRES esp_wifi
 REQUIRES nvs_flash
+REQUIRES common
 
-INCLUDE_DIRS "." "../common" )
+INCLUDE_DIRS "."
+
+)

@@ -1,16 +1,15 @@
 #ifndef TWAI_COMMAND_BUILDER_BASE_HPP
 #define TWAI_COMMAND_BUILDER_BASE_HPP
 
-#include "../common/utils.hpp"
 #include "Events.hpp"
 #include "TypeDefs.hpp"
-#include "esp_check.h"
-#include "esp_err.h"
-#include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
 #include "utils.hpp"
 #include <driver/twai.h>
+#include <esp_check.h>
+#include <esp_err.h>
+#include <esp_log.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
 #include <vector>
 
 class CommandLifecycleRegistry;
@@ -19,7 +18,7 @@ class CommandBase
 {
 protected:
     uint32_t id;
-    CommandIds command_id;
+    motor_command_id_t command_id;
     uint8_t cmd_code;
     uint8_t data_length = 0;
     std::optional<twai_message_t> msg;
@@ -30,7 +29,7 @@ protected:
     std::optional<CommandPayloadInfo> payload_info;
 
 public:
-    CommandBase(std::shared_ptr<CommandFactorySettings> settings, CommandIds command_id) : id(settings->id), command_id(command_id), system_event_loop(settings->system_event_loop), command_lifecycle_registry(settings->command_lifecycle_registry), msg_mutex(xSemaphoreCreateMutex())
+    CommandBase(std::shared_ptr<CommandFactorySettings> settings, motor_command_id_t command_id) : id(settings->id), command_id(command_id), system_event_loop(settings->system_event_loop), command_lifecycle_registry(settings->command_lifecycle_registry), msg_mutex(xSemaphoreCreateMutex())
     {
         uint8_t command_id_int = static_cast<uint8_t>(command_id);
 
@@ -46,7 +45,7 @@ public:
         }
     }
 
-    esp_err_t init_new_command(CommandIds command_id)
+    esp_err_t init_new_command(motor_command_id_t command_id)
     {
         CHECK_THAT(command_lifecycle_registry != nullptr);
         msg = twai_message_t();
@@ -93,7 +92,7 @@ public:
         return ESP_OK;
     }
 
-    esp_err_t set_command_id(CommandIds command_id)
+    esp_err_t set_command_id(motor_command_id_t command_id)
     {
         ESP_RETURN_ON_ERROR(msg_check(), FUNCTION_NAME, "msg is nullptr");
         cmd_code = static_cast<uint8_t>(command_id);

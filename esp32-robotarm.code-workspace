@@ -77,12 +77,16 @@
       "typeinfo": "cpp",
       "variant": "cpp",
       "*.tpp": "cpp",
-      "esp_err.h": "c",
+      <esp_err.h>: "c",
       "forward_list": "cpp",
       "unordered_set": "cpp",
       "any": "cpp",
       "cfloat": "cpp",
-      "climits": "cpp"
+      "climits": "cpp",
+      "codecvt": "cpp",
+      "csignal": "cpp",
+      "ranges": "cpp",
+      "valarray": "cpp"
     },
     "editor.detectIndentation": false,
     "editor.tabSize": 4,

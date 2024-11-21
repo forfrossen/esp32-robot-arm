@@ -2,8 +2,8 @@
 #define ERROR_CHECK_HANDLER_HPP
 
 #include "ResponseHandlerBase.hpp"
-#include "esp_log.h"
 #include "utils.hpp"
+#include <esp_log.h>
 
 class ErrorCheckHandler : public ResponseHandlerBase
 {
@@ -17,7 +17,7 @@ public:
     bool handle_response(const twai_message_t &msg) override
     {
         ESP_LOGD(FUNCTION_NAME, "called");
-        bool status_in_data1 = IS_STATUS_IN_DATA1(static_cast<CommandIds>(msg.data[0]));
+        bool status_in_data1 = IS_STATUS_IN_DATA1(static_cast<motor_command_id_t>(msg.data[0]));
         if (status_in_data1)
         {
             ESP_LOGD(FUNCTION_NAME, "Command follows status in data1 rule.");

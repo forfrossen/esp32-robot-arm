@@ -1,9 +1,9 @@
 #ifndef STATEMACHINE_HPP
 #define STATEMACHINE_HPP
 
-#include "../common/utils.hpp"
-#include "esp_err.h"
-#include "esp_log.h"
+#include "utils.hpp"
+#include <esp_err.h>
+#include <esp_log.h>
 #include <functional>
 #include <iostream>
 #include <map>

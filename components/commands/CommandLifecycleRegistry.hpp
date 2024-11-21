@@ -1,19 +1,19 @@
 #ifndef COMMAND_LIFECYCLE_REGISTRY_H
 #define COMMAND_LIFECYCLE_REGISTRY_H
 
-#include "../common/utils.hpp"
-#include "../magic_enum/include/magic_enum/magic_enum.hpp"
 #include "CommandLifecycleFSM.hpp"
-#include "esp_err.h"
-#include "esp_log.h"
+#include "utils.hpp"
 #include <chrono>
+#include <esp_err.h>
+#include <esp_log.h>
 #include <functional>
 #include <future>
+#include <magic_enum.hpp>
 #include <map>
 
 struct CommandRegistryEntry
 {
-    CommandIds command_id;
+    motor_command_id_t command_id;
     twai_message_t message;
     CommandLifecycleFSM state;
     uint8_t status;
@@ -22,12 +22,12 @@ struct CommandRegistryEntry
     std::optional<std::any> requested_change;
     std::optional<std::any> response;
 
-    std::map<std::string, MotorPropertyVariant> properties_requested;
+    std::map<std::string, motor_property_variant_t> properties_requested;
 
-    CommandRegistryEntry(CommandIds command_id, twai_message_t message) : command_id(command_id),
-                                                                          message(message),
-                                                                          cdate(std::chrono::system_clock::now()),
-                                                                          udate(std::chrono::system_clock::now())
+    CommandRegistryEntry(motor_command_id_t command_id, twai_message_t message) : command_id(command_id),
+                                                                                  message(message),
+                                                                                  cdate(std::chrono::system_clock::now()),
+                                                                                  udate(std::chrono::system_clock::now())
     {
         ESP_LOGD(FUNCTION_NAME, "CommandRegistryEntry constructor called");
     };
@@ -112,7 +112,7 @@ public:
     {
         esp_err_t ret;
         ESP_LOGD(FUNCTION_NAME, "Registering commandId: 0x%02X for motor 0x0%lu ", command_id, motor_id);
-        CommandRegistryEntry command = CommandRegistryEntry(static_cast<CommandIds>(command_id), message);
+        CommandRegistryEntry command = CommandRegistryEntry(static_cast<motor_command_id_t>(command_id), message);
         MotorCommandRegistry *motor_registry;
         ESP_RETURN_ON_ERROR(
             get_motor_registry(motor_id, motor_registry),
