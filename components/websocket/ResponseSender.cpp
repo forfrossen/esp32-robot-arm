@@ -31,28 +31,6 @@ esp_err_t ResponseSender::handle_set(httpd_req_t *req, const std::string &payloa
     return ret;
 }
 
-esp_err_t ResponseSender::send_response(httpd_req_t *req, int client_fd, int id, const nlohmann::json &data)
-{
-    // Erstelle ein JSON-Objekt für die Antwort
-    nlohmann::json response;
-    response["id"] = id;
-    response["status"] = "success";
-    response["data"] = data;
-
-    // Serialisiere das JSON-Objekt zu einem String
-    std::string response_str = response.dump();
-    AsyncRespArg *resp_arg = new AsyncRespArg{req->handle, client_fd, strdup(response_str.c_str())};
-
-    esp_err_t ret = httpd_queue_work(req->handle, ws_async_send, resp_arg);
-    if (ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "httpd_queue_work failed with %d", ret);
-        delete resp_arg;
-    }
-
-    return ret;
-}
-
 esp_err_t ResponseSender::send_error_response(httpd_req_t *req, int client_fd, int id, const char *error_message)
 {
     // Erstelle ein JSON-Objekt für die Fehlermeldung
@@ -63,7 +41,7 @@ esp_err_t ResponseSender::send_error_response(httpd_req_t *req, int client_fd, i
 
     // Serialisiere das JSON-Objekt zu einem String
     std::string response_str = response.dump();
-    AsyncRespArg *resp_arg = new AsyncRespArg{req->handle, client_fd, strdup(response_str.c_str())};
+    AsyncRespArg *resp_arg = new AsyncRespArg{req->handle, httpd_req_to_sockfd(req), response_str.c_str()};
 
     esp_err_t ret = httpd_queue_work(req->handle, ws_async_send, resp_arg);
     if (ret != ESP_OK)
@@ -74,6 +52,7 @@ esp_err_t ResponseSender::send_error_response(httpd_req_t *req, int client_fd, i
 
     return ret;
 }
+
 void ResponseSender::ws_async_send(void *arg)
 {
     AsyncRespArg *resp_arg = static_cast<AsyncRespArg *>(arg);
@@ -117,6 +96,7 @@ esp_err_t ResponseSender::trigger_async_send(httpd_handle_t handle, httpd_req_t 
 esp_err_t ResponseSender::send_rpc_response(rpc_event_data *data)
 {
     auto command = static_cast<IWsCommand *>(data->command);
+    auto req = command->get_req();
     ESP_RETURN_ON_FALSE(command != nullptr, ESP_ERR_INVALID_ARG, TAG, "Command is null");
 
     auto client_id = command->get_client_id();
@@ -124,8 +104,46 @@ esp_err_t ResponseSender::send_rpc_response(rpc_event_data *data)
     ESP_RETURN_ON_ERROR(client_manager->get_client(client_id, client_details), TAG, "Failed to get client");
 
     nlohmann::json response;
-    response["id"] = command->get_client_id();
-    response["status"] = command->get_result() ? "success" : "error";
 
-    return ESP_OK;
+    response["id"] = command->get_id();
+    response["status"] = command->get_result();
+
+    if (command->get_result())
+    {
+        response["data"] = command->get_result();
+    }
+    else
+    {
+        response["error"]["message"] = "An Error Occurred";
+    }
+
+    ESP_LOGD(TAG, "Sending response to client %s", client_id.c_str());
+    // return send_response(client_details.req, req., command->get_id(), response);
+    return trigger_async_send(req->handle, req, response.dump());
+}
+
+esp_err_t ResponseSender::send_response(httpd_req_t *req, int client_fd, int id, const nlohmann::json &data)
+{
+    // Erstelle ein JSON-Objekt für die Antwort
+    nlohmann::json response;
+    response["id"] = id;
+    response["status"] = "success";
+    response["data"] = data;
+
+    // Serialisiere das JSON-Objekt zu einem String
+    std::string response_str = response.dump();
+
+    AsyncRespArg *resp_arg = new AsyncRespArg{
+        req->handle,
+        httpd_req_to_sockfd(req),
+        response.dump()};
+
+    esp_err_t ret = httpd_queue_work(req->handle, ws_async_send, resp_arg);
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "httpd_queue_work failed with %d", ret);
+        delete resp_arg;
+    }
+
+    return ret;
 }
